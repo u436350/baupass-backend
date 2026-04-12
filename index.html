@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>BauPass Control</title>
+  <link id="appFavicon" rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="auth-locked">
+  <div id="authOverlay" class="auth-overlay" style="display:grid;">
+    <div class="auth-panel">
+      <div>
+        <img class="website-logo-sync website-logo website-logo-auth" src="/branding/baukometra-logo.svg" alt="Firmenlogo" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22210%22%20height%3D%2284%22%20viewBox%3D%220%200%20210%2084%22%3E%3Crect%20width%3D%22210%22%20height%3D%2284%22%20rx%3D%2212%22%20fill%3D%22%230f4c5c%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3EBK%3C/text%3E%3C/svg%3E';" />
+        <p class="eyebrow">Melde-Seite</p>
+        <h2>Sicher in BauPass Control anmelden</h2>
+        <p class="auth-copy">Super-Admin behaelt die Systemhoheit. Firmen-Admins sehen nur ihre Firma. Der Drehkreuz-Login bekommt einen schnellen Zutrittsmodus.</p>
+        <div class="auth-system-grid">
+          <article class="auth-system-card">
+            <span>Plattform</span>
+            <strong id="loginPlatformName">BauPass Control</strong>
+          </article>
+          <article class="auth-system-card">
+            <span>Betreiber</span>
+            <strong id="loginOperatorName">Deine Betriebsfirma</strong>
+          </article>
+          <article class="auth-system-card full-width">
+            <span>Drehkreuz-Endpunkt</span>
+            <strong id="loginTurnstileEndpoint">Noch nicht gesetzt</strong>
+          </article>
+        </div>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <label>
+          Benutzername
+          <input id="loginUsername" type="text" placeholder="superadmin" required />
+        </label>
+        <label>
+          Passwort
+          <input id="loginPassword" type="password" placeholder="1234" required />
+        </label>
+        <label>
+          OTP-Code (wenn 2FA aktiv)
+          <input id="loginOtpCode" type="text" placeholder="123456" />
+        </label>
+        <label>
+          Zugangstyp
+          <select id="loginScope">
+            <option value="auto">Automatisch</option>
+            <option value="server-admin">Server-Admin</option>
+            <option value="company-admin">Firmen-Admin</option>
+            <option value="turnstile">Drehkreuz</option>
+          </select>
+        </label>
+        <button type="submit" class="primary-button">Anmelden</button>
+      </form>
+
+      <div class="auth-hints">
+        <div class="meta-box">
+          <p>Demo-Zugaenge</p>
+          <p>Super-Admin: superadmin / 1234</p>
+          <p>Firmen-Admin: firma / 1234</p>
+          <p>Drehkreuz: drehkreuz / 1234</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainShell" class="shell locked" style="display:none;">
+    <aside class="sidebar">
+      <div>
+        <img class="website-logo-sync website-logo website-logo-sidebar hidden" alt="Firmenlogo" />
+        <p class="eyebrow">Firmenportal</p>
+        <h1>BauPass Control</h1>
+        <p class="sidebar-copy">Mitarbeiter erfassen, Fotos aufnehmen, digitale Ausweise erzeugen und Zutritte am Drehkreuz steuern.</p>
+      </div>
+      <nav class="nav">
+        <button class="nav-link active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="workers">Mitarbeiter</button>
+        <button class="nav-link" data-view="badge">Ausweis</button>
+        <button class="nav-link" data-view="access">Zutritt</button>
+        <button class="nav-link" data-view="admin">Admin</button>
+      </nav>
+      <div class="sidebar-card">
+        <p class="sidebar-card-label">Vermietungsmodus</p>
+        <strong>Multi-Firma faehig</strong>
+        <span>Jede Baufirma verwaltet ihr Team getrennt. Super-Admin behalt Systemkontrolle.</span>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Systemstatus</p>
+          <h2>Baustellen-Ausweise und Zutritt</h2>
+        </div>
+        <div class="topbar-actions">
+          <button id="seedDataButton" class="ghost-button">Demo-Daten einspielen</button>
+          <button id="exportButton" class="primary-button">System exportieren</button>
+          <button id="logoutButton" class="ghost-button">Sicher abmelden</button>
+        </div>
+      </header>
+
+      <section class="view active" data-view="dashboard">
+        <div id="sessionCard" class="session-card" style="margin-bottom:24px;"></div>
+        <div class="hero-panel">
+          <div>
+            <p class="eyebrow">Verbesserter MVP</p>
+            <h3>Digitale Ausweise mit Foto, Badge-ID und Check-in am Drehkreuz</h3>
+            <p>Der Prototyp ist bereits fuer Vermietung an Baufirmen gedacht: Firmenverwaltung, Mitarbeiter-Stammdaten, lokale Zutrittslogs, Export und Systemkonfiguration.</p>
+          </div>
+          <div class="hero-badges">
+            <span>Fotoaufnahme</span>
+            <span>Zutrittslog</span>
+            <span>Mandantenfaehig</span>
+          </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Letzte Aktivitaeten</p>
+                <h3>Zutrittsprotokoll</h3>
+              </div>
+            </div>
+            <div id="dashboardPorterLivePanel" class="porter-live-card empty-state">Letzter Zutritt wird angezeigt, sobald eine An- oder Abmeldung vorliegt.</div>
+            <div id="recentAccessList" class="list"></div>
+            <div id="dashboardDetailOverlay" class="dashboard-detail-overlay hidden">
+              <div id="dashboardWorkerDetail" class="dashboard-worker-detail"></div>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="view" data-view="workers">
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Stammdaten</p>
+                <h3>Mitarbeiter erfassen</h3>
+              </div>
+            </div>
+
+            <form id="workerForm" class="form-grid">
+              <label>
+                Firma
+                <select id="companySelect" required></select>
+              </label>
+              <label>
+                Subunternehmen
+                <select id="subcompanySelect">
+                  <option value="">Kein Subunternehmen</option>
+                </select>
+              </label>
+              <label>
+                Neues Subunternehmen
+                <input id="subcompanyName" type="text" placeholder="z. B. Elektro Yilmaz GmbH" />
+              </label>
+              <button id="addSubcompanyButton" type="button" class="ghost-button">Subunternehmen anlegen</button>
+              <label>
+                Vorname
+                <input id="firstName" type="text" placeholder="Max" required />
+              </label>
+              <label>
+                Nachname
+                <input id="lastName" type="text" placeholder="Mustermann" required />
+              </label>
+              <label>
+                Rentenversicherungsnummer
+                <input id="insuranceNumber" type="text" placeholder="12 345678 A 123" required />
+              </label>
+              <label>
+                Funktion
+                <input id="role" type="text" placeholder="Polier, Kranfuehrer, Monteur" required />
+              </label>
+              <label>
+                Baustelle
+                <input id="site" type="text" placeholder="Neubau Mitte" required />
+              </label>
+              <label>
+                Gueltig bis
+                <input id="validUntil" type="date" required />
+              </label>
+              <label>
+                Status
+                <select id="workerStatus">
+                  <option value="aktiv">Aktiv</option>
+                  <option value="gesperrt">Gesperrt</option>
+                  <option value="abgelaufen">Abgelaufen</option>
+                </select>
+              </label>
+              <input id="photoData" type="hidden" />
+              <input id="photoFileInput" type="file" accept="image/*" capture="user" hidden />
+
+              <div class="camera-block">
+                <div class="camera-preview-wrap">
+                  <video id="cameraPreview" playsinline autoplay muted></video>
+                  <div class="camera-guide" aria-hidden="true"></div>
+                  <div id="cameraPlaceholder" class="camera-placeholder">Kamera noch nicht gestartet</div>
+                </div>
+                <div class="camera-actions">
+                  <button type="button" id="startCameraButton" class="ghost-button">Kamera starten</button>
+                  <button type="button" id="capturePhotoButton" class="ghost-button">Foto aufnehmen</button>
+                  <button type="button" id="uploadPhotoButton" class="ghost-button">Foto hochladen</button>
+                </div>
+                <label class="camera-option">
+                  <input id="whiteBgBoost" type="checkbox" checked disabled />
+                  Hintergrund komplett weiss (aktiv)
+                </label>
+                <canvas id="photoCanvas" width="480" height="360" hidden></canvas>
+                <div class="photo-preview-block" style="margin: 12px 0; text-align: center;">
+                  <img id="capturedPhoto" src="" alt="Foto-Vorschau" style="max-width: 220px; max-height: 280px; border-radius: 10px; border: 1px solid #ccc; background: #fff; display: none;" />
+                </div>
+                <div class="photo-adjust-controls">
+                  <p class="helper-text">Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.</p>
+                  <p id="photoRequiredHint" class="helper-text helper-text-warning">Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.</p>
+                  <label class="photo-zoom-row">
+                    Zoom / Zuschneiden
+                    <input id="photoZoom" type="range" min="1" max="1.8" step="0.02" value="1.18" disabled />
+                    <span id="photoZoomValue">1.18x</span>
+                  </label>
+                  <div class="photo-adjust-grid">
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="up" disabled>Hoch</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="left" disabled>Links</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="right" disabled>Rechts</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="down" disabled>Runter</button>
+                    <button type="button" id="photoResetButton" class="ghost-button" disabled>Position zuruecksetzen</button>
+                  </div>
+                  <p id="photoAdjustStatus" class="helper-text">Position: X 0 | Y 0</p>
+                </div>
+              </div>
+
+              <button id="workerSubmitButton" type="submit" class="primary-button full-width">Mitarbeiter speichern und Ausweis erzeugen</button>
+              <button id="workerCancelEditButton" type="button" class="ghost-button full-width hidden">Bearbeiten abbrechen</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Datenbestand</p>
+                <h3>Registrierte Mitarbeiter</h3>
+              </div>
+            </div>
+            <div id="workerList" class="card-list"></div>
+            <div id="workerDetailOverlay" class="worker-detail-overlay hidden"></div>
+          <style>
+            .worker-detail-overlay {
+              position: fixed;
+              top: 0; left: 0; right: 0; bottom: 0;
+              background: rgba(0,0,0,0.45);
+              z-index: 1000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .worker-detail-card {
+              background: #fff;
+              border-radius: 16px;
+              box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+              padding: 32px 32px 24px 32px;
+              min-width: 340px;
+              max-width: 95vw;
+              max-height: 90vh;
+              overflow-y: auto;
+              position: relative;
+            }
+            .worker-detail-card .close-btn {
+              position: absolute;
+              top: 16px;
+              right: 16px;
+              background: none;
+              border: none;
+              font-size: 2rem;
+              color: #888;
+              cursor: pointer;
+            }
+            .worker-detail-card img {
+              max-width: 120px;
+              max-height: 150px;
+              border-radius: 14px;
+              border: 1px solid #ccc;
+              margin-bottom: 16px;
+            }
+            .worker-detail-card .button-row {
+              margin-top: 18px;
+              display: flex;
+              gap: 12px;
+              justify-content: flex-end;
+            }
+          </style>
+          </article>
+        </div>
+
+        <div class="photo-zoom-row">
+          <label for="photoSharpen">Schärfe:</label>
+          <input id="photoSharpen" type="range" min="0" max="2" step="0.01" value="0.28" disabled>
+          <span id="photoSharpenValue">Normal</span>
+        </div>
+      </section>
+
+      <section class="view" data-view="badge">
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Digitaler Ausweis</p>
+                <h3>Badge-Vorschau</h3>
+              </div>
+            </div>
+            <div id="badgePreview" class="badge-shell empty-state">
+              Bitte zuerst einen Mitarbeiter anlegen oder aus der Liste auswaehlen.
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Scan-Hilfe</p>
+                <h3>Badge-Code</h3>
+              </div>
+            </div>
+            <div id="badgeMeta" class="badge-meta empty-state">
+              Kein Badge ausgewaehlt.
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="access">
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Drehkreuz</p>
+                <h3>Check-in und Check-out</h3>
+              </div>
+            </div>
+
+            <form id="accessForm" class="form-grid compact-grid">
+              <label>
+                Badge-ID oder Mitarbeiter
+                <input id="accessWorkerSearch" type="text" placeholder="Name oder Badge-ID suchen" />
+                <select id="accessWorkerSelect" required></select>
+              </label>
+              <label>
+                Richtung
+                <select id="accessDirection">
+                  <option value="check-in">Check-in</option>
+                  <option value="check-out">Check-out</option>
+                </select>
+              </label>
+              <label>
+                Punkt
+                <input id="accessGate" type="text" value="Drehkreuz Nord" required />
+              </label>
+              <label>
+                Notiz
+                <input id="accessNote" type="text" placeholder="Optional" />
+              </label>
+              <button type="submit" class="primary-button full-width">Zutritt buchen</button>
+            </form>
+
+            <div id="turnstileQuickPanel" class="turnstile-quick-panel"></div>
+            <div id="porterLivePanel" class="porter-live-card empty-state">Pförtner-Live-Ansicht: Mitarbeiter wählen und Zutritt buchen.</div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Zutrittsjournal</p>
+                <h3>Eintritt und Austritt mit Zeitstempel</h3>
+              </div>
+            </div>
+
+            <form id="accessFilterForm" class="form-grid compact-grid">
+              <label>
+                Von
+                <input id="accessFrom" type="date" />
+              </label>
+              <label>
+                Bis
+                <input id="accessTo" type="date" />
+              </label>
+              <label>
+                Richtung
+                <select id="accessFilterDirection">
+                  <option value="">Alle</option>
+                  <option value="check-in">Check-in</option>
+                  <option value="check-out">Check-out</option>
+                </select>
+              </label>
+              <label>
+                Drehkreuz
+                <input id="accessFilterGate" type="text" placeholder="z. B. Drehkreuz Nord" />
+              </label>
+              <button type="submit" class="ghost-button">Filter anwenden</button>
+              <button id="accessResetButton" type="button" class="ghost-button">Filter zuruecksetzen</button>
+              <button id="accessCsvButton" type="button" class="primary-button full-width">Zutritts-CSV exportieren</button>
+            </form>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Tagesbericht</p>
+                <h3>Pro Drehkreuz</h3>
+              </div>
+              <button id="printDailyReportButton" type="button" class="ghost-button">Tagesreport drucken</button>
+            </div>
+            <div id="dayCloseBanner" class="day-close-banner hidden"></div>
+            <form id="dayCloseAcknowledgeForm" class="form-grid compact-grid hidden">
+              <label class="full-width">
+                Kommentar zur Tagesabschluss-Quittierung
+                <input id="dayCloseComment" type="text" placeholder="z. B. Schichtleiter informiert, Austritt wird nachgetragen" />
+              </label>
+              <button id="dayCloseAcknowledgeButton" type="submit" class="ghost-button full-width">Tagesabschluss quittieren</button>
+            </form>
+            <div id="accessSummaryGrid" class="summary-grid"></div>
+
+            <div class="summary-grid two-col-mini">
+              <article class="summary-block">
+                <div class="panel-heading slim">
+                  <div>
+                    <p class="eyebrow">Stundenanalyse</p>
+                    <h3>Eintritt/Austritt je Stunde</h3>
+                  </div>
+                </div>
+                <div id="accessHourlyGrid" class="hourly-grid"></div>
+              </article>
+
+              <article class="summary-block">
+                <div class="panel-heading slim">
+                  <div>
+                    <p class="eyebrow">Warnungen</p>
+                    <h3>Eintritt ohne Austritt</h3>
+                  </div>
+                </div>
+                <div id="accessOpenWarnings" class="list"></div>
+              </article>
+            </div>
+
+            <div id="accessLogList" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="admin">
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="meta-box">
+              <p><strong>Admin-Zentrale</strong></p>
+              <p>Nur Super-Admin kann globale Einstellungen aendern. Firmen-Admins sehen ausschliesslich ihre erlaubten Daten.</p>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Notfallzugriff</p>
+                <h3>Baustellen-Status und Reparatur</h3>
+              </div>
+            </div>
+            <div id="systemStatusPanel" class="card-item">
+              <p>Status wird geladen...</p>
+            </div>
+            <div class="button-row">
+              <button id="refreshSystemStatusButton" type="button" class="ghost-button">Status neu laden</button>
+              <button id="repairSystemButton" type="button" class="ghost-button">Sitzungen reparieren</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Systemhoheit</p>
+                <h3>Super-Admin Einstellungen</h3>
+              </div>
+            </div>
+
+            <form id="settingsForm" class="form-grid compact-grid">
+              <label>
+                Plattformname
+                <input id="platformName" type="text" placeholder="BauPass Control" required />
+              </label>
+              <label>
+                Betreiber
+                <input id="operatorName" type="text" placeholder="Deine Firma" required />
+              </label>
+              <label>
+                Drehkreuz-API Endpoint
+                <input id="turnstileEndpoint" type="url" placeholder="https://api.dein-gateway.de/access" />
+              </label>
+              <label>
+                Vermietungsmodell
+                <select id="rentalModel">
+                  <option value="tageskarte">Tageskarte (empfohlen)</option>
+                  <option value="monatlich">Monatlich pro Baustelle</option>
+                  <option value="pro-mitarbeiter">Pro Mitarbeiter</option>
+                  <option value="pauschal">Pauschal pro Firma</option>
+                </select>
+              </label>
+              <label>
+                Rechnungsfarbe Hauptton
+                <input id="invoicePrimaryColor" type="color" value="#0f4c5c" />
+              </label>
+              <label>
+                Rechnungsfarbe Akzent
+                <input id="invoiceAccentColor" type="color" value="#e36414" />
+              </label>
+              <label class="full-width">
+                Firmenlogo für Rechnungen
+                <input id="invoiceLogoFile" type="file" accept="image/*" />
+              </label>
+              <button id="loadCustomBrandButton" type="button" class="ghost-button full-width">BauKometra Branding laden</button>
+              <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width">BauKometra Branding Alternative laden</button>
+              <input id="invoiceLogoData" type="hidden" />
+              <img id="invoiceLogoPreview" class="invoice-logo-preview hidden" alt="Logo Vorschau" />
+              <label>
+                SMTP Host
+                <input id="smtpHost" type="text" placeholder="smtp.dein-provider.de" />
+              </label>
+              <label>
+                SMTP Port
+                <input id="smtpPort" type="number" min="1" step="1" value="587" />
+              </label>
+              <label>
+                SMTP Benutzer
+                <input id="smtpUsername" type="text" placeholder="mailer@deinefirma.de" />
+              </label>
+              <label>
+                SMTP Passwort
+                <input id="smtpPassword" type="password" placeholder="App-Passwort" />
+              </label>
+              <label>
+                Absender E-Mail
+                <input id="smtpSenderEmail" type="email" placeholder="rechnung@deinefirma.de" />
+              </label>
+              <label>
+                Absender Name
+                <input id="smtpSenderName" type="text" placeholder="Deine Firma" />
+              </label>
+              <label>
+                TLS aktiv
+                <select id="smtpUseTls">
+                  <option value="1">Ja</option>
+                  <option value="0">Nein</option>
+                </select>
+              </label>
+              <label class="full-width">
+                Admin IP-Whitelist (Komma getrennt, optional CIDR)
+                <input id="adminIpWhitelist" type="text" placeholder="203.0.113.10, 203.0.113.0/24" />
+              </label>
+              <label>
+                Firmen-Domain erzwingen
+                <select id="enforceTenantDomain">
+                  <option value="0">Nein</option>
+                  <option value="1">Ja</option>
+                </select>
+              </label>
+              <label>
+                Mitarbeiter-App (QR-Scan / Stempeluhr)
+                <select id="workerAppEnabled">
+                  <option value="1">Aktiv &ndash; Mitarbeiter k&ouml;nnen einstempeln</option>
+                  <option value="0">Gesperrt &ndash; App noch nicht freigegeben</option>
+                </select>
+              </label>
+              <button type="submit" class="primary-button full-width">Admin-Einstellungen speichern</button>
+            </form>
+
+            <div class="divider"></div>
+
+            <form id="companyForm" class="form-grid compact-grid">
+              <label>
+                Firmenname
+                <input id="companyName" type="text" placeholder="Muster Bau GmbH" required />
+              </label>
+              <label>
+                Ansprechpartner
+                <input id="companyContact" type="text" placeholder="Sabine Keller" required />
+              </label>
+              <label>
+                Rechnungs-E-Mail
+                <input id="companyBillingEmail" type="email" placeholder="buchhaltung@firma.de" />
+              </label>
+              <label>
+                Firmen-Zugangsdomain
+                <input id="companyAccessHost" type="text" placeholder="firma-a.deine-domain.de" />
+              </label>
+              <label>
+                Tarif
+                <select id="companyPlan">
+                  <option value="tageskarte">Tageskarte (19 EUR/Tag)</option>
+                  <option value="starter">Starter (49 EUR)</option>
+                  <option value="professional">Professional (99 EUR)</option>
+                  <option value="enterprise">Enterprise (199 EUR)</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select id="companyStatus">
+                  <option value="aktiv">Aktiv</option>
+                  <option value="test">Testphase</option>
+                  <option value="pausiert">Pausiert</option>
+                </select>
+              </label>
+              <button type="submit" class="ghost-button full-width">Baufirma anlegen</button>
+            </form>
+
+            <div class="divider"></div>
+
+            <form id="passwordForm" class="form-grid compact-grid">
+              <label>
+                Aktuelles Passwort
+                <input id="currentPassword" type="password" required />
+              </label>
+              <label>
+                Neues Passwort
+                <input id="newPassword" type="password" minlength="8" required />
+              </label>
+              <button type="submit" class="ghost-button full-width">Passwort aendern</button>
+            </form>
+
+            <div class="divider"></div>
+
+            <div id="twofaPanel" class="card-item"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Mandanten</p>
+                <h3>Baufirmen und Plaene</h3>
+              </div>
+            </div>
+            <div id="companyList" class="card-list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Rechnungen</p>
+                <h3>Mit Logo und Design versenden</h3>
+              </div>
+            </div>
+            <form id="invoiceForm" class="form-grid compact-grid">
+              <label>
+                Firma
+                <select id="invoiceCompanySelect" required></select>
+              </label>
+              <label>
+                Rechnungsnummer
+                <input id="invoiceNumber" type="text" placeholder="RE-2026-0001" />
+              </label>
+              <label>
+                Empfänger E-Mail
+                <input id="invoiceRecipientEmail" type="email" placeholder="buchhaltung@firma.de" required />
+              </label>
+              <label>
+                Rechnungsdatum
+                <input id="invoiceDate" type="date" required />
+              </label>
+              <label>
+                Leistungszeitraum
+                <input id="invoicePeriod" type="text" placeholder="01.04.2026 - 30.04.2026" required />
+              </label>
+              <label class="full-width">
+                Leistungsbeschreibung
+                <input id="invoiceDescription" type="text" placeholder="Digitale Baustellen-Ausweise + Zutrittskontrolle" required />
+              </label>
+              <label>
+                Nettobetrag (EUR)
+                <input id="invoiceNetAmount" type="number" min="0" step="0.01" value="0" required />
+              </label>
+              <label>
+                MwSt. (%)
+                <input id="invoiceVatRate" type="number" min="0" max="100" step="0.1" value="19" required />
+              </label>
+              <button type="submit" class="primary-button full-width">Rechnung drucken / als PDF speichern</button>
+              <button id="invoiceSendButton" type="button" class="ghost-button full-width">Rechnung per E-Mail senden</button>
+            </form>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Vorschau</p>
+                <h3>Rechnung vor Versand pruefen</h3>
+              </div>
+              <button id="invoicePreviewButton" type="button" class="ghost-button">Vorschau aktualisieren</button>
+            </div>
+            <iframe id="invoicePreviewFrame" class="invoice-preview-frame" title="Rechnungsvorschau"></iframe>
+
+            <div id="invoiceHistoryList" class="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Sicherheitsprotokoll</p>
+                <h3>Audit-Log</h3>
+              </div>
+            </div>
+            <form id="auditFilterForm" class="form-grid compact-grid">
+              <label>
+                Event-Typ
+                <input id="auditEventType" type="text" placeholder="z. B. worker.deleted" />
+              </label>
+              <label>
+                Rolle
+                <select id="auditActorRole">
+                  <option value="">Alle</option>
+                  <option value="superadmin">Super-Admin</option>
+                  <option value="company-admin">Firmen-Admin</option>
+                  <option value="turnstile">Drehkreuz</option>
+                </select>
+              </label>
+              <label>
+                Von
+                <input id="auditFrom" type="date" />
+              </label>
+              <label>
+                Bis
+                <input id="auditTo" type="date" />
+              </label>
+              <button type="submit" class="ghost-button">Filter anwenden</button>
+              <button id="auditResetButton" type="button" class="ghost-button">Filter zuruecksetzen</button>
+              <button id="auditCsvButton" type="button" class="primary-button full-width">Audit-CSV exportieren</button>
+            </form>
+            <div id="auditLogList" class="list"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="accessFeedbackOverlay" class="access-feedback-overlay hidden" aria-live="polite">
+    <div class="access-feedback-card">
+      <img class="website-logo-sync website-logo website-logo-feedback hidden" alt="Firmenlogo" />
+      <img id="accessFeedbackPhoto" class="access-feedback-photo" alt="Mitarbeiterfoto" />
+      <h3 id="accessFeedbackTitle">Zutritt gebucht</h3>
+      <p id="accessFeedbackMeta"></p>
+    </div>
+  </div>
+
+  <template id="statCardTemplate">
+    <article class="stat-card">
+      <p class="stat-label"></p>
+      <strong class="stat-value"></strong>
+      <span class="stat-detail"></span>
+    </article>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

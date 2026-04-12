@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#d95d39" />
+  <link rel="manifest" href="./worker-manifest.json" />
+  <title>BauPass Mitarbeiter-App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./worker.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top">
+      <p class="eyebrow">Mitarbeiter-App</p>
+      <h1>BauPass Mobile</h1>
+      <button id="installButton" class="ghost" hidden>App installieren</button>
+    </header>
+
+    <section id="loginCard" class="card">
+      <h2>Digitalen Ausweis aktivieren</h2>
+      <p>Wenn du einen Mitarbeiter-Link erhalten hast, ist der Zugang meist automatisch gesetzt.</p>
+      <div id="workerNotice" class="worker-notice hidden" role="alert" aria-live="polite"></div>
+      <form id="workerLoginForm" class="grid">
+        <label>
+          Zugangscode
+          <input id="workerAccessToken" type="text" placeholder="Token aus Link" required />
+        </label>
+        <button class="primary" type="submit">Ausweis laden</button>
+      </form>
+    </section>
+
+    <section id="badgeCard" class="card hidden">
+      <div class="badge-head">
+        <div>
+          <p class="eyebrow" id="companyName">Baufirma</p>
+          <h2 id="workerName">Mitarbeiter</h2>
+          <p id="workerRole">Rolle</p>
+        </div>
+        <span id="workerStatus" class="status">aktiv</span>
+      </div>
+
+      <div class="badge-body">
+        <img id="workerPhoto" alt="Mitarbeiterfoto" />
+        <div style="margin-top:10px;">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
+          <button id="changePhotoButton" type="button">Foto aufnehmen/hochladen</button>
+        </div>
+        <!-- Kamera-Overlay für Fotoaufnahme und Vorschau -->
+        <div id="cameraOverlay" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; flex-direction:column;">
+          <video id="cameraVideo" autoplay playsinline style="max-width:90vw; max-height:40vh; border-radius:12px; background:#222;"></video>
+          <div id="photoPreviewWrap" style="margin-top:16px; display:none; flex-direction:column; align-items:center;">
+            <canvas id="cameraCanvas" style="max-width:90vw; max-height:30vh; border:2px solid #fff; border-radius:8px;"></canvas>
+            <div style="margin-top:8px; display:flex; gap:10px;">
+              <button id="rotatePhotoButton" type="button">Drehen</button>
+              <button id="deletePhotoButton" type="button">Löschen</button>
+            </div>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:12px;">
+            <button id="takePhotoButton" type="button">Foto aufnehmen</button>
+            <button id="confirmPhotoButton" type="button" style="display:none;">Übernehmen</button>
+            <button id="retakePhotoButton" type="button" style="display:none;">Neu aufnehmen</button>
+            <button id="closeCameraButton" type="button">Abbrechen</button>
+          </div>
+        </div>
+        <div class="meta">
+          <p><strong>Badge-ID:</strong> <span id="workerBadgeId"></span></p>
+          <p><strong>Baustelle:</strong> <span id="workerSite"></span></p>
+          <p><strong>Gueltig bis:</strong> <span id="workerValidUntil"></span></p>
+        </div>
+      </div>
+
+      <div class="qr-wrap">
+        <img id="workerQr" alt="QR Code" />
+      </div>
+
+      <div class="actions">
+        <button id="refreshButton" class="ghost" type="button">Aktualisieren</button>
+        <button id="logoutButton" class="ghost" type="button">Abmelden</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="./worker-app.js"></script>
+</body>
+</html>

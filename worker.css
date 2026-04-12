@@ -1,0 +1,159 @@
+:root {
+  --bg: #f3efe7;
+  --card: rgba(255, 251, 245, 0.92);
+  --text: #171717;
+  --muted: #5f635f;
+  --accent: #d95d39;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Barlow", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(217, 93, 57, 0.18), transparent 28%),
+    linear-gradient(145deg, #f7f2e7 0%, #efe6db 45%, #e8e3dd 100%);
+}
+
+.app-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.top h1,
+.card h2 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.worker-notice {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(168, 37, 37, 0.4);
+  background: rgba(255, 230, 230, 0.92);
+  color: #7f1d1d;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 23, 23, 0.12);
+  border-radius: 12px;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #d95d39, #93381f);
+}
+
+.ghost {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(23, 23, 23, 0.1);
+}
+
+.badge-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status {
+  align-self: flex-start;
+  background: rgba(22, 120, 87, 0.14);
+  color: #167857;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.badge-body {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+}
+
+#workerPhoto {
+  width: 120px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(23, 23, 23, 0.1);
+}
+
+.meta p {
+  margin: 0 0 8px;
+}
+
+.qr-wrap {
+  margin-top: 12px;
+  display: grid;
+  place-items: center;
+}
+
+#workerQr {
+  width: 220px;
+  border-radius: 14px;
+  border: 1px solid rgba(23, 23, 23, 0.08);
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
