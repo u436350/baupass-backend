@@ -23,10 +23,11 @@ DB_PATH = BASE_DIR / "backend" / "baupass.db"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 
+@app.route("/api/session/login", methods=["POST"])
+def login():
+    
 
-
-
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 from flask_cors import CORS
 # CORS mit erlaubten Origins und Credentials aktivieren (kein Wildcard!)
