@@ -80,6 +80,15 @@ Wenn im Render-Dashboard weiter `Failed deploy` steht, sind die ersten Stellen z
 - Runtime Log: Startfehler beim Import oder Port-Binding
 - Environment: falscher Start-Command oder fehlende `PORT`-Weitergabe
 
+## Railway Deploy (Alternative zu Render)
+
+1. Neues Projekt in Railway erstellen und dieses GitHub-Repository verbinden.
+2. Railway erkennt die Konfiguration aus `railway.json` und `Procfile`.
+3. Falls Railway nach Start-Command fragt: `python backend/run_prod.py`.
+4. Nach dem ersten Deploy pruefen: `https://<deine-railway-domain>/api/health`.
+5. GitHub-Frontend mit API-Basis oeffnen:
+	`https://u436350.github.io/baupass-backend/?apiBase=https://<deine-railway-domain>`
+
 3. Oder als Autostart-Task installieren:
 
 ```powershell
