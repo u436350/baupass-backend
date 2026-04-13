@@ -2663,6 +2663,26 @@ async function startCamera() {
   const ua = (navigator.userAgent || "").toLowerCase();
   const isMobile = /android|iphone|ipad|ipod|mobile/.test(ua);
 
+  const buildCameraErrorMessage = (error) => {
+    const errorName = String(error?.name || "").trim();
+    if (!window.isSecureContext) {
+      return "Browser-Kamera benoetigt HTTPS oder localhost.";
+    }
+    if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+      return "Kamera-Zugriff wurde blockiert. Bitte Browser-Berechtigung fuer Kamera erlauben.";
+    }
+    if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
+      return "Keine Kamera gefunden.";
+    }
+    if (errorName === "NotReadableError" || errorName === "TrackStartError") {
+      return "Kamera ist bereits von einer anderen App oder Browser-Registerkarte belegt.";
+    }
+    if (errorName === "OverconstrainedError" || errorName === "ConstraintNotSatisfiedError") {
+      return "Kamera konnte mit den angeforderten Einstellungen nicht gestartet werden.";
+    }
+    return `Kamera konnte nicht gestartet werden: ${error?.message || errorName || "unbekannter Fehler"}`;
+  };
+
   if (!navigator.mediaDevices?.getUserMedia) {
     if (elements.photoDebugText) {
       elements.photoDebugText.textContent = "Browser-Kamera nicht verfuegbar. Bitte Foto hochladen verwenden.";
@@ -2674,9 +2694,9 @@ async function startCamera() {
   const videoConstraintCandidates = [
     {
       facingMode: { ideal: "user" },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 30, max: 60 }
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 24, max: 30 }
     },
     {
       facingMode: { ideal: "environment" },
@@ -2689,6 +2709,7 @@ async function startCamera() {
   try {
     stopCamera();
     let lastError = null;
+
     for (const videoConstraint of videoConstraintCandidates) {
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -2700,6 +2721,24 @@ async function startCamera() {
         }
       } catch (error) {
         lastError = error;
+      }
+    }
+
+    if (!cameraStream && navigator.mediaDevices.enumerateDevices) {
+      const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+      const videoInputs = devices.filter((device) => device.kind === "videoinput");
+      for (const device of videoInputs) {
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: device.deviceId } },
+            audio: false
+          });
+          if (cameraStream) {
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+        }
       }
     }
 
@@ -2715,14 +2754,12 @@ async function startCamera() {
       elements.photoDebugText.style.color = "#0b7a3b";
     }
   } catch (error) {
-    const reason = window.isSecureContext
-      ? `Kamera konnte nicht gestartet werden: ${error.message}`
-      : "Browser-Kamera benoetigt HTTPS. Kamera-Upload wird als Fallback geoeffnet.";
+    const reason = buildCameraErrorMessage(error);
     if (elements.photoDebugText) {
       elements.photoDebugText.textContent = reason;
       elements.photoDebugText.style.color = "#8a5a00";
     }
-    if (isMobile && error?.name === "NotAllowedError") {
+    if (isMobile && (error?.name === "NotAllowedError" || error?.name === "SecurityError")) {
       window.alert("Kamera-Zugriff wurde blockiert. Bitte Browser-Zugriff auf die Kamera erlauben und erneut auf Kamera starten klicken.");
       return;
     }
