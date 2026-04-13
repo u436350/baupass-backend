@@ -5,15 +5,43 @@ function normalizeApiBase(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function sanitizeApiBase(value) {
+  const normalized = normalizeApiBase(value);
+  if (!normalized) {
+    return "";
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    return "";
+  }
+
+  if (window.location.protocol === "https:" && parsed.protocol === "http:") {
+    const host = (parsed.hostname || "").toLowerCase();
+    const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+    if (!localHosts.has(host)) {
+      return "";
+    }
+  }
+
+  return parsed.toString().replace(/\/+$/, "");
+}
+
 function resolveWorkerApiBase() {
   const params = new URL(window.location.href).searchParams;
-  const queryValue = normalizeApiBase(params.get("apiBase"));
-  const storedValue = normalizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
+  const queryValue = sanitizeApiBase(params.get("apiBase"));
+  const storedValue = sanitizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
   const configuredValue = queryValue || storedValue;
 
   if (configuredValue) {
     window.localStorage.setItem(API_BASE_STORAGE_KEY, configuredValue);
     return `${configuredValue}/api/worker-app`;
+  }
+
+  if (!configuredValue && window.localStorage.getItem(API_BASE_STORAGE_KEY)) {
+    window.localStorage.removeItem(API_BASE_STORAGE_KEY);
   }
 
   if (window.location.hostname.endsWith("github.io")) {

@@ -6,16 +6,46 @@ function normalizeApiBase(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function sanitizeApiBase(value) {
+  const normalized = normalizeApiBase(value);
+  if (!normalized) {
+    return "";
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    return "";
+  }
+
+  // GitHub Pages laeuft ueber HTTPS; blockiere dort unsichere HTTP-Backends.
+  if (window.location.protocol === "https:" && parsed.protocol === "http:") {
+    const host = (parsed.hostname || "").toLowerCase();
+    const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+    if (!localHosts.has(host)) {
+      return "";
+    }
+  }
+
+  return parsed.toString().replace(/\/+$/, "");
+}
+
 function resolveApiBase() {
   const params = new URL(window.location.href).searchParams;
-  const queryValue = normalizeApiBase(params.get("apiBase"));
-  const storedValue = normalizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
-  const metaValue = normalizeApiBase(document.querySelector('meta[name="baupass-api-base"]')?.content);
+  const queryValue = sanitizeApiBase(params.get("apiBase"));
+  const storedValue = sanitizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
+  const metaValue = sanitizeApiBase(document.querySelector('meta[name="baupass-api-base"]')?.content);
   const configuredValue = queryValue || metaValue || storedValue;
 
   if (configuredValue) {
     window.localStorage.setItem(API_BASE_STORAGE_KEY, configuredValue);
     return configuredValue;
+  }
+
+  // Entfernt veraltete/ungueltige API-Konfigurationen, damit der sichere Default greift.
+  if (!configuredValue && window.localStorage.getItem(API_BASE_STORAGE_KEY)) {
+    window.localStorage.removeItem(API_BASE_STORAGE_KEY);
   }
 
   if (window.location.hostname.endsWith("github.io")) {
