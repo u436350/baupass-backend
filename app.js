@@ -2670,26 +2670,52 @@ async function startCamera() {
       elements.photoDebugText.textContent = "Browser-Kamera nicht verfuegbar. Kamera-Upload wird geoeffnet.";
       elements.photoDebugText.style.color = "#8a5a00";
     }
-    if (shouldAutoOpenPicker) {
-      openPhotoFilePicker({ preferCamera: true });
-    }
+    openPhotoFilePicker({ preferCamera: true });
     return;
   }
 
+  const videoConstraintCandidates = [
+    {
+      facingMode: { ideal: "user" },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30, max: 60 }
+    },
+    {
+      facingMode: { ideal: "environment" },
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    },
+    true
+  ];
+
   try {
     stopCamera();
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "user",
-        width: { min: 1280, ideal: 1920, max: 3840 },
-        height: { min: 720, ideal: 1080, max: 2160 },
-        frameRate: { ideal: 30, max: 60 }
-      },
-      audio: false
-    });
+    let lastError = null;
+    for (const videoConstraint of videoConstraintCandidates) {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraint,
+          audio: false
+        });
+        if (cameraStream) {
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!cameraStream) {
+      throw lastError || new Error("camera_unavailable");
+    }
 
     elements.cameraPreview.srcObject = cameraStream;
     elements.cameraPlaceholder.hidden = true;
+    if (elements.photoDebugText) {
+      elements.photoDebugText.textContent = "Kamera aktiv. Du kannst jetzt ein Foto aufnehmen.";
+      elements.photoDebugText.style.color = "#0b7a3b";
+    }
   } catch (error) {
     const reason = window.isSecureContext
       ? `Kamera konnte nicht gestartet werden: ${error.message}`
@@ -2698,9 +2724,7 @@ async function startCamera() {
       elements.photoDebugText.textContent = reason;
       elements.photoDebugText.style.color = "#8a5a00";
     }
-    if (shouldAutoOpenPicker) {
-      openPhotoFilePicker({ preferCamera: true });
-    }
+    openPhotoFilePicker({ preferCamera: isMobile || shouldAutoOpenPicker });
   }
 }
 
