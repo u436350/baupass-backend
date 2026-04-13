@@ -2747,7 +2747,13 @@ async function startCamera() {
     }
 
     elements.cameraPreview.srcObject = cameraStream;
-    await elements.cameraPreview.play().catch(() => {});
+    await new Promise((resolve) => {
+      const finalize = () => resolve();
+      elements.cameraPreview.onloadedmetadata = finalize;
+      window.setTimeout(finalize, 1200);
+    });
+    await elements.cameraPreview.play();
+    elements.cameraPreview.style.visibility = "visible";
     elements.cameraPlaceholder.hidden = true;
     if (elements.photoDebugText) {
       elements.photoDebugText.textContent = "Kamera aktiv. Du kannst jetzt ein Foto aufnehmen.";
@@ -3524,6 +3530,7 @@ function stopCamera() {
   cameraStream.getTracks().forEach((track) => track.stop());
   cameraStream = null;
   elements.cameraPreview.srcObject = null;
+  elements.cameraPreview.style.visibility = "hidden";
   elements.cameraPlaceholder.hidden = false;
 }
 
