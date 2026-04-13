@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: baupass-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python backend/run_prod.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PUBLIC_BASE_URL
+        value: https://baupass-backend.onrender.com

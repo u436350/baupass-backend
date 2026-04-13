@@ -66,6 +66,20 @@ $env:PUBLIC_BASE_URL = "https://baupass.example.com"
 python backend/run_prod.py
 ```
 
+## Render Deploy
+
+1. Repository direkt in Render als `Web Service` verbinden.
+2. Render kann jetzt die Root-Dateien `requirements.txt` und `render.yaml` verwenden.
+3. Start-Command ist `python backend/run_prod.py`.
+4. Die App bindet standardmaessig an `0.0.0.0` und nutzt `PORT` von Render.
+5. Nach dem Deploy sollte `https://baupass-backend.onrender.com/api/health` `{"status":"ok"...}` liefern.
+
+Wenn im Render-Dashboard weiter `Failed deploy` steht, sind die ersten Stellen zum Pruefen:
+
+- Build Log: Python-Pakete konnten nicht installiert werden
+- Runtime Log: Startfehler beim Import oder Port-Binding
+- Environment: falscher Start-Command oder fehlende `PORT`-Weitergabe
+
 3. Oder als Autostart-Task installieren:
 
 ```powershell
