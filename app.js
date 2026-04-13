@@ -2228,7 +2228,9 @@ function buildInvoiceDraft(options = {}) {
     accessLineItems,
     primaryColor: normalizeHexColor(state.settings.invoicePrimaryColor, "#0f4c5c"),
     accentColor: normalizeHexColor(state.settings.invoiceAccentColor, "#e36414"),
-    logo: state.settings.invoiceLogoData || elements.invoiceLogoData.value || DEFAULT_BRAND_LOGO
+    logo: sanitizeInvoiceLogoSrc(state.settings.invoiceLogoData)
+      || sanitizeInvoiceLogoSrc(elements.invoiceLogoData.value)
+      || DEFAULT_BRAND_LOGO
   };
 }
 
@@ -2464,6 +2466,27 @@ function normalizeHexColor(value, fallback) {
     return candidate;
   }
   return fallback;
+}
+
+function sanitizeInvoiceLogoSrc(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (raw.startsWith("data:image/")) {
+    return raw;
+  }
+
+  try {
+    const parsed = new URL(raw, window.location.origin);
+    if (parsed.protocol === "https:" || parsed.protocol === "blob:") {
+      return parsed.toString();
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
 }
 
 async function handleCompanySubmit(event) {
