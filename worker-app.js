@@ -52,15 +52,18 @@ function resolveWorkerApiBase() {
 }
 
 const API_BASE = resolveWorkerApiBase();
+const API_ROOT = resolveApiRoot(API_BASE);
 const WORKER_TOKEN_KEY = "baupass-worker-token";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
+const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
 let cameraStream = null;
 let lastCameraPhotoDataUrl = null;
 let lastCameraPhotoRotation = 0;
+let wakeLockHandle = null;
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -77,9 +80,18 @@ const elements = {
   workerSite: document.querySelector("#workerSite"),
   workerValidUntil: document.querySelector("#workerValidUntil"),
   workerQr: document.querySelector("#workerQr"),
+  qrFallbackText: document.querySelector("#qrFallbackText"),
   refreshButton: document.querySelector("#refreshButton"),
   logoutButton: document.querySelector("#logoutButton"),
   installButton: document.querySelector("#installButton"),
+  installPlatformHint: document.querySelector("#installPlatformHint"),
+  gateModeButton: document.querySelector("#gateModeButton"),
+  gateScannerOverlay: document.querySelector("#gateScannerOverlay"),
+  gateQr: document.querySelector("#gateQr"),
+  gateBadgeId: document.querySelector("#gateBadgeId"),
+  gateWorkerName: document.querySelector("#gateWorkerName"),
+  gateBrightnessHint: document.querySelector("#gateBrightnessHint"),
+  closeGateModeButton: document.querySelector("#closeGateModeButton"),
   changePhotoButton: document.querySelector("#changePhotoButton"),
   photoInput: document.querySelector("#photoInput"),
   cameraOverlay: document.querySelector("#cameraOverlay"),
@@ -136,6 +148,14 @@ function bindEvents() {
 
   if (elements.installButton) {
     elements.installButton.addEventListener("click", triggerInstall);
+  }
+
+  if (elements.gateModeButton) {
+    elements.gateModeButton.addEventListener("click", openGateMode);
+  }
+
+  if (elements.closeGateModeButton) {
+    elements.closeGateModeButton.addEventListener("click", closeGateMode);
   }
 
   if (elements.changePhotoButton) {
@@ -224,6 +244,7 @@ function registerWorkerSw() {
 }
 
 function wireInstallPrompt() {
+  updatePlatformInstallHint();
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
@@ -250,6 +271,16 @@ async function triggerInstall() {
 
   if (isStandaloneMode()) {
     showWorkerNotice("App ist bereits installiert.");
+    return;
+  }
+
+  if (isIosDevice()) {
+    showWorkerNotice("iPhone: In Safari auf Teilen tippen und dann 'Zum Home-Bildschirm' waehlen.");
+    return;
+  }
+
+  if (isAndroidDevice()) {
+    showWorkerNotice("Android: Im Browser-Menue auf 'App installieren' oder 'Zum Startbildschirm' tippen.");
     return;
   }
 
@@ -332,12 +363,43 @@ function renderWorker(payload) {
     }
   }
 
-  if (elements.workerQr && window.QRCode && worker.badgeId) {
-    window.QRCode.toDataURL(worker.badgeId, { margin: 1, width: 240 }, (error, url) => {
-      if (!error) {
-        elements.workerQr.src = url;
-      }
-    });
+  const qrPayload = buildQrPayload(worker);
+  if (elements.workerQr) {
+    if (!qrPayload) {
+      elements.workerQr.removeAttribute("src");
+      elements.workerQr.classList.add("hidden");
+    } else {
+      elements.workerQr.classList.remove("hidden");
+      void setQrImage(elements.workerQr, qrPayload, 280);
+    }
+  }
+
+  if (elements.qrFallbackText) {
+    if (!qrPayload) {
+      elements.qrFallbackText.textContent = "Kein QR verfuegbar. Bitte Admin kontaktieren.";
+      elements.qrFallbackText.classList.remove("hidden");
+    } else {
+      elements.qrFallbackText.textContent = `Code: ${qrPayload}`;
+      elements.qrFallbackText.classList.remove("hidden");
+    }
+  }
+
+  if (elements.gateQr) {
+    if (!qrPayload) {
+      elements.gateQr.removeAttribute("src");
+      elements.gateQr.classList.add("hidden");
+    } else {
+      elements.gateQr.classList.remove("hidden");
+      void setQrImage(elements.gateQr, qrPayload, 420);
+    }
+  }
+
+  if (elements.gateBadgeId) {
+    elements.gateBadgeId.textContent = qrPayload ? `Badge ${qrPayload}` : "Badge nicht gesetzt";
+  }
+
+  if (elements.gateWorkerName) {
+    elements.gateWorkerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim() || "Mitarbeiter";
   }
 
   if (elements.loginCard) elements.loginCard.classList.add("hidden");
@@ -379,7 +441,193 @@ async function workerLogout() {
 
   localStorage.removeItem(WORKER_TOKEN_KEY);
   workerToken = "";
+  closeGateMode();
   showLogin();
+}
+
+async function openGateMode() {
+  if (!elements.gateScannerOverlay) {
+    return;
+  }
+  elements.gateScannerOverlay.classList.remove("hidden");
+  showBrightnessHintTemporarily();
+  await requestWakeLock();
+}
+
+function closeGateMode() {
+  if (elements.gateScannerOverlay) {
+    elements.gateScannerOverlay.classList.add("hidden");
+  }
+  releaseWakeLock();
+}
+
+function buildQrPayload(worker) {
+  const badge = String(worker?.badgeId || "").trim();
+  if (badge) {
+    return badge;
+  }
+  const fallback = String(worker?.id || "").trim();
+  return fallback;
+}
+
+function resolveApiRoot(workerApiBase) {
+  return String(workerApiBase || "").replace(/\/api\/worker-app\/?$/, "");
+}
+
+function buildQrImageUrl(payload, size = 280) {
+  const text = String(payload || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(API_ROOT)) {
+    const url = new URL("/api/qr.png", API_ROOT);
+    url.searchParams.set("data", text);
+    url.searchParams.set("size", String(size));
+    return url.toString();
+  }
+
+  const url = new URL("/api/qr.png", window.location.origin);
+  url.searchParams.set("data", text);
+  url.searchParams.set("size", String(size));
+  return `${url.pathname}${url.search}`;
+}
+
+function getQrCacheKey(payload, size) {
+  return `${QR_CACHE_PREFIX}:${size}:${payload}`;
+}
+
+function getCachedQr(payload, size) {
+  const key = getQrCacheKey(payload, size);
+  return localStorage.getItem(key) || "";
+}
+
+function setCachedQr(payload, size, dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith("data:image/png")) {
+    return;
+  }
+  const key = getQrCacheKey(payload, size);
+  localStorage.setItem(key, dataUrl);
+}
+
+async function fetchQrAsDataUrl(payload, size) {
+  const url = buildQrImageUrl(payload, size);
+  if (!url) {
+    return "";
+  }
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`qr_fetch_failed_${response.status}`);
+  }
+  const blob = await response.blob();
+  return await blobToDataUrl(blob);
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("blob_to_dataurl_failed"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function setQrImage(imgElement, payload, size) {
+  if (!imgElement || !payload) {
+    return;
+  }
+
+  const cached = getCachedQr(payload, size);
+  if (cached) {
+    imgElement.src = cached;
+  } else {
+    const directUrl = buildQrImageUrl(payload, size);
+    if (directUrl) {
+      imgElement.src = directUrl;
+    }
+  }
+
+  try {
+    const freshDataUrl = await fetchQrAsDataUrl(payload, size);
+    if (freshDataUrl) {
+      setCachedQr(payload, size, freshDataUrl);
+      imgElement.src = freshDataUrl;
+    }
+  } catch {
+    if (!cached) {
+      imgElement.alt = "QR-Code konnte nicht geladen werden";
+    }
+  }
+}
+
+function showBrightnessHintTemporarily() {
+  if (!elements.gateBrightnessHint) {
+    return;
+  }
+  elements.gateBrightnessHint.classList.remove("hidden");
+  window.setTimeout(() => {
+    if (elements.gateBrightnessHint) {
+      elements.gateBrightnessHint.classList.add("hidden");
+    }
+  }, 6000);
+}
+
+function isIosDevice() {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const touchMac = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /iPhone|iPad|iPod/i.test(ua) || touchMac;
+}
+
+function isAndroidDevice() {
+  return /Android/i.test(navigator.userAgent || "");
+}
+
+function updatePlatformInstallHint() {
+  if (!elements.installPlatformHint) {
+    return;
+  }
+
+  if (isStandaloneMode()) {
+    elements.installPlatformHint.textContent = "App ist installiert. Am Drehkreuz einfach den QR-Code im Vollbild zeigen.";
+    return;
+  }
+
+  if (isIosDevice()) {
+    elements.installPlatformHint.textContent = "iPhone: Safari > Teilen > Zum Home-Bildschirm. Danach laeuft die App wie Wallet.";
+    return;
+  }
+
+  if (isAndroidDevice()) {
+    elements.installPlatformHint.textContent = "Android: Browser-Menue > App installieren. Danach direkt als Wallet-Pass fuer den Scanner nutzbar.";
+    return;
+  }
+
+  elements.installPlatformHint.textContent = "Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.";
+}
+
+async function requestWakeLock() {
+  if (!navigator.wakeLock || wakeLockHandle) {
+    return;
+  }
+  try {
+    wakeLockHandle = await navigator.wakeLock.request("screen");
+    wakeLockHandle.addEventListener("release", () => {
+      wakeLockHandle = null;
+    });
+  } catch {
+    wakeLockHandle = null;
+  }
+}
+
+function releaseWakeLock() {
+  if (!wakeLockHandle) {
+    return;
+  }
+  wakeLockHandle.release().catch(() => {
+    // ignore release failures
+  });
+  wakeLockHandle = null;
 }
 
 function openCameraOverlay() {

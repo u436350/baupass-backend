@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#d95d39" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BauPass" />
+  <link rel="apple-touch-icon" href="/worker-icon-192.png" />
   <link rel="manifest" href="./worker-manifest.json" />
   <title>BauPass Mitarbeiter-App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,6 +21,7 @@
       <p class="eyebrow">Mitarbeiter-App</p>
       <h1>BauPass Mobile</h1>
       <button id="installButton" class="ghost" hidden>App installieren</button>
+      <p id="installPlatformHint" class="platform-hint">Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.</p>
     </header>
 
     <section id="loginCard" class="card">
@@ -130,16 +135,31 @@
       <div class="qr-wrap">
         <p class="qr-label">Einlasskontrolle scannen</p>
         <img id="workerQr" alt="QR Code" />
+        <p id="qrFallbackText" class="qr-fallback hidden"></p>
       </div>
 
       <div class="actions">
+        <button id="gateModeButton" class="primary" type="button">Drehkreuzmodus</button>
         <button id="refreshButton" class="ghost" type="button">Aktualisieren</button>
         <button id="logoutButton" class="ghost" type="button">Abmelden</button>
       </div>
     </section>
+
+    <section id="gateScannerOverlay" class="gate-overlay hidden" aria-live="polite">
+      <div class="gate-panel">
+        <p class="eyebrow">Wallet Pass</p>
+        <h2 id="gateWorkerName">Mitarbeiter</h2>
+        <p class="gate-sub">Drehkreuz-Modus aktiv - QR unter Scanner halten</p>
+        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">Bitte Display-Helligkeit auf Maximum stellen fuer schnellen Scan.</p>
+        <img id="gateQr" alt="Einlass QR" />
+        <p id="gateBadgeId" class="gate-badge-id">-</p>
+        <div class="actions">
+          <button id="closeGateModeButton" class="ghost" type="button">Schliessen</button>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="./worker-app.js"></script>
 </body>
 </html>

@@ -43,6 +43,13 @@ body {
   font-size: .75rem;
 }
 
+.platform-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.35;
+}
+
 /* ── Generic Card Shell ────────────────────────── */
 .card {
   background: var(--card);
@@ -445,12 +452,102 @@ button {
   border-radius: 14px;
   border: 1px solid rgba(23, 23, 23, .08);
   box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
+  background: #fff;
+  padding: 8px;
+}
+
+.qr-fallback {
+  margin: 0;
+  font-size: .82rem;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: .03em;
 }
 
 .actions {
   margin-top: 12px;
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: radial-gradient(circle at top, rgba(217, 93, 57, .22), rgba(8, 12, 18, .98) 45%);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.gate-panel {
+  width: min(500px, 100%);
+  background: rgba(13, 21, 32, .95);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 18px;
+  padding: 16px;
+  color: #f6f3ef;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+}
+
+.gate-panel h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.gate-sub {
+  margin: 8px 0 14px;
+  color: rgba(255, 255, 255, .72);
+}
+
+.gate-brightness-hint {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(240, 132, 74, .55);
+  background: rgba(240, 132, 74, .12);
+  color: #ffd9c9;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+#gateQr {
+  width: min(75vw, 320px);
+  aspect-ratio: 1;
+  border-radius: 18px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: #fff;
+  animation: qrPulse 1.8s ease-in-out infinite;
+}
+
+.gate-badge-id {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, .74);
+  letter-spacing: .08em;
+  font-family: "Space Grotesk", monospace;
+}
+
+@keyframes qrPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(217, 93, 57, .3); }
+  70% { transform: scale(1.02); box-shadow: 0 0 0 20px rgba(217, 93, 57, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(217, 93, 57, 0); }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 14px 12px 20px;
+  }
+
+  .wallet-card {
+    max-width: 100%;
+  }
+
+  #workerQr {
+    width: 180px;
+  }
 }
 
 .hidden { display: none !important; }
