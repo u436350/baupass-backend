@@ -1,5 +1,31 @@
 // ALLE ELEMENTE OBEN DEFINIEREN!
-const API_BASE = "";
+const DEFAULT_RENDER_API_BASE = "https://baupass-backend.onrender.com";
+const API_BASE_STORAGE_KEY = "baupass-api-base";
+
+function normalizeApiBase(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function resolveApiBase() {
+  const params = new URL(window.location.href).searchParams;
+  const queryValue = normalizeApiBase(params.get("apiBase"));
+  const storedValue = normalizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
+  const metaValue = normalizeApiBase(document.querySelector('meta[name="baupass-api-base"]')?.content);
+  const configuredValue = queryValue || metaValue || storedValue;
+
+  if (configuredValue) {
+    window.localStorage.setItem(API_BASE_STORAGE_KEY, configuredValue);
+    return configuredValue;
+  }
+
+  if (window.location.hostname.endsWith("github.io")) {
+    return DEFAULT_RENDER_API_BASE;
+  }
+
+  return "";
+}
+
+const API_BASE = resolveApiBase();
 const elements = {
   body: document.body,
   authOverlay: document.querySelector("#authOverlay"),
@@ -2493,6 +2519,11 @@ async function handleLoginSubmit(event) {
     }
     if (error.message === "login_scope_mismatch") {
       window.alert("Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswaehlen.");
+      return;
+    }
+    if (error.message === "http_405") {
+      const targetInfo = API_BASE || window.location.origin;
+      window.alert(`Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf ${targetInfo}. Fuer GitHub Pages muss das Frontend dein Render-Backend nutzen.`);
       return;
     }
     window.alert(`Login fehlgeschlagen: ${error.message}`);

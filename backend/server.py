@@ -7,12 +7,13 @@ import smtplib
 import ipaddress
 import html
 import socket
+import re
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from email.message import EmailMessage
 from urllib.parse import quote, urlsplit, urlunsplit
-from flask import Flask, jsonify, request, send_from_directory, g, Response, redirect
+from flask import Flask, jsonify, request, send_from_directory, g, Response, redirect, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pyotp
@@ -22,21 +23,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "backend" / "baupass.db"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+
+def get_cors_origins():
+    origins = [
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+        "https://saa-s-flow--mahmodscharif12.replit.app",
+        re.compile(r"^https://[a-z0-9-]+\.github\.io$"),
+        re.compile(r"^https://[a-z0-9-]+\.onrender\.com$"),
+    ]
+    extra_origins = [item.strip() for item in (os.getenv("BAUPASS_CORS_ORIGINS") or "").split(",") if item.strip()]
+    return origins + extra_origins
 
 @app.route("/user/<id>")
 def user(id):
- return f"Baustellenausweis für User {id}"
-    
-
- app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    return f"Baustellenausweis fuer User {id}"
 
 from flask_cors import CORS
 # CORS mit erlaubten Origins und Credentials aktivieren (kein Wildcard!)
-CORS(app, supports_credentials=True, origins=[
-    "http://127.0.0.1:8080",
-    "http://localhost:8080",
-    "https://saa-s-flow--mahmodscharif12.replit.app"
-])
+CORS(app, supports_credentials=True, origins=get_cors_origins())
 
 SESSION_TTL_HOURS = 12
 LOGIN_MAX_ATTEMPTS = 5
@@ -422,8 +429,25 @@ def should_force_https_links(hostname):
 
 
 def get_public_base_url():
-    # Immer lokale IP für QR-Code-Links verwenden, damit Handy im WLAN zugreifen kann
-    return "http://172.20.10.2:8000"
+    configured = (os.getenv("PUBLIC_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
+    if configured:
+        return configured
+
+    if has_request_context() and request.host:
+        return f"{request.scheme}://{request.host}"
+
+    preferred_ip = get_preferred_local_ip() or "127.0.0.1"
+    port = (os.getenv("PORT") or "8000").strip() or "8000"
+    scheme = "https" if get_ssl_context_from_env() else "http"
+    default_port = "443" if scheme == "https" else "80"
+    port_suffix = "" if port == default_port else f":{port}"
+    return f"{scheme}://{preferred_ip}{port_suffix}"
+
+
+def should_use_cross_site_cookie():
+    origin = (request.headers.get("Origin") or "").strip().rstrip("/")
+    current_origin = f"{request.scheme}://{request.host}".rstrip("/")
+    return bool(origin) and origin != current_origin and request.is_secure
 
 
 def get_ssl_context_from_env():
@@ -1231,7 +1255,13 @@ def login():
     log_audit("login.success", f"Benutzer {user['username']} angemeldet", target_type="user", target_id=user["id"], actor=row_to_dict(user))
 
     response = jsonify({"token": token, "user": serialize_user(user)})
-    response.set_cookie(SESSION_COOKIE_NAME, token, httponly=True, samesite="Lax", secure=False)
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="None" if should_use_cross_site_cookie() else "Lax",
+        secure=request.is_secure,
+    )
     return response
 
 
@@ -2869,5 +2899,7 @@ def static_proxy(path):
 
 if __name__ == "__main__":
     init_db()
-    # Replit erwartet Port 8080 und host 0.0.0.0
-    app.run(host="0.0.0.0", port=8080)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8080"))
+    ssl_context = get_ssl_context_from_env()
+    app.run(host=host, port=port, ssl_context=ssl_context)

@@ -1,4 +1,29 @@
-const API_BASE = "/api/worker-app";
+const DEFAULT_RENDER_API_BASE = "https://baupass-backend.onrender.com";
+const API_BASE_STORAGE_KEY = "baupass-api-base";
+
+function normalizeApiBase(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function resolveWorkerApiBase() {
+  const params = new URL(window.location.href).searchParams;
+  const queryValue = normalizeApiBase(params.get("apiBase"));
+  const storedValue = normalizeApiBase(window.localStorage.getItem(API_BASE_STORAGE_KEY));
+  const configuredValue = queryValue || storedValue;
+
+  if (configuredValue) {
+    window.localStorage.setItem(API_BASE_STORAGE_KEY, configuredValue);
+    return `${configuredValue}/api/worker-app`;
+  }
+
+  if (window.location.hostname.endsWith("github.io")) {
+    return `${DEFAULT_RENDER_API_BASE}/api/worker-app`;
+  }
+
+  return "/api/worker-app";
+}
+
+const API_BASE = resolveWorkerApiBase();
 const WORKER_TOKEN_KEY = "baupass-worker-token";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
