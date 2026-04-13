@@ -1284,8 +1284,12 @@ def me():
 
 @app.get("/api/session/bootstrap")
 def session_bootstrap():
+    auth_header = request.headers.get("Authorization", "")
+    auth_token = auth_header.split(" ", 1)[1].strip() if auth_header.startswith("Bearer ") else ""
     cookie_token = request.cookies.get(SESSION_COOKIE_NAME, "")
-    user = get_user_from_session_token(cookie_token)
+    token = auth_token or cookie_token
+
+    user = get_user_from_session_token(token)
     if not user:
         return jsonify({"error": "unauthorized"}), 401
 
@@ -1299,10 +1303,10 @@ def session_bootstrap():
         if whitelist and not ip_allowed(get_client_ip(), whitelist):
             return jsonify({"error": "admin_ip_not_allowed"}), 403
 
-    db.execute("UPDATE sessions SET expires_at = ? WHERE token = ?", (expiry_iso(), cookie_token))
+    db.execute("UPDATE sessions SET expires_at = ? WHERE token = ?", (expiry_iso(), token))
     db.commit()
 
-    return jsonify({"token": cookie_token, "user": serialize_user(user)})
+    return jsonify({"token": token, "user": serialize_user(user)})
 
 
 @app.get("/api/system/status")
