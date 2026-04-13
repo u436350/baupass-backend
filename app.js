@@ -2662,15 +2662,12 @@ async function startCamera() {
 
   const ua = (navigator.userAgent || "").toLowerCase();
   const isMobile = /android|iphone|ipad|ipod|mobile/.test(ua);
-  const isSafariLike = /safari/.test(ua) && !/chrome|chromium|edg/.test(ua);
-  const shouldAutoOpenPicker = isMobile && isSafariLike;
 
   if (!navigator.mediaDevices?.getUserMedia) {
     if (elements.photoDebugText) {
-      elements.photoDebugText.textContent = "Browser-Kamera nicht verfuegbar. Kamera-Upload wird geoeffnet.";
+      elements.photoDebugText.textContent = "Browser-Kamera nicht verfuegbar. Bitte Foto hochladen verwenden.";
       elements.photoDebugText.style.color = "#8a5a00";
     }
-    openPhotoFilePicker({ preferCamera: true });
     return;
   }
 
@@ -2711,6 +2708,7 @@ async function startCamera() {
     }
 
     elements.cameraPreview.srcObject = cameraStream;
+    await elements.cameraPreview.play().catch(() => {});
     elements.cameraPlaceholder.hidden = true;
     if (elements.photoDebugText) {
       elements.photoDebugText.textContent = "Kamera aktiv. Du kannst jetzt ein Foto aufnehmen.";
@@ -2724,7 +2722,10 @@ async function startCamera() {
       elements.photoDebugText.textContent = reason;
       elements.photoDebugText.style.color = "#8a5a00";
     }
-    openPhotoFilePicker({ preferCamera: isMobile || shouldAutoOpenPicker });
+    if (isMobile && error?.name === "NotAllowedError") {
+      window.alert("Kamera-Zugriff wurde blockiert. Bitte Browser-Zugriff auf die Kamera erlauben und erneut auf Kamera starten klicken.");
+      return;
+    }
   }
 }
 
