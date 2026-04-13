@@ -392,6 +392,14 @@ button {
   line-height: 1;
 }
 
+.wc-subcompany {
+  margin: 0;
+  max-width: 18ch;
+  font-size: clamp(.38rem, 1.45vw, .57rem);
+  color: rgba(255, 255, 255, .55);
+  line-height: 1.1;
+}
+
 /* ═══════════════════════════════════════════════
    Below-Card Info
    ═══════════════════════════════════════════════ */

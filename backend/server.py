@@ -177,8 +177,31 @@ def apply_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
+    path = (request.path or "").lower()
+    is_pwa_asset = (
+        path in {
+            "/worker.html",
+            "/worker.css",
+            "/worker-app.js",
+            "/worker-manifest.json",
+            "/worker-sw.js",
+            "/worker-icon-192.png",
+            "/worker-icon-512.png",
+            "/worker-icon-192.svg",
+            "/worker-icon-512.svg",
+        }
+        or path.startswith("/worker-icon-")
+    )
+
+    if path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+    elif is_pwa_asset:
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        response.headers.pop("Pragma", None)
+    else:
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["Pragma"] = "no-cache"
     return response
 
 

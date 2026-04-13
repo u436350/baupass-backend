@@ -72,6 +72,7 @@ const elements = {
   workerLoginForm: document.querySelector("#workerLoginForm"),
   workerAccessToken: document.querySelector("#workerAccessToken"),
   companyName: document.querySelector("#companyName"),
+    workerSubcompany: document.querySelector("#workerSubcompany"),
   workerName: document.querySelector("#workerName"),
   workerRole: document.querySelector("#workerRole"),
   workerStatus: document.querySelector("#workerStatus"),
@@ -280,6 +281,10 @@ async function triggerInstall() {
   }
 
   if (isAndroidDevice()) {
+      if (!isAndroidChrome()) {
+        showWorkerNotice("Bitte in Google Chrome oeffnen. Nur dort funktioniert die direkte Installation ohne Play Store.");
+        return;
+      }
     showWorkerNotice("Android: Im Browser-Menue auf 'App installieren' oder 'Zum Startbildschirm' tippen.");
     return;
   }
@@ -342,8 +347,19 @@ async function loadWorkerData() {
 function renderWorker(payload) {
   const worker = payload.worker || {};
   const company = payload.company || {};
+    const subcompany = payload.subcompany || {};
 
   if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
+    if (elements.workerSubcompany) {
+      const subcompanyName = String(subcompany.name || "").trim();
+      if (subcompanyName) {
+        elements.workerSubcompany.textContent = subcompanyName;
+        elements.workerSubcompany.classList.remove("hidden");
+      } else {
+        elements.workerSubcompany.textContent = "";
+        elements.workerSubcompany.classList.add("hidden");
+      }
+    }
   if (elements.workerName) elements.workerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim();
   if (elements.workerRole) elements.workerRole.textContent = worker.role || "-";
   if (elements.workerStatus) elements.workerStatus.textContent = worker.status || "-";
@@ -583,6 +599,12 @@ function isAndroidDevice() {
   return /Android/i.test(navigator.userAgent || "");
 }
 
+  function isAndroidChrome() {
+    const ua = navigator.userAgent || "";
+    const isChrome = /Chrome\//i.test(ua) && !/EdgA\//i.test(ua) && !/OPR\//i.test(ua) && !/SamsungBrowser\//i.test(ua);
+    return isAndroidDevice() && isChrome;
+  }
+
 function updatePlatformInstallHint() {
   if (!elements.installPlatformHint) {
     return;
@@ -599,7 +621,11 @@ function updatePlatformInstallHint() {
   }
 
   if (isAndroidDevice()) {
-    elements.installPlatformHint.textContent = "Android: Browser-Menue > App installieren. Danach direkt als Wallet-Pass fuer den Scanner nutzbar.";
+      if (isAndroidChrome()) {
+        elements.installPlatformHint.textContent = "Android (Chrome): Menue > App installieren. Danach wie eine normale Handy-App nutzbar.";
+      } else {
+        elements.installPlatformHint.textContent = "Android: Bitte in Google Chrome oeffnen, dann Menue > App installieren.";
+      }
     return;
   }
 

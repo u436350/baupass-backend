@@ -1,8 +1,11 @@
 {
+  "id": "/worker.html",
   "name": "BauPass Mitarbeiter-App",
   "short_name": "BauPass",
+  "description": "Digitaler Mitarbeiterausweis fuer Einlasskontrolle am Drehkreuz.",
   "start_url": "/worker.html",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0f1923",
   "theme_color": "#d95d39",
   "scope": "/",
