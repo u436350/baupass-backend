@@ -2662,6 +2662,18 @@ async function startCamera() {
 
   const ua = (navigator.userAgent || "").toLowerCase();
   const isMobile = /android|iphone|ipad|ipod|mobile/.test(ua);
+  const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+  const requestUserMedia = async (constraints) => {
+    if (navigator.mediaDevices?.getUserMedia) {
+      return navigator.mediaDevices.getUserMedia(constraints);
+    }
+    if (legacyGetUserMedia) {
+      return new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+      });
+    }
+    throw new Error("getUserMedia_not_supported");
+  };
 
   const buildCameraErrorMessage = (error) => {
     const errorName = String(error?.name || "").trim();
@@ -2680,12 +2692,16 @@ async function startCamera() {
     if (errorName === "OverconstrainedError" || errorName === "ConstraintNotSatisfiedError") {
       return "Kamera konnte mit den angeforderten Einstellungen nicht gestartet werden.";
     }
+    if (errorName === "" && error?.message === "getUserMedia_not_supported") {
+      return "Dieser Browser stellt keine Live-Kamera-API bereit.";
+    }
     return `Kamera konnte nicht gestartet werden: ${error?.message || errorName || "unbekannter Fehler"}`;
   };
 
-  if (!navigator.mediaDevices?.getUserMedia) {
+  if (!navigator.mediaDevices?.getUserMedia && !legacyGetUserMedia) {
     if (elements.photoDebugText) {
-      elements.photoDebugText.textContent = "Browser-Kamera nicht verfuegbar. Bitte Foto hochladen verwenden.";
+      const secureHint = window.isSecureContext ? "" : " HTTPS oder localhost ist erforderlich.";
+      elements.photoDebugText.textContent = `Browser-Kamera nicht verfuegbar.${secureHint}`;
       elements.photoDebugText.style.color = "#8a5a00";
     }
     return;
@@ -2712,7 +2728,7 @@ async function startCamera() {
 
     for (const videoConstraint of videoConstraintCandidates) {
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
+        cameraStream = await requestUserMedia({
           video: videoConstraint,
           audio: false
         });
@@ -2724,12 +2740,12 @@ async function startCamera() {
       }
     }
 
-    if (!cameraStream && navigator.mediaDevices.enumerateDevices) {
+    if (!cameraStream && navigator.mediaDevices?.enumerateDevices) {
       const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
       const videoInputs = devices.filter((device) => device.kind === "videoinput");
       for (const device of videoInputs) {
         try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({
+          cameraStream = await requestUserMedia({
             video: { deviceId: { exact: device.deviceId } },
             audio: false
           });
