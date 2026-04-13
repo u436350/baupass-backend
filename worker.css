@@ -1,14 +1,17 @@
+/* ═══════════════════════════════════════════════════════
+   BauPass Mitarbeiter-App – Wallet-Card Redesign
+   ═══════════════════════════════════════════════════════ */
+
 :root {
   --bg: #f3efe7;
   --card: rgba(255, 251, 245, 0.92);
   --text: #171717;
   --muted: #5f635f;
   --accent: #d95d39;
+  --accent-dark: #b94a2a;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -21,65 +24,55 @@ body {
 }
 
 .app-shell {
-  max-width: 720px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 16px;
   display: grid;
   gap: 16px;
 }
 
-.top h1,
-.card h2 {
-  margin: 0;
-  font-family: "Space Grotesk", sans-serif;
-}
+/* ── Shared Typography ─────────────────────────── */
+.top h1, .card h2 { margin: 0; font-family: "Space Grotesk", sans-serif; }
 
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: .12em;
   font-weight: 700;
   color: var(--accent);
-  font-size: 0.75rem;
+  font-size: .75rem;
 }
 
+/* ── Generic Card Shell ────────────────────────── */
 .card {
   background: var(--card);
-  border: 1px solid rgba(23, 23, 23, 0.08);
+  border: 1px solid rgba(23, 23, 23, .08);
   border-radius: 18px;
   padding: 16px;
 }
 
+/* ── Login Notice ──────────────────────────────── */
 .worker-notice {
   margin: 10px 0 14px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(168, 37, 37, 0.4);
-  background: rgba(255, 230, 230, 0.92);
+  border: 1px solid rgba(168, 37, 37, .4);
+  background: rgba(255, 230, 230, .92);
   color: #7f1d1d;
   font-weight: 600;
 }
 
-.grid {
-  display: grid;
-  gap: 10px;
-}
+/* ── Form ──────────────────────────────────────── */
+.grid { display: grid; gap: 10px; }
 
-label {
-  display: grid;
-  gap: 8px;
-  font-weight: 600;
-}
+label { display: grid; gap: 8px; font-weight: 600; }
 
-input,
-button {
-  font: inherit;
-}
+input, button { font: inherit; }
 
 input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid rgba(23, 23, 23, 0.12);
+  border: 1px solid rgba(23, 23, 23, .12);
   border-radius: 12px;
 }
 
@@ -98,54 +91,360 @@ button {
 
 .ghost {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(23, 23, 23, 0.1);
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(23, 23, 23, .1);
 }
 
-.badge-head {
+.small-btn {
+  padding: 9px 14px;
+  font-size: .85rem;
+}
+
+/* ═══════════════════════════════════════════════
+   WALLET CARD
+   ═══════════════════════════════════════════════ */
+
+.wallet-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  /* Standard-Kreditkartenformat 85.6 × 53.98 mm */
+  aspect-ratio: 85.6 / 54;
+  border-radius: 16px;
+  padding: 5.5% 6%;
+  background: linear-gradient(
+    135deg,
+    #0f1923 0%,
+    #1a2d3d 45%,
+    #0d1520 100%
+  );
+  box-shadow:
+    0 28px 60px rgba(0, 0, 0, .55),
+    0  4px 20px rgba(0, 0, 0, .35),
+    0  0   0  1px rgba(255, 255, 255, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+  color: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  user-select: none;
+}
+
+/* Farbstreifen oben */
+.wallet-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    #f0844a 50%,
+    var(--accent) 100%
+  );
+  height: 3px;
+  bottom: auto;
+}
+
+/* Holographischer Shimmer */
+.wc-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(217, 93, 57, .10) 38%,
+    rgba(255, 200, 100, .08) 46%,
+    rgba(217, 93, 57, .06) 54%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 220% 220%;
+  animation: holo 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes holo {
+  0%   { background-position: 200% 200%; }
+  50%  { background-position:   0%   0%; }
+  100% { background-position: 200% 200%; }
+}
+
+/* Punkt-Raster Textur */
+.wc-grid {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+
+/* ── Top Row ────────────────────────────────────── */
+.wc-top {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
 }
 
-.status {
-  align-self: flex-start;
-  background: rgba(22, 120, 87, 0.14);
-  color: #167857;
-  border-radius: 999px;
-  padding: 8px 12px;
+.wc-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.wc-brand-mark {
+  width: clamp(26px, 7%, 32px);
+  height: clamp(26px, 7%, 32px);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(217, 93, 57, .45);
+  flex-shrink: 0;
+}
+
+.wc-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wc-brand-name {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(.55rem, 2.4vw, .82rem);
   font-weight: 700;
+  letter-spacing: .16em;
+  line-height: 1;
+  color: #fff;
 }
 
-.badge-body {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
+.wc-brand-sub {
+  font-size: clamp(.4rem, 1.6vw, .58rem);
+  color: rgba(255, 255, 255, .45);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
-#workerPhoto {
-  width: 120px;
-  height: 150px;
+.wc-nfc {
+  opacity: .75;
+  flex-shrink: 0;
+}
+
+/* ── Middle Row ─────────────────────────────────── */
+.wc-middle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* EMV-Chip */
+.wc-chip {
+  width: clamp(36px, 9.5%, 46px);
+  height: clamp(27px, 7%, 35px);
+  background: linear-gradient(135deg, #c8a84b, #e8c96b 40%, #a87832 70%, #d4a843);
+  border-radius: 5px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
+  flex-shrink: 0;
+}
+
+.wc-chip-inner {
+  position: absolute;
+  inset: 20% 18%;
+  border: 1px solid rgba(130, 90, 15, .65);
+  border-radius: 3px;
+}
+
+.wc-chip::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(130, 90, 15, .45);
+  transform: translateX(-50%);
+}
+
+/* Mitarbeiterfoto */
+.wc-photo {
+  width: clamp(44px, 13%, 60px);
+  height: clamp(44px, 13%, 60px);
+  border-radius: 50%;
   object-fit: cover;
-  border-radius: 14px;
-  border: 1px solid rgba(23, 23, 23, 0.1);
+  border: 2px solid rgba(217, 93, 57, .65);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+  flex-shrink: 0;
 }
 
-.meta p {
-  margin: 0 0 8px;
+/* ── Bottom Row ─────────────────────────────────── */
+.wc-bottom {
+  position: relative;
+  z-index: 1;
 }
+
+.wc-name {
+  margin: 0 0 1px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(.7rem, 2.8vw, 1rem);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.wc-role-text {
+  margin: 0 0 5px;
+  font-size: clamp(.5rem, 1.9vw, .68rem);
+  color: rgba(255, 255, 255, .55);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+
+.wc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wc-fields {
+  display: flex;
+  gap: clamp(10px, 4%, 20px);
+}
+
+.wc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wc-field-label {
+  font-size: clamp(.38rem, 1.4vw, .52rem);
+  color: rgba(255, 255, 255, .38);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  line-height: 1;
+}
+
+.wc-field-value {
+  font-family: "Space Grotesk", monospace;
+  font-size: clamp(.52rem, 1.9vw, .72rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, .9);
+  letter-spacing: .04em;
+  line-height: 1;
+}
+
+.wc-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.wc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(.42rem, 1.6vw, .6rem);
+  font-weight: 700;
+  color: #4ade80;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  line-height: 1;
+}
+
+.wc-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 7px rgba(74, 222, 128, .7);
+  flex-shrink: 0;
+}
+
+.wc-company {
+  margin: 0;
+  font-size: clamp(.38rem, 1.4vw, .55rem);
+  color: rgba(255, 255, 255, .3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   Below-Card Info
+   ═══════════════════════════════════════════════ */
+
+.below-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, .65);
+  border: 1px solid rgba(23, 23, 23, .07);
+  border-radius: 14px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-icon { font-size: .9rem; }
+
+.info-label {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.info-value {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-left: auto;
+}
+
+/* ═══════════════════════════════════════════════
+   QR-Code
+   ═══════════════════════════════════════════════ */
 
 .qr-wrap {
-  margin-top: 12px;
+  margin-top: 14px;
   display: grid;
   place-items: center;
+  gap: 8px;
+}
+
+.qr-label {
+  margin: 0;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
 }
 
 #workerQr {
-  width: 220px;
+  width: 200px;
   border-radius: 14px;
-  border: 1px solid rgba(23, 23, 23, 0.08);
+  border: 1px solid rgba(23, 23, 23, .08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
 }
 
 .actions {
@@ -154,6 +453,5 @@ button {
   gap: 10px;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
+

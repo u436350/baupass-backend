@@ -20,6 +20,79 @@ import pyotp
 import qrcode
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ──────────────────────────────────────────────
+# PWA-Icon-Generierung (PNG, einmalig gecacht)
+# ──────────────────────────────────────────────
+_icon_png_cache: dict[int, bytes] = {}
+
+
+def _generate_icon_png(size: int) -> bytes:
+    """Erzeugt ein PNG-Icon (size×size) mit Baupass-Branding."""
+    if size in _icon_png_cache:
+        return _icon_png_cache[size]
+
+    from PIL import Image, ImageDraw, ImageFont
+    import io as _io
+
+    r1, g1, b1 = 217, 93, 57    # #d95d39 (orange)
+    r2, g2, b2 = 18, 20, 23     # #121417 (dunkel)
+    radius = max(4, size // 6)
+    denom = max(1, 2 * (size - 1))
+
+    try:
+        import numpy as np
+        yi, xi = np.mgrid[0:size, 0:size]
+        t = (xi + yi) / denom
+        arr = np.zeros((size, size, 4), dtype=np.uint8)
+        arr[:, :, 0] = np.clip(r1 + (r2 - r1) * t, 0, 255).astype(np.uint8)
+        arr[:, :, 1] = np.clip(g1 + (g2 - g1) * t, 0, 255).astype(np.uint8)
+        arr[:, :, 2] = np.clip(b1 + (b2 - b1) * t, 0, 255).astype(np.uint8)
+        arr[:, :, 3] = 255
+        img_raw = Image.fromarray(arr, "RGBA")
+    except ImportError:
+        pixels = bytearray(size * size * 4)
+        idx = 0
+        for y in range(size):
+            for x in range(size):
+                tn = x + y
+                pixels[idx]     = r1 + (r2 - r1) * tn // denom
+                pixels[idx + 1] = g1 + (g2 - g1) * tn // denom
+                pixels[idx + 2] = b1 + (b2 - b1) * tn // denom
+                pixels[idx + 3] = 255
+                idx += 4
+        img_raw = Image.frombytes("RGBA", (size, size), bytes(pixels))
+
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=radius, fill=255)
+    result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    result.paste(img_raw, mask=mask)
+
+    draw = ImageDraw.Draw(result)
+    text = "BP"
+    font_size = size // 3
+    font = None
+    for fp in ["arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf",
+               "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+               "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]:
+        try:
+            font = ImageFont.truetype(fp, font_size)
+            break
+        except Exception:
+            pass
+    if font is None:
+        font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((size - tw) // 2 - bbox[0], (size - th) // 2 - bbox[1]),
+              text, fill=(255, 247, 239, 255), font=font)
+
+    buf = _io.BytesIO()
+    result.save(buf, "PNG")
+    data = buf.getvalue()
+    _icon_png_cache[size] = data
+    return data
 DB_PATH = BASE_DIR / "backend" / "baupass.db"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
@@ -2886,6 +2959,18 @@ def root():
 @app.get("/worker.html")
 def worker_entry_redirect():
     return send_from_directory(BASE_DIR, "worker.html")
+
+
+@app.get("/worker-icon-<int:icon_size>.png")
+def worker_icon_png(icon_size: int):
+    if icon_size not in (192, 512):
+        return jsonify({"error": "not_found"}), 404
+    data = _generate_icon_png(icon_size)
+    if not data:
+        return jsonify({"error": "icon_generation_failed"}), 500
+    response = Response(data, mimetype="image/png")
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 @app.get("/<path:path>")

@@ -33,46 +33,102 @@
     </section>
 
     <section id="badgeCard" class="card hidden">
-      <div class="badge-head">
-        <div>
-          <p class="eyebrow" id="companyName">Baufirma</p>
-          <h2 id="workerName">Mitarbeiter</h2>
-          <p id="workerRole">Rolle</p>
-        </div>
-        <span id="workerStatus" class="status">aktiv</span>
-      </div>
 
-      <div class="badge-body">
-        <img id="workerPhoto" alt="Mitarbeiterfoto" />
-        <div style="margin-top:10px;">
-          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
-          <button id="changePhotoButton" type="button">Foto aufnehmen/hochladen</button>
-        </div>
-        <!-- Kamera-Overlay für Fotoaufnahme und Vorschau -->
-        <div id="cameraOverlay" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; flex-direction:column;">
-          <video id="cameraVideo" autoplay playsinline style="max-width:90vw; max-height:40vh; border-radius:12px; background:#222;"></video>
-          <div id="photoPreviewWrap" style="margin-top:16px; display:none; flex-direction:column; align-items:center;">
-            <canvas id="cameraCanvas" style="max-width:90vw; max-height:30vh; border:2px solid #fff; border-radius:8px;"></canvas>
-            <div style="margin-top:8px; display:flex; gap:10px;">
-              <button id="rotatePhotoButton" type="button">Drehen</button>
-              <button id="deletePhotoButton" type="button">Löschen</button>
+      <!-- ══════════ WALLET-CARD ══════════ -->
+      <div class="wallet-card">
+        <div class="wc-shimmer"></div>
+        <div class="wc-grid"></div>
+
+        <!-- Top: Marke + NFC -->
+        <div class="wc-top">
+          <div class="wc-brand">
+            <div class="wc-brand-mark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 17L12 4l9 13H3z" fill="#fff" fill-opacity=".9"/>
+                <rect x="7" y="17" width="10" height="4" rx="1" fill="#fff" fill-opacity=".7"/>
+                <rect x="10" y="13" width="4" height="4" fill="#fff" fill-opacity=".5"/>
+              </svg>
+            </div>
+            <div class="wc-brand-text">
+              <span class="wc-brand-name">BAUPASS</span>
+              <span class="wc-brand-sub">Mitarbeiterausweis</span>
             </div>
           </div>
-          <div style="margin-top:16px; display:flex; gap:12px;">
-            <button id="takePhotoButton" type="button">Foto aufnehmen</button>
-            <button id="confirmPhotoButton" type="button" style="display:none;">Übernehmen</button>
-            <button id="retakePhotoButton" type="button" style="display:none;">Neu aufnehmen</button>
-            <button id="closeCameraButton" type="button">Abbrechen</button>
+          <!-- NFC-Symbol -->
+          <svg class="wc-nfc" width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path d="M4 13a9 9 0 019-9" stroke="rgba(255,255,255,.75)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M7.5 13a5.5 5.5 0 015.5-5.5" stroke="rgba(255,255,255,.55)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M11 13a2 2 0 012-2" stroke="rgba(255,255,255,.4)" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="13" cy="13" r="1.2" fill="rgba(255,255,255,.6)"/>
+          </svg>
+        </div>
+
+        <!-- Mitte: Chip + Foto -->
+        <div class="wc-middle">
+          <div class="wc-chip">
+            <div class="wc-chip-inner"></div>
+          </div>
+          <img id="workerPhoto" class="wc-photo" alt="Mitarbeiterfoto" />
+        </div>
+
+        <!-- Unten: Name + Felder -->
+        <div class="wc-bottom">
+          <p id="workerName" class="wc-name">Mitarbeiter</p>
+          <p id="workerRole" class="wc-role-text">Rolle</p>
+          <div class="wc-footer">
+            <div class="wc-fields">
+              <div class="wc-field">
+                <span class="wc-field-label">Badge-ID</span>
+                <span id="workerBadgeId" class="wc-field-value">–</span>
+              </div>
+              <div class="wc-field">
+                <span class="wc-field-label">Gültig bis</span>
+                <span id="workerValidUntil" class="wc-field-value">–</span>
+              </div>
+            </div>
+            <div class="wc-right">
+              <div id="workerStatus" class="wc-status">Aktiv</div>
+              <p id="companyName" class="wc-company">Baufirma</p>
+            </div>
           </div>
         </div>
-        <div class="meta">
-          <p><strong>Badge-ID:</strong> <span id="workerBadgeId"></span></p>
-          <p><strong>Baustelle:</strong> <span id="workerSite"></span></p>
-          <p><strong>Gueltig bis:</strong> <span id="workerValidUntil"></span></p>
+      </div>
+      <!-- ══════════════════════════════════ -->
+
+      <!-- Baustelle & Foto-Aktion -->
+      <div class="below-card">
+        <div class="info-row">
+          <span class="info-icon">📍</span>
+          <span class="info-label">Baustelle</span>
+          <span id="workerSite" class="info-value">–</span>
+        </div>
+        <div style="margin-top:10px;">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
+          <button id="changePhotoButton" class="ghost small-btn" type="button">📷 Foto aufnehmen / hochladen</button>
         </div>
       </div>
 
+      <!-- Kamera-Overlay (unverändert) -->
+      <div id="cameraOverlay" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; flex-direction:column;">
+        <video id="cameraVideo" autoplay playsinline style="max-width:90vw; max-height:40vh; border-radius:12px; background:#222;"></video>
+        <div id="photoPreviewWrap" style="margin-top:16px; display:none; flex-direction:column; align-items:center;">
+          <canvas id="cameraCanvas" style="max-width:90vw; max-height:30vh; border:2px solid #fff; border-radius:8px;"></canvas>
+          <div style="margin-top:8px; display:flex; gap:10px;">
+            <button id="rotatePhotoButton" type="button">Drehen</button>
+            <button id="deletePhotoButton" type="button">Löschen</button>
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:12px;">
+          <button id="takePhotoButton" type="button">Foto aufnehmen</button>
+          <button id="confirmPhotoButton" type="button" style="display:none;">Übernehmen</button>
+          <button id="retakePhotoButton" type="button" style="display:none;">Neu aufnehmen</button>
+          <button id="closeCameraButton" type="button">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- QR-Code -->
       <div class="qr-wrap">
+        <p class="qr-label">Einlasskontrolle scannen</p>
         <img id="workerQr" alt="QR Code" />
       </div>
 
