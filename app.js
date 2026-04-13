@@ -315,7 +315,7 @@ function getAllowedViewsForRole(role) {
     return ["dashboard", "workers", "badge", "access", "admin"];
   }
   if (normalized === "company-admin") {
-    return ["dashboard", "workers", "badge", "access", "admin"];
+    return ["dashboard", "workers", "badge", "access"];
   }
   if (normalized === "turnstile") {
     return ["access", "dashboard"];
