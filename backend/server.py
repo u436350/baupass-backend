@@ -23,8 +23,9 @@ DB_PATH = BASE_DIR / "backend" / "baupass.db"
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 
-@app.route("/api/session/login", methods=["POST"])
-def login():
+@app.route("/user/<id>")
+def user(id):
+ return f"Baustellenausweis für User {id}"
     
 
  app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
