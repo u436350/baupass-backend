@@ -2566,6 +2566,13 @@ async function handleLoginSubmit(event) {
       }
     });
 
+    if (payload?.ok === false || payload?.error) {
+      throw new Error(payload?.error || "login_failed");
+    }
+    if (!payload?.token || !payload?.user) {
+      throw new Error("invalid_login_response");
+    }
+
     token = payload.token;
     elements.loginForm.reset();
 
@@ -2595,6 +2602,10 @@ async function handleLoginSubmit(event) {
       window.alert("Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.");
       return;
     }
+    if (error.message === "invalid_credentials") {
+      window.alert("Benutzername oder Passwort ist falsch. Bitte Daten pruefen und erneut versuchen.");
+      return;
+    }
     if (error.message === "admin_ip_not_allowed") {
       window.alert("Admin-Zugriff von dieser IP ist nicht erlaubt.");
       return;
@@ -2606,6 +2617,10 @@ async function handleLoginSubmit(event) {
     if (error.message === "http_405") {
       const targetInfo = API_BASE || window.location.origin;
       window.alert(`Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf ${targetInfo}. Fuer GitHub Pages muss das Frontend dein Render-Backend nutzen.`);
+      return;
+    }
+    if (error.message === "invalid_login_response") {
+      window.alert("Login-Antwort vom Server ist unvollstaendig. Bitte Seite neu laden und erneut versuchen.");
       return;
     }
     window.alert(`Login fehlgeschlagen: ${error.message}`);

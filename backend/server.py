@@ -429,6 +429,7 @@ def render_login_page():
                     event.preventDefault();
                     errorBox.style.display = 'none';
                     let res;
+                    let p = null;
                     try {
                         res = await fetch('/api/login', {
                             method: 'POST',
@@ -444,11 +445,15 @@ def render_login_page():
                         showError('Backend nicht erreichbar. Bitte Seite neu laden und Server pruefen.');
                         return;
                     }
-                    if (!res.ok) {
-                        const p = await res.json().catch(() => ({ error: 'login_failed' }));
-                        const code = p.error || String(res.status);
+                    p = await res.json().catch(() => ({ error: 'login_failed' }));
+                    const code = (p && p.error) ? p.error : (!res.ok ? String(res.status) : '');
+                    if (code) {
                         if (code === 'too_many_attempts') {
                             showError('Zu viele Fehlversuche. Bitte spaeter erneut versuchen.');
+                            return;
+                        }
+                        if (code === 'invalid_credentials') {
+                            showError('Benutzername oder Passwort ist falsch. Bitte Daten pruefen.');
                             return;
                         }
                         if (code === 'otp_required') {
@@ -472,6 +477,10 @@ def render_login_page():
                             return;
                         }
                         showError('Login fehlgeschlagen: ' + code);
+                        return;
+                    }
+                    if (!p || p.ok !== true || !p.token) {
+                        showError('Login-Antwort unvollstaendig. Bitte erneut versuchen.');
                         return;
                     }
                     location.href = '/';
@@ -1304,10 +1313,15 @@ def qr_data_url():
 
 @app.post("/api/login")
 def login():
+    def login_error(code, **extra):
+        payload = {"ok": False, "error": code}
+        payload.update(extra)
+        return jsonify(payload)
+
     throttle_key = build_login_throttle_key()
     allowed, retry_after = can_attempt_login(throttle_key)
     if not allowed:
-        return jsonify({"error": "too_many_attempts", "retryAfterSeconds": retry_after}), 429
+        return login_error("too_many_attempts", retryAfterSeconds=retry_after)
 
     payload = request.get_json(silent=True) or {}
     username = (payload.get("username") or "").strip().lower()
@@ -1321,7 +1335,7 @@ def login():
     if not user or not check_password_hash(user["password_hash"], password):
         register_login_failure(throttle_key)
         log_audit("login.failed", f"Fehlgeschlagener Login fuer {username or 'unbekannt'}")
-        return jsonify({"error": "invalid_credentials"}), 401
+        return login_error("invalid_credentials")
 
     required_role_by_scope = {
         "server-admin": "superadmin",
@@ -1332,20 +1346,20 @@ def login():
     if required_role and user["role"] != required_role:
         register_login_failure(throttle_key)
         log_audit("login.failed", f"Login-Typ passt nicht zu {username or 'unbekannt'}")
-        return jsonify({"error": "login_scope_mismatch"}), 403
+        return login_error("login_scope_mismatch")
 
     if int(user["twofa_enabled"]) == 1:
         if not otp_code:
             register_login_failure(throttle_key)
-            return jsonify({"error": "otp_required"}), 401
+            return login_error("otp_required")
         totp = pyotp.TOTP(user["twofa_secret"])
         if not totp.verify(otp_code, valid_window=1):
             register_login_failure(throttle_key)
-            return jsonify({"error": "otp_invalid"}), 401
+            return login_error("otp_invalid")
 
     if not is_tenant_host_valid(db, row_to_dict(user)):
         register_login_failure(throttle_key)
-        return jsonify({"error": "forbidden_tenant_host"}), 403
+        return login_error("forbidden_tenant_host")
 
     clear_login_failures(throttle_key)
 
@@ -1359,7 +1373,7 @@ def login():
 
     log_audit("login.success", f"Benutzer {user['username']} angemeldet", target_type="user", target_id=user["id"], actor=row_to_dict(user))
 
-    response = jsonify({"token": token, "user": serialize_user(user)})
+    response = jsonify({"ok": True, "token": token, "user": serialize_user(user)})
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
