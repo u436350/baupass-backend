@@ -680,13 +680,15 @@ function updateTopbarActionsState(loggedIn) {
   }
 
   if (elements.exportButton) {
-    elements.exportButton.style.display = loggedIn ? "inline-flex" : "none";
-    elements.exportButton.disabled = false;
+    const canExport = role === "superadmin" || role === "company-admin";
+    elements.exportButton.style.display = loggedIn && canExport ? "inline-flex" : "none";
+    elements.exportButton.disabled = !canExport;
+    elements.exportButton.title = canExport ? "" : "Nur fuer Admin-Rollen";
   }
 
   if (elements.importButton) {
     const canImport = role === "superadmin" || role === "company-admin";
-    elements.importButton.style.display = loggedIn ? "inline-flex" : "none";
+    elements.importButton.style.display = loggedIn && canImport ? "inline-flex" : "none";
     elements.importButton.disabled = !canImport;
     elements.importButton.title = canImport ? "" : "Nur fuer Admin-Rollen";
   }
