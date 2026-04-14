@@ -3016,6 +3016,56 @@ function getInvoiceCollectionsMeta(invoice) {
   };
 }
 
+function renderCollectionsKpis(allOpenRows) {
+  const kpiContainer = document.querySelector("#collectionsKpiGrid");
+  if (!kpiContainer) {
+    return;
+  }
+
+  const rows = Array.isArray(allOpenRows) ? allOpenRows : [];
+  const totals = {
+    all: { count: 0, amount: 0 },
+    overdue: { count: 0, amount: 0 },
+    prelock: { count: 0, amount: 0 },
+    locked: { count: 0, amount: 0 },
+  };
+
+  rows.forEach(({ invoice, meta }) => {
+    const amount = Number(invoice?.total_amount || 0);
+    totals.all.count += 1;
+    totals.all.amount += amount;
+    if (meta?.overdue) {
+      totals.overdue.count += 1;
+      totals.overdue.amount += amount;
+    }
+    if (meta?.prelock) {
+      totals.prelock.count += 1;
+      totals.prelock.amount += amount;
+    }
+    if (meta?.locked) {
+      totals.locked.count += 1;
+      totals.locked.amount += amount;
+    }
+  });
+
+  const cards = [
+    ["Offen gesamt", totals.all],
+    ["Ueberfaellig", totals.overdue],
+    ["Vor Sperre", totals.prelock],
+    ["Gesperrte Firmen", totals.locked],
+  ];
+
+  kpiContainer.innerHTML = cards
+    .map(([label, data]) => `
+      <article class="card-item" style="display:inline-block; min-width:220px; margin:0 8px 8px 0;">
+        <p class="helper-text">${escapeHtml(label)}</p>
+        <strong>${escapeHtml(String(data.count))}</strong>
+        <p class="helper-text">${escapeHtml(formatCurrency(data.amount))}</p>
+      </article>
+    `)
+    .join("");
+}
+
 function renderCollectionsList() {
   const container = document.querySelector("#collectionsList");
   if (!container) {
@@ -3026,9 +3076,13 @@ function renderCollectionsList() {
   const role = String(getCurrentUser()?.role || "").toLowerCase();
   const canToggleLock = role === "superadmin";
 
-  let rows = (state.invoices || [])
+  const allOpenRows = (state.invoices || [])
     .map((invoice) => ({ invoice, meta: getInvoiceCollectionsMeta(invoice) }))
     .filter((entry) => entry.meta.open);
+
+  renderCollectionsKpis(allOpenRows);
+
+  let rows = [...allOpenRows];
 
   if (filter === "overdue") {
     rows = rows.filter((entry) => entry.meta.overdue);
