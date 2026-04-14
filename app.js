@@ -75,6 +75,9 @@ const elements = {
   views: Array.from(document.querySelectorAll(".view")),
   navLinks: Array.from(document.querySelectorAll(".nav-link")),
   statsGrid: document.querySelector("#statsGrid"),
+  reportingSummaryGrid: document.querySelector("#reportingSummaryGrid"),
+  reportingTopOverdueList: document.querySelector("#reportingTopOverdueList"),
+  reportingAccessDaily: document.querySelector("#reportingAccessDaily"),
   recentAccessList: document.querySelector("#recentAccessList"),
   dashboardPorterLivePanel: document.querySelector("#dashboardPorterLivePanel"),
   workerList: document.querySelector("#workerList"),
@@ -157,6 +160,7 @@ const state = {
   workers: [],
   accessLogs: [],
   accessInsights: { hourly: [], openEntries: [] },
+  reporting: { kpis: {}, accessDaily: [], topOverdueCompanies: [] },
   invoices: [],
   companyRepairHistory: {},
   companyRepairBusy: {},
@@ -428,10 +432,10 @@ function getDefaultViewForRole(role) {
 function getAllowedViewsForRole(role) {
   const normalized = String(role || "").toLowerCase();
   if (normalized === "superadmin") {
-    return ["dashboard", "workers", "badge", "access", "admin"];
+    return ["dashboard", "workers", "badge", "access", "invoices", "admin"];
   }
   if (normalized === "company-admin") {
-    return ["dashboard", "workers", "badge", "access"];
+    return ["dashboard", "workers", "badge", "access", "invoices"];
   }
   if (normalized === "turnstile") {
     return ["access", "dashboard"];
@@ -549,6 +553,7 @@ async function loadAllData() {
   token = bootstrap.token || token;
   state.currentUser = bootstrap.user || null;
 
+  const reportUrl = `${API_BASE}/api/reporting/summary`;
   const requests = await Promise.allSettled([
     apiRequest(`${API_BASE}/api/settings`),
     apiRequest(`${API_BASE}/api/companies`),
@@ -558,10 +563,11 @@ async function loadAllData() {
     apiRequest(`${API_BASE}/api/invoices`),
     apiRequest(`${API_BASE}/api/access-logs/summary`),
     apiRequest(`${API_BASE}/api/access-logs/day-close-check`),
-    apiRequest(`${API_BASE}/api/audit-logs?eventType=company.repair&targetType=company&limit=120`)
+    apiRequest(`${API_BASE}/api/audit-logs?eventType=company.repair&targetType=company&limit=120`),
+    apiRequest(reportUrl)
   ]);
 
-  const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit] = requests;
+  const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit, reporting] = requests;
   if (settings.status === "fulfilled") state.settings = settings.value || state.settings;
   if (companies.status === "fulfilled") state.companies = companies.value || [];
   if (subcompanies.status === "fulfilled") state.subcompanies = subcompanies.value || [];
@@ -569,6 +575,7 @@ async function loadAllData() {
   if (accessLogs.status === "fulfilled") state.accessLogs = (accessLogs.value || []).map(normalizeLog);
   if (invoices.status === "fulfilled") state.invoices = invoices.value || [];
   if (summary.status === "fulfilled") state.accessInsights = summary.value || state.accessInsights;
+  if (reporting.status === "fulfilled") state.reporting = reporting.value || state.reporting;
   if (dayClose.status === "fulfilled") state.dayClose = dayClose.value || null;
   if (repairAudit.status === "fulfilled") {
     const grouped = {};
@@ -619,6 +626,7 @@ function refreshAll() {
   enforceRoleViewAccess();
 
   renderStats();
+  renderReportingPanels();
   renderWorkerList();
   renderCompanyList();
   populateWorkerSelectOptions();
@@ -696,6 +704,100 @@ function renderStats() {
   elements.statsGrid.innerHTML = cards
     .map(([label, value]) => `<article class="stat-card"><p>${escapeHtml(label)}</p><strong>${escapeHtml(String(value))}</strong></article>`)
     .join("");
+}
+
+function formatCurrencyEur(value) {
+  const numeric = Number(value || 0);
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number.isFinite(numeric) ? numeric : 0);
+}
+
+function renderReportingPanels() {
+  const summaryGrid = elements.reportingSummaryGrid;
+  const topOverdueList = elements.reportingTopOverdueList;
+  const accessDailyList = elements.reportingAccessDaily;
+  if (!summaryGrid || !topOverdueList || !accessDailyList) {
+    return;
+  }
+
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  if (role !== "superadmin" && role !== "company-admin") {
+    summaryGrid.innerHTML = "";
+    topOverdueList.innerHTML = "";
+    accessDailyList.innerHTML = "";
+    return;
+  }
+
+  const kpis = state.reporting?.kpis || {};
+  const generatedAt = state.reporting?.generatedAt || "";
+  const summaryCards = [
+    ["Bezahlt", formatCurrencyEur(kpis.paidTotal)],
+    ["Offen", formatCurrencyEur(kpis.openTotal)],
+    ["Ueberfaellig", `${Number(kpis.overdueInvoiceCount || 0)} Rechnungen`],
+    ["Ueberfaellige Summe", formatCurrencyEur(kpis.overdueTotal)],
+    ["Gesperrte Firmen", String(Number(kpis.lockedCompanies || 0))],
+    ["Auto-Sperren (30d)", String(Number(kpis.suspensionsLast30d || 0))]
+  ];
+
+  summaryGrid.innerHTML = summaryCards
+    .map(([label, value]) => `
+      <article class="card-item">
+        <p class="helper-text">${escapeHtml(label)}</p>
+        <strong>${escapeHtml(String(value))}</strong>
+      </article>
+    `)
+    .join("") + (generatedAt ? `<p class="helper-text">Stand: ${escapeHtml(formatTimestamp(generatedAt))}</p>` : "");
+
+  const topCompanies = state.reporting?.topOverdueCompanies || [];
+  if (!topCompanies.length) {
+    topOverdueList.innerHTML = '<div class="empty-state">Keine ueberfaelligen Firmen vorhanden.</div>';
+  } else {
+    topOverdueList.innerHTML = topCompanies
+      .map((entry) => `
+        <article class="card-item">
+          <strong>${escapeHtml(entry.companyName || "Firma")}</strong>
+          <p class="helper-text">${Number(entry.overdueCount || 0)} ueberfaellige Rechnungen</p>
+          <p>${escapeHtml(formatCurrencyEur(entry.overdueTotal))}</p>
+        </article>
+      `)
+      .join("");
+  }
+
+  const dailyRows = state.reporting?.accessDaily || [];
+  if (!dailyRows.length) {
+    accessDailyList.innerHTML = '<div class="empty-state">Keine Zutrittsdaten fuer die letzten 7 Tage.</div>';
+  } else {
+    const maxDaily = Math.max(
+      ...dailyRows.map((entry) => Number(entry.checkIn || 0) + Number(entry.checkOut || 0)),
+      1
+    );
+
+    accessDailyList.innerHTML = dailyRows
+      .map((entry) => {
+        const checkIn = Number(entry.checkIn || 0);
+        const checkOut = Number(entry.checkOut || 0);
+        const inWidth = Math.max(3, Math.round((checkIn / maxDaily) * 100));
+        const outWidth = Math.max(3, Math.round((checkOut / maxDaily) * 100));
+        return `
+        <article class="card-item">
+          <strong>${escapeHtml(formatDate(entry.day))}</strong>
+          <p class="helper-text">Check-in: ${escapeHtml(String(checkIn))}</p>
+          <div style="height:8px; background:#e6edf2; border-radius:6px; overflow:hidden; margin:4px 0 8px;">
+            <div style="height:100%; width:${inWidth}%; background:#0f7a5a;"></div>
+          </div>
+          <p class="helper-text">Check-out: ${escapeHtml(String(checkOut))}</p>
+          <div style="height:8px; background:#e6edf2; border-radius:6px; overflow:hidden; margin:4px 0 0;">
+            <div style="height:100%; width:${outWidth}%; background:#4c6faf;"></div>
+          </div>
+        </article>
+      `;
+      })
+      .join("");
+  }
 }
 
 function renderWorkerList() {

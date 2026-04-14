@@ -2877,6 +2877,162 @@ def access_summary():
     )
 
 
+@app.get("/api/reporting/summary")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def reporting_summary():
+    db = get_db()
+    user = g.current_user
+    is_superadmin = user["role"] == "superadmin"
+    company_id = user.get("company_id")
+
+    invoice_scope_sql = ""
+    invoice_scope_params = []
+    company_scope_sql = ""
+    company_scope_params = []
+    access_scope_sql = ""
+    access_scope_params = []
+    audit_scope_sql = ""
+    audit_scope_params = []
+
+    if not is_superadmin:
+        invoice_scope_sql = " AND invoices.company_id = ?"
+        invoice_scope_params = [company_id]
+        company_scope_sql = " AND id = ?"
+        company_scope_params = [company_id]
+        access_scope_sql = " AND workers.company_id = ?"
+        access_scope_params = [company_id]
+        audit_scope_sql = " AND (company_id = ? OR company_id IS NULL)"
+        audit_scope_params = [company_id]
+
+    paid_total_row = db.execute(
+        f"""
+        SELECT COALESCE(SUM(invoices.total_amount), 0) AS value
+        FROM invoices
+        WHERE (invoices.status = 'bezahlt' OR invoices.paid_at IS NOT NULL)
+        {invoice_scope_sql}
+        """,
+        invoice_scope_params,
+    ).fetchone()
+
+    open_total_row = db.execute(
+        f"""
+        SELECT COALESCE(SUM(invoices.total_amount), 0) AS value
+        FROM invoices
+        WHERE invoices.paid_at IS NULL
+          AND invoices.status IN ('draft', 'sent', 'overdue', 'send_failed')
+        {invoice_scope_sql}
+        """,
+        invoice_scope_params,
+    ).fetchone()
+
+    overdue_row = db.execute(
+        f"""
+        SELECT COUNT(*) AS invoice_count, COALESCE(SUM(invoices.total_amount), 0) AS total_value
+        FROM invoices
+        WHERE invoices.paid_at IS NULL
+          AND invoices.due_date IS NOT NULL
+          AND DATE(invoices.due_date) < DATE('now')
+        {invoice_scope_sql}
+        """,
+        invoice_scope_params,
+    ).fetchone()
+
+    locked_companies_row = db.execute(
+        f"""
+        SELECT COUNT(*) AS value
+        FROM companies
+        WHERE deleted_at IS NULL
+          AND status = 'gesperrt'
+        {company_scope_sql}
+        """,
+        company_scope_params,
+    ).fetchone()
+
+    suspensions_row = db.execute(
+        f"""
+        SELECT COUNT(*) AS value
+        FROM audit_logs
+        WHERE event_type = 'company.auto_suspended_overdue_invoice'
+          AND DATE(created_at) >= DATE('now', '-30 day')
+        {audit_scope_sql}
+        """,
+        audit_scope_params,
+    ).fetchone()
+
+    access_rows = db.execute(
+        f"""
+        SELECT DATE(access_logs.timestamp) AS day,
+               SUM(CASE WHEN access_logs.direction = 'check-in' THEN 1 ELSE 0 END) AS check_in,
+               SUM(CASE WHEN access_logs.direction = 'check-out' THEN 1 ELSE 0 END) AS check_out
+        FROM access_logs
+        JOIN workers ON workers.id = access_logs.worker_id
+        WHERE DATE(access_logs.timestamp) >= DATE('now', '-6 day')
+        {access_scope_sql}
+        GROUP BY DATE(access_logs.timestamp)
+        ORDER BY day ASC
+        """,
+        access_scope_params,
+    ).fetchall()
+
+    access_map = {row["day"]: row for row in access_rows}
+    access_daily = []
+    for day_offset in range(6, -1, -1):
+        day = (datetime.now(timezone.utc).date() - timedelta(days=day_offset)).isoformat()
+        source = access_map.get(day)
+        access_daily.append(
+            {
+                "day": day,
+                "checkIn": int(source["check_in"] or 0) if source else 0,
+                "checkOut": int(source["check_out"] or 0) if source else 0,
+            }
+        )
+
+    top_overdue_companies = []
+    if is_superadmin:
+        top_rows = db.execute(
+            """
+            SELECT companies.id, companies.name,
+                   COUNT(invoices.id) AS overdue_count,
+                   COALESCE(SUM(invoices.total_amount), 0) AS overdue_total
+            FROM invoices
+            JOIN companies ON companies.id = invoices.company_id
+            WHERE invoices.paid_at IS NULL
+              AND invoices.due_date IS NOT NULL
+              AND DATE(invoices.due_date) < DATE('now')
+              AND companies.deleted_at IS NULL
+            GROUP BY companies.id, companies.name
+            ORDER BY overdue_total DESC
+            LIMIT 5
+            """
+        ).fetchall()
+        top_overdue_companies = [
+            {
+                "companyId": row["id"],
+                "companyName": row["name"],
+                "overdueCount": int(row["overdue_count"] or 0),
+                "overdueTotal": float(row["overdue_total"] or 0),
+            }
+            for row in top_rows
+        ]
+
+    return jsonify(
+        {
+            "kpis": {
+                "paidTotal": float(paid_total_row["value"] or 0),
+                "openTotal": float(open_total_row["value"] or 0),
+                "overdueInvoiceCount": int(overdue_row["invoice_count"] or 0),
+                "overdueTotal": float(overdue_row["total_value"] or 0),
+                "lockedCompanies": int(locked_companies_row["value"] or 0),
+                "suspensionsLast30d": int(suspensions_row["value"] or 0),
+            },
+            "accessDaily": access_daily,
+            "topOverdueCompanies": top_overdue_companies,
+            "generatedAt": now_iso(),
+        }
+    )
+
+
 @app.get("/api/access-logs/day-close-check")
 @require_auth
 def access_day_close_check():
