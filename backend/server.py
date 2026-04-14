@@ -2212,6 +2212,13 @@ def create_company():
 def demo_seed():
     payload = request.get_json(silent=True) or {}
     company_id = payload.get("companyId") or g.current_user.get("company_id")
+    mode = (payload.get("mode") or "replace").strip().lower()
+    include_invoices = int(payload.get("includeInvoices") or 0) == 1
+    include_access_logs = int(payload.get("includeAccessLogs") or 1) == 1
+    include_overdue_example = int(payload.get("includeOverdueExample") or 1) == 1
+
+    if mode not in {"replace", "append"}:
+        return jsonify({"error": "invalid_mode"}), 400
 
     db = get_db()
     if g.current_user["role"] == "superadmin" and not company_id:
@@ -2227,9 +2234,12 @@ def demo_seed():
     if g.current_user["role"] != "superadmin" and company_id != g.current_user.get("company_id"):
         return jsonify({"error": "forbidden_company"}), 403
 
-    db.execute("DELETE FROM access_logs WHERE worker_id IN (SELECT id FROM workers WHERE company_id = ?)", (company_id,))
-    db.execute("DELETE FROM workers WHERE company_id = ?", (company_id,))
-    db.execute("DELETE FROM subcompanies WHERE company_id = ?", (company_id,))
+    if mode == "replace":
+        db.execute("DELETE FROM access_logs WHERE worker_id IN (SELECT id FROM workers WHERE company_id = ?)", (company_id,))
+        db.execute("DELETE FROM workers WHERE company_id = ?", (company_id,))
+        db.execute("DELETE FROM subcompanies WHERE company_id = ?", (company_id,))
+        if include_invoices:
+            db.execute("DELETE FROM invoices WHERE company_id = ?", (company_id,))
 
     subcompanies = [
         (f"sub-{secrets.token_hex(6)}", company_id, "Demir Montage", "Ali Demir", "aktiv", None),
@@ -2294,21 +2304,121 @@ def demo_seed():
             ),
         )
 
-    db.execute(
-        "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            f"log-{secrets.token_hex(6)}",
-            workers[0]["id"],
-            "check-in",
-            "Drehkreuz Nord",
-            "Fruehschicht",
-            now_iso(),
-        ),
-    )
-    db.commit()
-    log_audit("demo.seed", "Demo-Daten wurden geladen", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
+    access_logs_created = 0
+    if include_access_logs:
+        db.execute(
+            "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                f"log-{secrets.token_hex(6)}",
+                workers[0]["id"],
+                "check-in",
+                "Drehkreuz Nord",
+                "Fruehschicht",
+                now_iso(),
+            ),
+        )
+        db.execute(
+            "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                f"log-{secrets.token_hex(6)}",
+                workers[1]["id"],
+                "check-in",
+                "Drehkreuz Sued",
+                "Spaetschicht",
+                now_iso(),
+            ),
+        )
+        access_logs_created = 2
 
-    return jsonify({"ok": True, "workersCreated": len(workers)})
+    invoices_created = 0
+    if include_invoices:
+        company = db.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
+        created_by = g.current_user["id"]
+        base_date = datetime.utcnow().date()
+        invoice_examples = [
+            {
+                "number": f"RE-{base_date.year}-{secrets.token_hex(2).upper()}",
+                "offset": -28,
+                "due_offset": -14,
+                "status": "overdue" if include_overdue_example else "sent",
+                "desc": "Monatliche Baustellenplattform",
+                "total": 119.0,
+                "period": "Demo-Monat 1",
+                "reminder_stage": 3 if include_overdue_example else 1,
+            },
+            {
+                "number": f"RE-{base_date.year}-{secrets.token_hex(2).upper()}",
+                "offset": -7,
+                "due_offset": 7,
+                "status": "sent",
+                "desc": "Mitarbeiterverwaltung + Zutritt",
+                "total": 89.0,
+                "period": "Demo-Monat 2",
+                "reminder_stage": 1,
+            },
+        ]
+        for item in invoice_examples:
+            invoice_date = (base_date + timedelta(days=item["offset"])).isoformat()
+            due_date = (base_date + timedelta(days=item["due_offset"])).isoformat()
+            net_amount = round(item["total"] / 1.19, 2)
+            vat_amount = round(item["total"] - net_amount, 2)
+            db.execute(
+                """
+                INSERT INTO invoices (
+                    id, invoice_number, company_id, recipient_email, invoice_date, invoice_period, description,
+                    net_amount, vat_rate, vat_amount, total_amount, status, error_message, sent_at,
+                    rendered_html, created_by_user_id, created_at, due_date, paid_at,
+                    auto_suspend_triggered_at, reminder_stage, last_reminder_sent_at, last_reminder_error
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"inv-{secrets.token_hex(6)}",
+                    item["number"],
+                    company_id,
+                    (company["billing_email"] or "buchhaltung@demo-firma.de") if company else "buchhaltung@demo-firma.de",
+                    invoice_date,
+                    item["period"],
+                    item["desc"],
+                    net_amount,
+                    19.0,
+                    vat_amount,
+                    item["total"],
+                    item["status"],
+                    "",
+                    now_iso(),
+                    f"<html><body><h1>{item['number']}</h1></body></html>",
+                    created_by,
+                    now_iso(),
+                    due_date,
+                    None,
+                    None,
+                    item["reminder_stage"],
+                    None,
+                    "",
+                ),
+            )
+            invoices_created += 1
+
+    db.commit()
+    log_audit(
+        "demo.seed",
+        f"Demo-Daten geladen (mode={mode}, workers={len(workers)}, logs={access_logs_created}, invoices={invoices_created})",
+        target_type="company",
+        target_id=company_id,
+        company_id=company_id,
+        actor=g.current_user,
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "mode": mode,
+            "workersCreated": len(workers),
+            "accessLogsCreated": access_logs_created,
+            "invoicesCreated": invoices_created,
+            "companyId": company_id,
+        }
+    )
 
 
 @app.get("/api/workers")
@@ -3754,20 +3864,98 @@ def export_audit_csv():
 @app.get("/api/export")
 @require_auth
 def export_payload():
+    db = get_db()
+    user = g.current_user
+    include_audit = request.args.get("includeAudit", "0") == "1"
+    include_day_close = request.args.get("includeDayClose", "0") == "1"
+    include_deleted = request.args.get("includeDeleted", "0") == "1"
+    requested_company_id = (request.args.get("companyId") or "").strip()
+
+    if user["role"] != "superadmin":
+        requested_company_id = user.get("company_id") or ""
+
     settings = get_settings().json
     companies = list_companies().json
     subcompanies = list_subcompanies().json
     workers = list_workers().json
     logs = list_access_logs().json
     invoices = []
-    if g.current_user["role"] in ["superadmin", "company-admin"]:
-        invoices = list_invoices().json
+    if user["role"] in ["superadmin", "company-admin"]:
+        if requested_company_id:
+            invoice_rows = db.execute(
+                """
+                SELECT invoices.*, companies.name AS company_name
+                FROM invoices
+                JOIN companies ON companies.id = invoices.company_id
+                WHERE invoices.company_id = ?
+                ORDER BY invoices.created_at DESC
+                """,
+                (requested_company_id,),
+            ).fetchall()
+            invoices = [row_to_dict(row) for row in invoice_rows]
+        else:
+            invoice_rows = db.execute(
+                """
+                SELECT invoices.*, companies.name AS company_name
+                FROM invoices
+                JOIN companies ON companies.id = invoices.company_id
+                ORDER BY invoices.created_at DESC
+                """
+            ).fetchall()
+            invoices = [row_to_dict(row) for row in invoice_rows]
+
+    if include_deleted:
+        if requested_company_id:
+            worker_rows = db.execute(
+                "SELECT * FROM workers WHERE company_id = ? ORDER BY last_name, first_name",
+                (requested_company_id,),
+            ).fetchall()
+        elif user["role"] == "superadmin":
+            worker_rows = db.execute("SELECT * FROM workers ORDER BY last_name, first_name").fetchall()
+        else:
+            worker_rows = db.execute(
+                "SELECT * FROM workers WHERE company_id = ? ORDER BY last_name, first_name",
+                (user.get("company_id"),),
+            ).fetchall()
+        workers = [
+            {
+                "id": row["id"],
+                "companyId": row["company_id"],
+                "subcompanyId": row["subcompany_id"],
+                "firstName": row["first_name"],
+                "lastName": row["last_name"],
+                "insuranceNumber": row["insurance_number"],
+                "role": row["role"],
+                "site": row["site"],
+                "validUntil": row["valid_until"],
+                "status": row["status"],
+                "photoData": row["photo_data"],
+                "badgeId": row["badge_id"],
+                "badgePinConfigured": bool(row["badge_pin_hash"]),
+                "physicalCardId": row["physical_card_id"],
+                "deletedAt": row["deleted_at"],
+            }
+            for row in worker_rows
+        ]
+
+    if requested_company_id:
+        companies = [item for item in companies if item.get("id") == requested_company_id]
+        subcompanies = [item for item in subcompanies if item.get("companyId") == requested_company_id]
+        workers = [item for item in workers if item.get("companyId") == requested_company_id]
+        worker_ids = {item.get("id") for item in workers}
+        logs = [item for item in logs if item.get("workerId") in worker_ids]
+    elif not include_deleted:
+        companies = [item for item in companies if not item.get("deleted_at")]
+        workers = [item for item in workers if not item.get("deletedAt")]
+
     user = g.current_user
     users = [user]
 
     if user["role"] == "superadmin":
-        rows = get_db().execute("SELECT * FROM users ORDER BY username").fetchall()
+        rows = db.execute("SELECT * FROM users ORDER BY username").fetchall()
         users = [row_to_dict(row) for row in rows]
+        if requested_company_id:
+            users = [item for item in users if item.get("company_id") in [None, requested_company_id]]
     users = [
         {
             "id": item["id"],
@@ -3780,8 +3968,69 @@ def export_payload():
         for item in users
     ]
 
+    audit_logs = []
+    if include_audit:
+        if user["role"] == "superadmin" and not requested_company_id:
+            audit_rows = db.execute("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 5000").fetchall()
+        else:
+            scope_company_id = requested_company_id or user.get("company_id")
+            audit_rows = db.execute(
+                "SELECT * FROM audit_logs WHERE company_id = ? OR company_id IS NULL ORDER BY created_at DESC LIMIT 5000",
+                (scope_company_id,),
+            ).fetchall()
+        audit_logs = [row_to_dict(row) for row in audit_rows]
+
+    day_close_acknowledgements = []
+    if include_day_close:
+        if user["role"] == "superadmin" and not requested_company_id:
+            ack_rows = db.execute("SELECT * FROM day_close_acknowledgements ORDER BY created_at DESC LIMIT 2000").fetchall()
+        else:
+            scope_company_id = requested_company_id or user.get("company_id")
+            ack_rows = db.execute(
+                "SELECT * FROM day_close_acknowledgements WHERE company_id = ? OR company_id IS NULL ORDER BY created_at DESC LIMIT 2000",
+                (scope_company_id,),
+            ).fetchall()
+        day_close_acknowledgements = [row_to_dict(row) for row in ack_rows]
+
+    export_scope = "company" if requested_company_id else ("system" if user["role"] == "superadmin" else "company")
+    metadata = {
+        "schemaVersion": "2026-04-export-v2",
+        "scope": export_scope,
+        "companyId": requested_company_id or user.get("company_id"),
+        "generatedBy": {
+            "id": user.get("id"),
+            "username": user.get("username"),
+            "role": user.get("role"),
+        },
+        "counts": {
+            "companies": len(companies),
+            "subcompanies": len(subcompanies),
+            "workers": len(workers),
+            "accessLogs": len(logs),
+            "invoices": len(invoices),
+            "users": len(users),
+            "auditLogs": len(audit_logs),
+            "dayCloseAcknowledgements": len(day_close_acknowledgements),
+        },
+        "options": {
+            "includeAudit": include_audit,
+            "includeDayClose": include_day_close,
+            "includeDeleted": include_deleted,
+        },
+    }
+
+    log_audit(
+        "export.created",
+        f"Export erstellt (scope={export_scope}, companies={len(companies)}, workers={len(workers)}, logs={len(logs)})",
+        target_type="export",
+        target_id=metadata["schemaVersion"],
+        company_id=metadata["companyId"],
+        actor=user,
+    )
+
     return jsonify(
         {
+            "meta": metadata,
             "settings": settings,
             "companies": companies,
             "subcompanies": subcompanies,
@@ -3789,6 +4038,8 @@ def export_payload():
             "accessLogs": logs,
             "invoices": invoices,
             "users": users,
+            "auditLogs": audit_logs,
+            "dayCloseAcknowledgements": day_close_acknowledgements,
             "exportedAt": now_iso(),
         }
     )

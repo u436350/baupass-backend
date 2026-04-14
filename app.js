@@ -4234,24 +4234,37 @@ function stopCamera() {
   elements.cameraPlaceholder.hidden = false;
 }
 
-async function exportState() {
+async function exportState(options = {}) {
   try {
-    const exportPayload = await apiRequest(API_BASE + "/api/export");
+    const includeAudit = Boolean(options.includeAudit);
+    const includeDayClose = Boolean(options.includeDayClose);
+    const includeDeleted = Boolean(options.includeDeleted);
+    const companyId = String(options.companyId || "").trim();
+
+    const query = new URLSearchParams();
+    if (includeAudit) query.set("includeAudit", "1");
+    if (includeDayClose) query.set("includeDayClose", "1");
+    if (includeDeleted) query.set("includeDeleted", "1");
+    if (companyId) query.set("companyId", companyId);
+
+    const exportPayload = await apiRequest(`${API_BASE}/api/export${query.toString() ? `?${query.toString()}` : ""}`);
     const currentUser = getCurrentUser();
     const exportCompanyId = currentUser?.company_id || currentUser?.companyId || "";
     const exportCompany = state.companies.find((entry) => entry.id === exportCompanyId);
     const exportScopeLabel = exportCompany ? ` fuer ${exportCompany.name}` : "";
+    const fileScope = exportPayload?.meta?.scope || (companyId ? "company" : "system");
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `baupass-export-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `baupass-export-${fileScope}-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     if (elements.photoDebugText) {
-      elements.photoDebugText.textContent = `System-Export${exportScopeLabel} wurde heruntergeladen.`;
+      const counts = exportPayload?.meta?.counts || {};
+      elements.photoDebugText.textContent = `System-Export${exportScopeLabel} wurde heruntergeladen (Firmen: ${counts.companies || 0}, Mitarbeiter: ${counts.workers || 0}, Logs: ${counts.accessLogs || 0}).`;
       elements.photoDebugText.style.color = "#0b7a3b";
     }
   } catch (error) {
@@ -4279,19 +4292,47 @@ async function loadDemoData() {
 
   const company = state.companies.find((entry) => entry.id === companyId);
   const companyName = company?.name || "die ausgewaehlte Firma";
-  const proceed = window.confirm(`Demo-Daten jetzt fuer ${companyName} laden? Vorhandene Mitarbeiter, Subunternehmen und Zutrittsdaten dieser Firma werden ersetzt.`);
+  const modeRaw = window.prompt(
+    `Demo-Daten fuer ${companyName}: Modus eingeben (replace oder append)`,
+    "replace"
+  );
+  if (modeRaw === null) {
+    return;
+  }
+  const mode = String(modeRaw || "replace").trim().toLowerCase();
+  if (!["replace", "append"].includes(mode)) {
+    window.alert("Ungueltiger Modus. Bitte replace oder append verwenden.");
+    return;
+  }
+
+  const includeInvoices = window.confirm("Sollen Demo-Rechnungen mit erzeugt werden?");
+  const includeAccessLogs = window.confirm("Sollen Demo-Zutrittslogs erzeugt werden?");
+
+  const proceed = window.confirm(
+    mode === "replace"
+      ? `Demo-Daten jetzt fuer ${companyName} im Modus REPLACE laden? Vorhandene Mitarbeiter/Subunternehmen/Logs werden ersetzt.`
+      : `Demo-Daten jetzt fuer ${companyName} im Modus APPEND zusaetzlich laden?`
+  );
   if (!proceed) {
     return;
   }
 
   try {
-    await apiRequest(API_BASE + "/api/demo-seed", {
+    const result = await apiRequest(API_BASE + "/api/demo-seed", {
       method: "POST",
-      body: { companyId }
+      body: {
+        companyId,
+        mode,
+        includeInvoices: includeInvoices ? 1 : 0,
+        includeAccessLogs: includeAccessLogs ? 1 : 0,
+        includeOverdueExample: 1,
+      }
     });
     await loadAllData();
     refreshAll();
-    window.alert(`Demo-Daten fuer ${companyName} wurden geladen.`);
+    window.alert(
+      `Demo-Daten fuer ${companyName} wurden geladen (Modus: ${result.mode}, Mitarbeiter: ${result.workersCreated}, Logs: ${result.accessLogsCreated}, Rechnungen: ${result.invoicesCreated}).`
+    );
   } catch (error) {
     window.alert(`Demo-Daten konnten nicht geladen werden: ${error.message}`);
   }
@@ -4305,11 +4346,28 @@ async function handleTopbarExport() {
   const exportCompanyId = state.currentUser?.company_id || state.currentUser?.companyId || "";
   const exportCompany = state.companies.find((entry) => entry.id === exportCompanyId);
   const exportScopeLabel = exportCompany ? ` fuer ${exportCompany.name}` : "";
+  const includeAudit = window.confirm("Audit-Log im Export einschliessen?");
+  const includeDayClose = window.confirm("Tagesabschluss-Quittierungen im Export einschliessen?");
+  const includeDeleted = window.confirm("Geloeschte Eintraege im Export einschliessen?");
+
+  let exportCompanyTarget = "";
+  if (state.currentUser?.role === "superadmin") {
+    const exportAll = window.confirm("Als Superadmin: Gesamtsystem exportieren? (Nein = nur aktuelle Firma)");
+    if (!exportAll) {
+      exportCompanyTarget = exportCompanyId;
+    }
+  }
+
   const proceed = window.confirm(`System-Export${exportScopeLabel} jetzt herunterladen?`);
   if (!proceed) {
     return;
   }
-  await exportState();
+  await exportState({
+    includeAudit,
+    includeDayClose,
+    includeDeleted,
+    companyId: exportCompanyTarget,
+  });
 }
 
 async function handleTopbarLogout() {
