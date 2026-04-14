@@ -524,7 +524,7 @@ async function loadWorkerData() {
     workerToken = "";
     clearWorkerSessionExpiryTimer();
     if (error?.code === "worker_session_expired" || error?.code === "invalid_worker_session") {
-      showWorkerNotice("Digitale Tageskarte abgelaufen. Bitte fuer heute neu anmelden.");
+      showWorkerNotice("Digitale Besucherkarte abgelaufen. Bitte fuer heute neu anmelden.");
     }
     showLogin();
     return false;
@@ -1187,10 +1187,10 @@ function renderDayCardValidity(expiresAt) {
     return;
   }
   if (!expiresAt) {
-    elements.workerDayCardValidity.textContent = "Digitale Tageskarte: gueltig bis heute 00:00 Uhr.";
+    elements.workerDayCardValidity.textContent = "Digitale Besucherkarte: gueltig bis heute 00:00 Uhr.";
     return;
   }
-  elements.workerDayCardValidity.textContent = `Digitale Tageskarte: gueltig bis ${formatDateTime(expiresAt)} Uhr.`;
+  elements.workerDayCardValidity.textContent = `Digitale Besucherkarte: gueltig bis ${formatDateTime(expiresAt)} Uhr.`;
 }
 
 function clearWorkerSessionExpiryTimer() {
@@ -1206,7 +1206,7 @@ function expireDailyCardInClient() {
   clearWorkerSessionExpiryTimer();
   closeGateMode();
   showLogin();
-  showWorkerNotice("Digitale Tageskarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.");
+  showWorkerNotice("Digitale Besucherkarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.");
 }
 
 function scheduleWorkerSessionExpiry(expiresAt) {

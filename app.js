@@ -136,7 +136,7 @@ let heartbeatTimer = null;
 let selfieSegmenter = null;
 
 const PLAN_LABELS = {
-  tageskarte: "Tageskarte",
+  tageskarte: "Besucherkarte",
   starter: "Starter",
   professional: "Professional",
   enterprise: "Enterprise"
@@ -1498,7 +1498,7 @@ function renderBadge() {
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const normalizedPlan = String(company?.plan || "").trim().toLowerCase();
   const isDayPass = normalizedPlan === "tageskarte";
-  const badgeTitle = isDayPass ? "Tages-Baustellen-Ausweis" : "Digitaler Baustellen-Ausweis";
+  const badgeTitle = isDayPass ? "Besucher-Baustellen-Ausweis" : "Digitaler Baustellen-Ausweis";
   const badgeClass = isDayPass ? "badge-card badge-card-daypass" : "badge-card";
   const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
