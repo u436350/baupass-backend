@@ -2203,7 +2203,6 @@ def worker_app_login():
 
     session_token = secrets.token_urlsafe(28)
     db.execute("INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)", (session_token, worker["id"], worker_session_expiry_iso(days=30)))
-    db.execute("UPDATE worker_app_tokens SET revoked_at = ? WHERE token = ?", (now_iso(), access_token))
     db.commit()
 
     return jsonify(

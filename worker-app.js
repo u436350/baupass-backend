@@ -54,6 +54,7 @@ function resolveWorkerApiBase() {
 const API_BASE = resolveWorkerApiBase();
 const API_ROOT = resolveApiRoot(API_BASE);
 const WORKER_TOKEN_KEY = "baupass-worker-token";
+const WORKER_ACCESS_TOKEN_KEY = "baupass-worker-access-token";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
@@ -64,6 +65,7 @@ let cameraStream = null;
 let lastCameraPhotoDataUrl = null;
 let lastCameraPhotoRotation = 0;
 let wakeLockHandle = null;
+let dynamicManifestUrl = "";
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -111,23 +113,69 @@ init();
 
 async function init() {
   bindEvents();
-  registerWorkerSw();
-  wireInstallPrompt();
-
   const params = new URL(window.location.href).searchParams;
   const urlToken = (params.get("access") || "").trim();
+  const storedAccessToken = (window.localStorage.getItem(WORKER_ACCESS_TOKEN_KEY) || "").trim();
+  const bootstrapAccessToken = urlToken || storedAccessToken;
+
+  if (bootstrapAccessToken) {
+    window.localStorage.setItem(WORKER_ACCESS_TOKEN_KEY, bootstrapAccessToken);
+    applyDynamicManifestStartUrl(bootstrapAccessToken);
+  }
+
+  registerWorkerSw();
+  wireInstallPrompt();
 
   if (urlToken) {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = urlToken;
     }
-    await loginWithAccessToken(urlToken);
+    await loginWithAccessToken(urlToken, { keepUrlToken: true, silent: false });
     return;
   }
 
   if (workerToken) {
     await loadWorkerData();
+    return;
   }
+
+  if (storedAccessToken) {
+    if (elements.workerAccessToken) {
+      elements.workerAccessToken.value = storedAccessToken;
+    }
+    await loginWithAccessToken(storedAccessToken, { keepUrlToken: false, silent: true });
+  }
+}
+
+function applyDynamicManifestStartUrl(accessToken) {
+  const manifestLink = document.querySelector('link[rel="manifest"]');
+  if (!manifestLink || !accessToken) {
+    return;
+  }
+
+  fetch("./worker-manifest.json", { cache: "no-store" })
+    .then((response) => response.json())
+    .then((manifest) => {
+      const params = new URLSearchParams();
+      params.set("access", accessToken);
+
+      const apiBaseParam = new URL(window.location.href).searchParams.get("apiBase");
+      if (apiBaseParam) {
+        params.set("apiBase", apiBaseParam);
+      }
+
+      manifest.start_url = `/worker.html?${params.toString()}`;
+
+      const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+      if (dynamicManifestUrl) {
+        URL.revokeObjectURL(dynamicManifestUrl);
+      }
+      dynamicManifestUrl = URL.createObjectURL(blob);
+      manifestLink.href = dynamicManifestUrl;
+    })
+    .catch(() => {
+      // ignore manifest customization failures
+    });
 }
 
 function bindEvents() {
@@ -292,13 +340,17 @@ async function triggerInstall() {
   showWorkerNotice("Installation manuell: Browser-Menue oeffnen und 'Zum Startbildschirm' bzw. 'App installieren' waehlen.");
 }
 
-async function loginWithAccessToken(accessToken) {
+async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent = false } = {}) {
   if (!accessToken) {
-    showWorkerNotice("Bitte Zugangscode eingeben.");
+    if (!silent) {
+      showWorkerNotice("Bitte Zugangscode eingeben.");
+    }
     return;
   }
 
-  hideWorkerNotice();
+  if (!silent) {
+    hideWorkerNotice();
+  }
 
   try {
     const payload = await fetchJson(`${API_BASE}/login`, {
@@ -309,14 +361,27 @@ async function loginWithAccessToken(accessToken) {
 
     workerToken = payload.token;
     localStorage.setItem(WORKER_TOKEN_KEY, workerToken);
-    window.history.replaceState({}, document.title, "./worker.html");
+    localStorage.setItem(WORKER_ACCESS_TOKEN_KEY, accessToken);
+    applyDynamicManifestStartUrl(accessToken);
+    if (!keepUrlToken) {
+      window.history.replaceState({}, document.title, "./worker.html");
+    }
     await loadWorkerData();
 
     if (!isStandaloneMode() && elements.installButton) {
       elements.installButton.hidden = false;
-      showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
+      if (!silent) {
+        showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
+      }
     }
   } catch (error) {
+    if (["invalid_access_token", "access_token_revoked", "access_token_expired"].includes(error.code)) {
+      localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+    }
+    if (silent) {
+      showLogin();
+      return;
+    }
     if (error.code === "worker_app_disabled") {
       showWorkerNotice("Mitarbeiter-App ist derzeit deaktiviert.");
       return;

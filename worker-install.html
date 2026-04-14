@@ -78,6 +78,13 @@
   <script>
     const params = new URL(window.location.href).searchParams;
     const accessToken = params.get("access") || "";
+    if (accessToken) {
+      try {
+        localStorage.setItem("baupass-worker-access-token", accessToken);
+      } catch {
+        // ignore storage failures
+      }
+    }
     const targetUrl = `./worker.html${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ""}`;
 
     let deferredInstallPrompt = null;
