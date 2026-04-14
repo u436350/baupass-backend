@@ -649,9 +649,15 @@ function refreshAll() {
 
 function ensureInvoiceDefaults() {
   const invoiceDateField = document.querySelector("#invoiceDate");
+  const invoiceDueDateField = document.querySelector("#invoiceDueDate");
   const invoicePeriodField = document.querySelector("#invoicePeriod");
   if (invoiceDateField && !invoiceDateField.value) {
     invoiceDateField.value = new Date().toISOString().slice(0, 10);
+  }
+  if (invoiceDueDateField && !invoiceDueDateField.value) {
+    const base = invoiceDateField?.value ? new Date(`${invoiceDateField.value}T00:00:00`) : new Date();
+    const due = new Date(base.getTime() + (14 * 24 * 60 * 60 * 1000));
+    invoiceDueDateField.value = due.toISOString().slice(0, 10);
   }
   if (invoicePeriodField && !invoicePeriodField.value) {
     const now = new Date();
@@ -2472,6 +2478,7 @@ async function handleInvoiceSend() {
         recipientEmail: invoice.recipientEmail,
         invoiceNumber: invoice.invoiceNumber,
         invoiceDate: invoice.invoiceDate,
+        dueDate: invoice.dueDate,
         invoicePeriod: invoice.invoicePeriod,
         description: invoice.invoiceDescription,
         netAmount: invoice.netAmount,
@@ -2517,15 +2524,16 @@ function buildInvoiceDraft(options = {}) {
   }
 
   const invoiceDate = document.querySelector("#invoiceDate").value;
+  const invoiceDueDate = document.querySelector("#invoiceDueDate")?.value || "";
   const invoicePeriod = document.querySelector("#invoicePeriod").value.trim();
   const invoiceDescription = document.querySelector("#invoiceDescription").value.trim();
   const requestedNetAmount = Number(document.querySelector("#invoiceNetAmount").value || "0");
   const invoiceNumberRaw = document.querySelector("#invoiceNumber").value.trim();
   const invoiceNumber = invoiceNumberRaw || `RE-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
 
-  if (!invoiceDate || !invoicePeriod || !invoiceDescription) {
+  if (!invoiceDate || !invoiceDueDate || !invoicePeriod || !invoiceDescription) {
     if (!silent) {
-      window.alert("Bitte Rechnungsdatum, Leistungszeitraum und Leistungsbeschreibung ausfuellen.");
+      window.alert("Bitte Rechnungsdatum, Faelligkeitsdatum, Leistungszeitraum und Leistungsbeschreibung ausfuellen.");
     }
     return null;
   }
@@ -2547,6 +2555,7 @@ function buildInvoiceDraft(options = {}) {
     recipientEmail,
     invoiceNumber,
     invoiceDate,
+    dueDate: invoiceDueDate,
     invoicePeriod,
     invoiceDescription,
     planLabel: getPlanLabel(company.plan),
@@ -2681,6 +2690,10 @@ function renderInvoiceHtml(invoice) {
           <tr>
             <td><strong>Rechnungsnummer:</strong> ${escapeHtml(invoice.invoiceNumber)}</td>
             <td><strong>Rechnungsdatum:</strong> ${escapeHtml(formatDate(invoice.invoiceDate))}</td>
+          </tr>
+          <tr>
+            <td><strong>Faelligkeitsdatum:</strong> ${escapeHtml(formatDate(invoice.dueDate))}</td>
+            <td></td>
           </tr>
           <tr>
             <td><strong>Kunde:</strong> ${escapeHtml(invoice.company.name)}</td>
@@ -4302,7 +4315,7 @@ if (invoiceCompanySelect) {
   });
 }
 
-["#invoiceNumber", "#invoiceRecipientEmail", "#invoiceDate", "#invoicePeriod", "#invoiceDescription", "#invoiceNetAmount", "#invoiceVatRate"].forEach((selector) => {
+["#invoiceNumber", "#invoiceRecipientEmail", "#invoiceDate", "#invoiceDueDate", "#invoicePeriod", "#invoiceDescription", "#invoiceNetAmount", "#invoiceVatRate"].forEach((selector) => {
   const field = document.querySelector(selector);
   if (field) {
     field.addEventListener("input", () => refreshInvoicePreview({ silent: true }));

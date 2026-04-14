@@ -131,6 +131,8 @@ PLAN_NET_PRICE_EUR = {
     "enterprise": 199.0,
 }
 
+AUTO_SUSPEND_GRACE_DAYS = 3
+
 
 def get_db():
     if "db" not in g:
@@ -148,6 +150,16 @@ def close_db(_exc):
 
 def now_iso():
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+
+def parse_iso_date(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def expiry_iso(hours=SESSION_TTL_HOURS):
@@ -875,6 +887,12 @@ def init_db():
         cur.execute("ALTER TABLE invoices ADD COLUMN paid_at TEXT")
     if "auto_suspend_triggered_at" not in invoice_columns:
         cur.execute("ALTER TABLE invoices ADD COLUMN auto_suspend_triggered_at TEXT")
+    if "reminder_stage" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN reminder_stage INTEGER NOT NULL DEFAULT 0")
+    if "last_reminder_sent_at" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN last_reminder_sent_at TEXT")
+    if "last_reminder_error" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN last_reminder_error TEXT")
 
     db.commit()
     db.close()
@@ -1068,9 +1086,9 @@ def check_and_apply_overdue_suspensions(db):
         WHERE inv.status IN ('sent', 'overdue')
           AND inv.paid_at IS NULL
           AND inv.due_date IS NOT NULL
-          AND DATE(inv.due_date) <= DATE(?)
+                    AND DATE(inv.due_date) <= DATE(?, ?)
         """,
-        (today,),
+                (today, f"-{AUTO_SUSPEND_GRACE_DAYS} day"),
     ).fetchall()
 
     suspended_companies = []
@@ -1099,6 +1117,141 @@ def check_and_apply_overdue_suspensions(db):
     if suspended_companies:
         db.commit()
     return suspended_companies
+
+
+def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, days_until_due):
+    smtp_host = (settings_row["smtp_host"] or "").strip()
+    smtp_sender = (settings_row["smtp_sender_email"] or "").strip()
+    if not smtp_host or not smtp_sender:
+        return False, "SMTP ist nicht konfiguriert"
+
+    stage_label = {1: "Erinnerung", 2: "Letzte Erinnerung", 3: "Ueberfaellig"}.get(stage, "Erinnerung")
+    due_label = invoice_row["due_date"] or "-"
+
+    if days_until_due < 0:
+        timing_text = f"seit {abs(days_until_due)} Tag(en) ueberfaellig"
+    elif days_until_due == 0:
+        timing_text = "heute faellig"
+    else:
+        timing_text = f"in {days_until_due} Tag(en) faellig"
+
+    message = EmailMessage()
+    message["Subject"] = f"{stage_label}: Rechnung {invoice_row['invoice_number']} ({timing_text})"
+    message["From"] = f"{settings_row['smtp_sender_name']} <{smtp_sender}>"
+    message["To"] = invoice_row["recipient_email"]
+    message.set_content(
+        (
+            f"Guten Tag,\n\n"
+            f"dies ist eine Zahlungs-{stage_label.lower()} fuer die Rechnung {invoice_row['invoice_number']} "
+            f"({company_row['name']}).\n"
+            f"Faelligkeit: {due_label} ({timing_text})\n"
+            f"Offener Betrag: {float(invoice_row['total_amount'] or 0):.2f} EUR\n\n"
+            f"Bitte begleichen Sie den Betrag zeitnah, um eine Sperrung zu vermeiden.\n\n"
+            f"Viele Gruesse\n{settings_row['operator_name']}"
+        )
+    )
+
+    try:
+        with smtplib.SMTP(smtp_host, int(settings_row["smtp_port"] or 587), timeout=20) as smtp:
+            if int(settings_row["smtp_use_tls"] or 0) == 1:
+                smtp.starttls()
+            smtp_username = (settings_row["smtp_username"] or "").strip()
+            if smtp_username:
+                smtp.login(smtp_username, settings_row["smtp_password"] or "")
+            smtp.send_message(message)
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)
+
+
+def run_invoice_dunning_cycle(db):
+    """Update overdue status and send staged reminders before automatic suspension."""
+    today = datetime.utcnow().date()
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name, companies.deleted_at AS company_deleted_at
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoices.paid_at IS NULL
+          AND invoices.due_date IS NOT NULL
+          AND invoices.status IN ('sent', 'overdue')
+        ORDER BY invoices.created_at ASC
+        """
+    ).fetchall()
+
+    result = {
+        "remindersSent": 0,
+        "reminderFailures": 0,
+        "overdueUpdated": 0,
+    }
+
+    for row in rows:
+        if row["company_deleted_at"]:
+            continue
+
+        due_date = parse_iso_date(row["due_date"])
+        if not due_date:
+            continue
+
+        days_until_due = (due_date - today).days
+        invoice_id = row["id"]
+        current_stage = int(row["reminder_stage"] or 0)
+        last_reminder_day = str(row["last_reminder_sent_at"] or "")[:10]
+
+        if days_until_due < 0 and row["status"] != "overdue":
+            db.execute("UPDATE invoices SET status = 'overdue' WHERE id = ?", (invoice_id,))
+            result["overdueUpdated"] += 1
+
+        target_stage = 0
+        if days_until_due <= 7 and days_until_due > 3:
+            target_stage = 1
+        elif days_until_due <= 3 and days_until_due >= 0:
+            target_stage = 2
+        elif days_until_due < 0:
+            target_stage = 3
+
+        if target_stage == 0:
+            continue
+
+        should_send = target_stage > current_stage or (target_stage == 3 and last_reminder_day != today.isoformat())
+        if not should_send:
+            continue
+
+        company_row = {"name": row["company_name"]}
+        sent_ok, error_message = send_payment_reminder_email(row, company_row, settings, target_stage, days_until_due)
+
+        if sent_ok:
+            db.execute(
+                "UPDATE invoices SET reminder_stage = ?, last_reminder_sent_at = ?, last_reminder_error = '' WHERE id = ?",
+                (target_stage, now_iso(), invoice_id),
+            )
+            log_audit(
+                "invoice.reminder_sent",
+                f"Mahnstufe {target_stage} fuer Rechnung {row['invoice_number']} versendet",
+                target_type="invoice",
+                target_id=invoice_id,
+                company_id=row["company_id"],
+                actor=None,
+            )
+            result["remindersSent"] += 1
+        else:
+            db.execute(
+                "UPDATE invoices SET last_reminder_error = ? WHERE id = ?",
+                (error_message, invoice_id),
+            )
+            log_audit(
+                "invoice.reminder_failed",
+                f"Mahnstufe {target_stage} fuer Rechnung {row['invoice_number']} fehlgeschlagen: {error_message}",
+                target_type="invoice",
+                target_id=invoice_id,
+                company_id=row["company_id"],
+                actor=None,
+            )
+            result["reminderFailures"] += 1
+
+    db.commit()
+    return result
 
 
 def get_company_access_error(db, company_id):
@@ -3293,6 +3446,7 @@ def send_invoice_email(invoice_row, company_row, settings_row):
         (
             f"Guten Tag,\n\n"
             f"anbei erhalten Sie die Rechnung {invoice_row['invoice_number']} für {company_row['name']}.\n"
+            f"Faellig am: {(invoice_row['due_date'] or '-')}\n"
             f"Gesamtbetrag: {invoice_row['total_amount']:.2f} EUR\n\n"
             f"Viele Grüße\n{settings_row['operator_name']}"
         )
@@ -3362,6 +3516,10 @@ def send_invoice():
 
     invoice_number = (payload.get("invoiceNumber") or "").strip() or f"RE-{datetime.now().year}-{secrets.token_hex(3).upper()}"
     invoice_date = (payload.get("invoiceDate") or datetime.now().date().isoformat()).strip()
+    due_date_input = (payload.get("dueDate") or "").strip()
+    invoice_date_obj = parse_iso_date(invoice_date) or datetime.utcnow().date()
+    due_date_obj = parse_iso_date(due_date_input) or (invoice_date_obj + timedelta(days=14))
+    due_date = due_date_obj.isoformat()
     invoice_period = (payload.get("invoicePeriod") or "").strip()
     description = (payload.get("description") or "").strip()
     rendered_html = payload.get("renderedHtml") or ""
@@ -3379,8 +3537,8 @@ def send_invoice():
         INSERT INTO invoices (
             id, invoice_number, company_id, recipient_email, invoice_date, invoice_period, description,
             net_amount, vat_rate, vat_amount, total_amount, status, error_message, sent_at,
-            rendered_html, created_by_user_id, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            rendered_html, created_by_user_id, created_at, due_date, reminder_stage, last_reminder_sent_at, last_reminder_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             invoice_id,
@@ -3400,6 +3558,10 @@ def send_invoice():
             rendered_html,
             g.current_user["id"],
             now_iso(),
+            due_date,
+            0,
+            None,
+            "",
         ),
     )
 
@@ -3445,7 +3607,7 @@ def mark_invoice_paid(invoice_id):
 
     # Mark as paid
     db.execute(
-        "UPDATE invoices SET status = ?, paid_at = ? WHERE id = ?",
+        "UPDATE invoices SET status = ?, paid_at = ?, last_reminder_error = '' WHERE id = ?",
         ("bezahlt", payment_date, invoice_id),
     )
     log_audit(

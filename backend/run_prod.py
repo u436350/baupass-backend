@@ -4,7 +4,7 @@ import os
 
 from waitress import serve
 
-from server import app, get_runtime_diagnostics, init_db, check_and_apply_overdue_suspensions, get_db
+from server import app, get_runtime_diagnostics, init_db, check_and_apply_overdue_suspensions, run_invoice_dunning_cycle, get_db
 
 
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -25,7 +25,15 @@ if __name__ == "__main__":
     init_db()
     with app.app_context():
         db = get_db()
+        dunning_result = run_invoice_dunning_cycle(db)
         suspended = check_and_apply_overdue_suspensions(db)
+    if dunning_result.get("remindersSent") or dunning_result.get("reminderFailures") or dunning_result.get("overdueUpdated"):
+        print(
+            "[baupass] Dunning cycle: "
+            f"sent={dunning_result.get('remindersSent', 0)}, "
+            f"failed={dunning_result.get('reminderFailures', 0)}, "
+            f"overdue_updated={dunning_result.get('overdueUpdated', 0)}"
+        )
     if suspended:
         print(f"[baupass] Auto-suspended {len(suspended)} company/ies due to overdue invoices")
     diagnostics = get_runtime_diagnostics()
