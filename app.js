@@ -258,6 +258,9 @@ function mapCompanyRepairError(error) {
   if (message === "company_locked") {
     return "Diese Firma ist aktuell gesperrt.";
   }
+  if (message === "company_has_workers") {
+    return "Die Firma hat noch aktive Mitarbeiter. Bitte komplette Löschung als Superadmin verwenden.";
+  }
   return message || "unbekannter_fehler";
 }
 
@@ -935,6 +938,7 @@ function renderCompanyList() {
   const userRole = getCurrentUser()?.role || "";
   const userCompanyId = getCurrentUser()?.company_id || getCurrentUser()?.companyId || "";
   const canRepairAny = userRole === "superadmin";
+  const canDeleteAny = userRole === "superadmin";
   const canRepairOwn = userRole === "company-admin";
   const historyWindowValue = String(state.repairHistoryWindowDays || 0);
   const onlyProblemsChecked = Boolean(state.onlyCompaniesWithRepairs);
@@ -984,6 +988,7 @@ function renderCompanyList() {
           <div class="button-row">
             <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Reparatur laeuft..." : "Firma reparieren"}</button>
             <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
+            <button type="button" class="ghost-button" data-company-delete="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Firma löschen</button>
           </div>
         </article>
       `;
@@ -1059,6 +1064,33 @@ function bindCompanyRowActions() {
 
   elements.companyList.dataset.repairBound = "1";
   elements.companyList.addEventListener("click", async (event) => {
+    const deleteButton = event.target.closest("[data-company-delete]");
+    if (deleteButton && !deleteButton.disabled && elements.companyList.contains(deleteButton)) {
+      const companyId = deleteButton.dataset.companyDelete;
+      if (!companyId) {
+        return;
+      }
+      const company = state.companies.find((entry) => entry.id === companyId);
+      const companyName = company?.name || "diese Firma";
+      const forceDelete = window.confirm(
+        `Firma ${companyName} und alle zugehörigen Datensätze löschen?\n\nOK = komplette Löschung (inkl. Mitarbeiter/Subunternehmen)\nAbbrechen = nicht löschen`
+      );
+      if (!forceDelete) {
+        return;
+      }
+
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}?force=1`, { method: "DELETE" });
+        await loadAllData();
+        refreshAll();
+        window.alert(`Firma ${companyName} wurde gelöscht.`);
+      } catch (error) {
+        const repairMessage = mapCompanyRepairError(error);
+        window.alert(`Firma ${companyName} konnte nicht gelöscht werden: ${repairMessage}`);
+      }
+      return;
+    }
+
     const lockButton = event.target.closest("[data-company-toggle-lock]");
     if (lockButton && !lockButton.disabled && elements.companyList.contains(lockButton)) {
       const companyId = lockButton.dataset.companyToggleLock;
@@ -2552,6 +2584,10 @@ async function handleInvoiceSend() {
       }
     }
   } catch (error) {
+    if (String(error.message || "") === "duplicate_invoice_number") {
+      window.alert(`Rechnungsnummer ${invoice.invoiceNumber} ist bereits vergeben. Bitte eine andere Nummer verwenden.`);
+      return;
+    }
     window.alert(`Rechnung konnte nicht versendet werden: ${error.message}`);
   }
 }
@@ -2582,6 +2618,18 @@ function buildInvoiceDraft(options = {}) {
   const requestedNetAmount = Number(document.querySelector("#invoiceNetAmount").value || "0");
   const invoiceNumberRaw = document.querySelector("#invoiceNumber").value.trim();
   const invoiceNumber = invoiceNumberRaw || `RE-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+
+  const duplicateInvoice = (state.invoices || []).some((entry) => {
+    const sameCompany = String(entry.company_id || entry.companyId || "") === String(company.id || "");
+    const sameNumber = String(entry.invoice_number || entry.invoiceNumber || "").trim().toLowerCase() === invoiceNumber.trim().toLowerCase();
+    return sameCompany && sameNumber;
+  });
+  if (duplicateInvoice) {
+    if (!silent) {
+      window.alert(`Rechnungsnummer ${invoiceNumber} ist bereits vergeben. Bitte eine andere Nummer verwenden.`);
+    }
+    return null;
+  }
 
   if (!invoiceDate || !invoiceDueDate || !invoicePeriod || !invoiceDescription) {
     if (!silent) {
