@@ -4478,6 +4478,22 @@ function showImportDryRunDialog(summary) {
     panel.innerHTML = `
       <h3 style="margin:0 0 8px;">Import Vorschau (Dry-Run)</h3>
       <p class="helper-text" style="margin:0 0 12px;">Bitte Zahlen pruefen, bevor der Import angewendet wird.</p>
+      
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px; padding:10px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
+          <span style="display:inline-flex; min-width:24px; height:24px; justify-content:center; align-items:center; padding:2px 6px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:700; font-size:0.8rem;">✓</span>
+          <span style="color:#16a34a;"><strong>Grün:</strong> OK / Keine Konflikte</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
+          <span style="display:inline-flex; min-width:24px; height:24px; justify-content:center; align-items:center; padding:2px 6px; border-radius:999px; background:#fef3c7; color:#92400e; font-weight:700; font-size:0.8rem;">⚠</span>
+          <span style="color:#b45309;"><strong>Gelb:</strong> 1-5 Konflikte</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
+          <span style="display:inline-flex; min-width:24px; height:24px; justify-content:center; align-items:center; padding:2px 6px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:700; font-size:0.8rem;">✕</span>
+          <span style="color:#dc2626;"><strong>Rot:</strong> >5 Konflikte</span>
+        </div>
+      </div>
+
       <table style="width:100%; border-collapse:collapse; font-size:0.95rem; margin-bottom:12px;">
         <thead>
           <tr style="background:#f5f7fa; text-align:left;">
@@ -4494,7 +4510,15 @@ function showImportDryRunDialog(summary) {
           <tr><td style="padding:8px; border:1px solid #d8dee8;">Invoices</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.invoices, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.invoices, "conflict")}</td></tr>
         </tbody>
       </table>
-      <p class="helper-text" style="margin:0 0 14px; color:#6b7280;">Skipped: forbidden=${formatBadge(skipped.forbidden, "skip")}, invalid=${formatBadge(skipped.invalid, "skip")}</p>
+
+      <div style="padding:8px 10px; background:#fef3c7; border-radius:6px; border-left:4px solid #b45309; margin-bottom:14px;">
+        <p style="margin:0 0 6px; font-weight:600; color:#92400e; font-size:0.9rem;">⚠ Übersprungene Einträge:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; color:#78350f;">
+          <div><strong>Forbidden (Berechtigung):</strong> ${formatBadge(skipped.forbidden, "skip")}</div>
+          <div><strong>Invalid (Format):</strong> ${formatBadge(skipped.invalid, "skip")}</div>
+        </div>
+      </div>
+
       <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button type="button" class="ghost-button" data-import-preview="cancel">Abbrechen</button>
         <button type="button" class="primary-button" data-import-preview="apply">Import anwenden</button>
