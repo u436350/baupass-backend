@@ -181,6 +181,30 @@ body {
   line-height: 1.4;
 }
 
+.connection-banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.connection-banner.online {
+  background: rgba(22, 163, 74, .2);
+  color: #86efac;
+  border: 1px solid rgba(134, 239, 172, .35);
+}
+
+.connection-banner.offline {
+  background: rgba(220, 38, 38, .22);
+  color: #fecaca;
+  border: 1px solid rgba(254, 202, 202, .35);
+}
+
 /* ── Generic Card Shell ────────────────────────── */
 .card {
   background: var(--card);
@@ -338,7 +362,7 @@ input {
 button {
   border: 0;
   border-radius: 16px;
-  min-height: 50px;
+  min-height: 54px;
   padding: 12px 16px;
   cursor: pointer;
   font-weight: 700;
@@ -364,9 +388,14 @@ button:hover,
 }
 
 .small-btn {
-  min-height: 44px;
-  padding: 9px 14px;
+  min-height: 50px;
+  padding: 10px 16px;
   font-size: .85rem;
+}
+
+.actions button {
+  min-height: 56px;
+  font-size: .95rem;
 }
 
 .login-tips {

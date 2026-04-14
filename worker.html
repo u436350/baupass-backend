@@ -61,7 +61,9 @@
       </div>
       <div class="top-actions">
         <button id="installButton" class="ghost install-cta" hidden>App installieren</button>
-        <p id="installPlatformHint" class="platform-hint">Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.</p>
+        <p id="installPlatformHint" class="platform-hint">Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.</p>
+        <p id="connectionBanner" class="connection-banner online">Online</p>
+        <p id="lastSyncInfo" class="platform-hint">Zuletzt synchronisiert: -</p>
       </div>
     </header>
 
@@ -79,7 +81,7 @@
         </label>
         <label>
           Badge-PIN
-          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Nur fuer Badge-ID Login" />
+          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Nur für Badge-ID Login" />
         </label>
         <button class="primary" type="submit">Ausweis laden</button>
       </form>
@@ -100,7 +102,7 @@
         <div class="section-head section-head-inline">
           <div>
             <p class="section-kicker">Digitaler Pass</p>
-            <h2>Dein BauPass fuer heute</h2>
+            <h2>Dein BauPass für heute</h2>
           </div>
           <span class="pass-stage-chip">Live</span>
         </div>
@@ -181,7 +183,7 @@
             <span id="workerSite" class="info-value">–</span>
           </div>
           <div class="info-actions">
-            <a id="workerSiteMapLink" class="site-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">Route in Maps oeffnen</a>
+            <a id="workerSiteMapLink" class="site-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">Route in Maps öffnen</a>
           </div>
           <div class="photo-action-wrap">
             <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
@@ -234,7 +236,7 @@
         <p class="eyebrow">Wallet Pass</p>
         <h2 id="gateWorkerName">Mitarbeiter</h2>
         <p class="gate-sub">Drehkreuz-Modus aktiv - QR unter Scanner halten</p>
-        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">⚠ Bitte Display-Helligkeit auf Maximum stellen fuer schnellen Scan.</p>
+        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">⚠ Bitte Display-Helligkeit auf Maximum stellen für schnellen Scan.</p>
         <div style="position: relative; display: inline-block; margin: 16px 0;">
           <div style="position: absolute; inset: -12px; border: 2px dashed rgba(240, 132, 74, 0.4); border-radius: 20px; animation: scannerGlow 2s ease-in-out infinite;"></div>
           <img id="gateQr" alt="Einlass QR" />

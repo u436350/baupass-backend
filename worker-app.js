@@ -112,7 +112,9 @@ const elements = {
   deletePhotoButton: document.querySelector("#deletePhotoButton"),
   workerStatusBanner: document.querySelector("#workerStatusBanner"),
   workerStatusText: document.querySelector("#workerStatusText"),
-  gateStatusFeedback: document.querySelector("#gateStatusFeedback")
+  gateStatusFeedback: document.querySelector("#gateStatusFeedback"),
+  connectionBanner: document.querySelector("#connectionBanner"),
+  lastSyncInfo: document.querySelector("#lastSyncInfo")
 };
 
 const splashStartedAt = performance.now();
@@ -154,6 +156,7 @@ async function init() {
 
   registerWorkerSw();
   wireInstallPrompt();
+  updateConnectionState();
 
   if (urlToken) {
     if (elements.workerAccessToken) {
@@ -219,6 +222,9 @@ function applyDynamicManifestStartUrl(accessToken) {
 }
 
 function bindEvents() {
+  window.addEventListener("online", updateConnectionState);
+  window.addEventListener("offline", updateConnectionState);
+
   if (elements.workerLoginForm) {
     elements.workerLoginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -369,20 +375,20 @@ async function triggerInstall() {
   }
 
   if (isIosDevice()) {
-    showWorkerNotice("iPhone: In Safari auf Teilen tippen und dann 'Zum Home-Bildschirm' waehlen.");
+    showWorkerNotice("iPhone: In Safari auf Teilen tippen und dann 'Zum Home-Bildschirm' wählen.");
     return;
   }
 
   if (isAndroidDevice()) {
       if (!isAndroidChrome()) {
-        showWorkerNotice("Bitte in Google Chrome oeffnen. Nur dort funktioniert die direkte Installation ohne Play Store.");
+        showWorkerNotice("Bitte in Google Chrome öffnen. Nur dort funktioniert die direkte Installation ohne Play Store.");
         return;
       }
-    showWorkerNotice("Android: Im Browser-Menue auf 'App installieren' oder 'Zum Startbildschirm' tippen.");
+    showWorkerNotice("Android: Im Browser-Menü auf 'App installieren' oder 'Zum Startbildschirm' tippen.");
     return;
   }
 
-  showWorkerNotice("Installation manuell: Browser-Menue oeffnen und 'Zum Startbildschirm' bzw. 'App installieren' waehlen.");
+  showWorkerNotice("Installation manuell: Browser-Menü öffnen und 'Zum Startbildschirm' bzw. 'App installieren' wählen.");
 }
 
 async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent = false } = {}) {
@@ -505,6 +511,10 @@ async function loadWorkerData() {
       headers: { Authorization: `Bearer ${workerToken}` }
     });
     renderWorker(payload);
+    if (elements.lastSyncInfo) {
+      elements.lastSyncInfo.textContent = `Zuletzt synchronisiert: ${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
+    }
+    updateConnectionState();
     await syncOfflinePhotoQueue();
     return true;
   } catch {
@@ -623,6 +633,19 @@ function showLogin() {
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
   document.body.classList.remove("worker-loaded");
+}
+
+function updateConnectionState() {
+  if (!elements.connectionBanner) {
+    return;
+  }
+  if (navigator.onLine) {
+    elements.connectionBanner.textContent = "Online";
+    elements.connectionBanner.className = "connection-banner online";
+  } else {
+    elements.connectionBanner.textContent = "Offline";
+    elements.connectionBanner.className = "connection-banner offline";
+  }
 }
 
 function showWorkerNotice(message) {

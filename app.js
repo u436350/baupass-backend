@@ -2238,16 +2238,16 @@ async function exportAccessCsv() {
   }
 }
 
-async function exportWorkersCsv() {
+async function exportWorkersPdf() {
   try {
-    const includeDeleted = window.confirm("Geloeschte Mitarbeiter ebenfalls exportieren?");
+    const includeDeleted = window.confirm("Gelöschte Mitarbeiter ebenfalls exportieren?");
     const query = new URLSearchParams();
     if (includeDeleted) {
       query.set("includeDeleted", "1");
     }
     const suffix = query.toString() ? `?${query.toString()}` : "";
 
-    const response = await fetch(`${API_BASE}/api/workers/export.csv${suffix}`, {
+    const response = await fetch(`${API_BASE}/api/workers/export.pdf${suffix}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -2261,14 +2261,14 @@ async function exportWorkersCsv() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `mitarbeiterliste-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `mitarbeiterliste-${new Date().toISOString().slice(0, 10)}.pdf`;
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
-    window.alert(`Mitarbeiterlisten-Export fehlgeschlagen: ${error.message}`);
+    window.alert(`Mitarbeiterlisten-Export (PDF) fehlgeschlagen: ${error.message}`);
   }
 }
 
@@ -4390,9 +4390,9 @@ async function handleTopbarExport() {
   const exportCompanyId = state.currentUser?.company_id || state.currentUser?.companyId || "";
   const exportCompany = state.companies.find((entry) => entry.id === exportCompanyId);
   const exportScopeLabel = exportCompany ? ` fuer ${exportCompany.name}` : "";
-  const includeAudit = window.confirm("Audit-Log im Export einschliessen?");
-  const includeDayClose = window.confirm("Tagesabschluss-Quittierungen im Export einschliessen?");
-  const includeDeleted = window.confirm("Geloeschte Eintraege im Export einschliessen?");
+  const includeAudit = window.confirm("Audit-Log im Export einschließen?");
+  const includeDayClose = window.confirm("Tagesabschluss-Quittierungen im Export einschließen?");
+  const includeDeleted = window.confirm("Gelöschte Einträge im Export einschließen?");
 
   let exportCompanyTarget = "";
   if (state.currentUser?.role === "superadmin") {
@@ -4427,6 +4427,8 @@ function showImportDryRunDialog(summary) {
     const accepted = summary?.accepted || {};
     const conflicts = summary?.conflicts || {};
     const skipped = summary?.skipped || {};
+    const unchanged = summary?.unchanged || {};
+    const importOnlyChanges = Boolean(summary?.importOnlyChanges);
 
     const formatBadge = (value, mode) => {
       const numeric = Number(value || 0);
@@ -4482,12 +4484,13 @@ function showImportDryRunDialog(summary) {
 
     panel.innerHTML = `
       <h3 style="margin:0 0 8px;">Import Vorschau (Dry-Run)</h3>
-      <p class="helper-text" style="margin:0 0 12px;">Bitte Zahlen pruefen, bevor der Import angewendet wird.</p>
+      <p class="helper-text" style="margin:0 0 12px;">Bitte Zahlen prüfen, bevor der Import angewendet wird.</p>
+      <p class="helper-text" style="margin:0 0 12px; color:#475569;">Modus: <strong>${importOnlyChanges ? "Nur Änderungen" : "Alle Datensätze"}</strong> · Unverändert erkannt: ${Number(unchanged.companies || 0) + Number(unchanged.subcompanies || 0) + Number(unchanged.workers || 0) + Number(unchanged.accessLogs || 0) + Number(unchanged.invoices || 0)}</p>
       
       <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px; padding:10px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
         <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
           <span style="display:inline-flex; min-width:24px; height:24px; justify-content:center; align-items:center; padding:2px 6px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:700; font-size:0.8rem;">✓</span>
-          <span style="color:#16a34a;"><strong>Grün:</strong> OK / Keine Konflikte</span>
+          <span style="color:#16a34a;"><strong>Grün:</strong> OK / keine Konflikte</span>
         </div>
         <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
           <span style="display:inline-flex; min-width:24px; height:24px; justify-content:center; align-items:center; padding:2px 6px; border-radius:999px; background:#fef3c7; color:#92400e; font-weight:700; font-size:0.8rem;">⚠</span>
@@ -4519,8 +4522,8 @@ function showImportDryRunDialog(summary) {
       <div style="padding:8px 10px; background:#fef3c7; border-radius:6px; border-left:4px solid #b45309; margin-bottom:14px;">
         <p style="margin:0 0 6px; font-weight:600; color:#92400e; font-size:0.9rem;">⚠ Übersprungene Einträge:</p>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; color:#78350f;">
-          <div><strong>Forbidden (Berechtigung):</strong> ${formatBadge(skipped.forbidden, "skip")}</div>
-          <div><strong>Invalid (Format):</strong> ${formatBadge(skipped.invalid, "skip")}</div>
+          <div><strong>Verboten (Berechtigung):</strong> ${formatBadge(skipped.forbidden, "skip")}</div>
+          <div><strong>Ungültig (Format):</strong> ${formatBadge(skipped.invalid, "skip")}</div>
         </div>
       </div>
 
@@ -4570,11 +4573,14 @@ async function handleTopbarImport() {
       const parsed = JSON.parse(text);
       const payloadData = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
 
+      const importOnlyChanges = window.confirm("Nur Änderungen importieren? (Empfohlen)");
+
       const dryRunResult = await apiRequest(`${API_BASE}/api/import`, {
         method: "POST",
         body: {
           data: payloadData,
           dryRun: 1,
+          importOnlyChanges: importOnlyChanges ? 1 : 0,
         }
       });
 
@@ -4590,6 +4596,7 @@ async function handleTopbarImport() {
         body: {
           data: payloadData,
           dryRun: 0,
+          importOnlyChanges: importOnlyChanges ? 1 : 0,
         }
       });
 
@@ -4703,7 +4710,7 @@ if (elements.importButton) {
 
 const workerCsvButton = document.querySelector("#workerCsvButton");
 if (workerCsvButton) {
-  workerCsvButton.addEventListener("click", exportWorkersCsv);
+  workerCsvButton.addEventListener("click", exportWorkersPdf);
 }
 
 const workerForm = document.querySelector("#workerForm");

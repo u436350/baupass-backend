@@ -3,11 +3,14 @@ import sqlite3
 import secrets
 import csv
 import io
+import json
 import smtplib
 import ipaddress
 import html
 import socket
 import re
+import threading
+import time
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -132,6 +135,20 @@ PLAN_NET_PRICE_EUR = {
 }
 
 AUTO_SUSPEND_GRACE_DAYS = 3
+APP_STARTED_AT = datetime.utcnow()
+DUNNING_LAST_RUN_AT = None
+DUNNING_LAST_RESULT = {"remindersSent": 0, "reminderFailures": 0, "overdueUpdated": 0, "suspendedCompanies": 0}
+
+REQUEST_RATE_LIMITS = {
+    "import": {"max": 10, "window_seconds": 60},
+    "login": {"max": 30, "window_seconds": 60},
+    "worker_login": {"max": 30, "window_seconds": 60},
+}
+request_rate_state = {}
+_rate_lock = threading.Lock()
+
+_background_started = False
+_background_lock = threading.Lock()
 
 
 def get_db():
@@ -160,6 +177,50 @@ def parse_iso_date(value):
         return datetime.strptime(raw[:10], "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def get_rate_limit_key(scope):
+    return f"{scope}|{get_client_ip()}"
+
+
+def check_rate_limit(scope):
+    rule = REQUEST_RATE_LIMITS.get(scope)
+    if not rule:
+        return True, 0
+
+    now_ts = time.time()
+    key = get_rate_limit_key(scope)
+    with _rate_lock:
+        state = request_rate_state.get(key)
+        if not state:
+            request_rate_state[key] = {"count": 1, "window_start": now_ts}
+            return True, 0
+
+        elapsed = now_ts - float(state.get("window_start", now_ts))
+        if elapsed >= rule["window_seconds"]:
+            request_rate_state[key] = {"count": 1, "window_start": now_ts}
+            return True, 0
+
+        state["count"] = int(state.get("count", 0)) + 1
+        if state["count"] > rule["max"]:
+            retry_after = max(1, int(rule["window_seconds"] - elapsed))
+            return False, retry_after
+
+        return True, 0
+
+
+def require_rate_limit(scope):
+    def decorator(handler):
+        @wraps(handler)
+        def wrapper(*args, **kwargs):
+            allowed, retry_after = check_rate_limit(scope)
+            if not allowed:
+                return jsonify({"error": "rate_limited", "retryAfterSeconds": retry_after}), 429
+            return handler(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def expiry_iso(hours=SESSION_TTL_HOURS):
@@ -1254,6 +1315,100 @@ def run_invoice_dunning_cycle(db):
     return result
 
 
+def create_import_rollback_backup(db, role, target_company_id):
+    backup_dir = BASE_DIR / "backend" / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    company_clause = ""
+    company_params = []
+    if role != "superadmin" or target_company_id:
+        scope_id = target_company_id
+        company_clause = " WHERE company_id = ?"
+        company_params = [scope_id]
+
+    payload = {
+        "meta": {
+            "type": "import-rollback-backup",
+            "createdAt": now_iso(),
+            "scopeCompanyId": target_company_id,
+            "role": role,
+        },
+        "companies": [],
+        "subcompanies": [],
+        "workers": [],
+        "accessLogs": [],
+        "invoices": [],
+    }
+
+    if role == "superadmin" and not target_company_id:
+        payload["companies"] = [row_to_dict(row) for row in db.execute("SELECT * FROM companies ORDER BY name").fetchall()]
+    elif target_company_id:
+        payload["companies"] = [
+            row_to_dict(row)
+            for row in db.execute("SELECT * FROM companies WHERE id = ? ORDER BY name", (target_company_id,)).fetchall()
+        ]
+
+    payload["subcompanies"] = [
+        row_to_dict(row)
+        for row in db.execute(f"SELECT * FROM subcompanies{company_clause} ORDER BY name", company_params).fetchall()
+    ]
+    payload["workers"] = [
+        row_to_dict(row)
+        for row in db.execute(f"SELECT * FROM workers{company_clause} ORDER BY last_name, first_name", company_params).fetchall()
+    ]
+    payload["invoices"] = [
+        row_to_dict(row)
+        for row in db.execute(f"SELECT * FROM invoices{company_clause} ORDER BY created_at DESC", company_params).fetchall()
+    ]
+
+    worker_ids = [row["id"] for row in payload["workers"]]
+    if worker_ids:
+        placeholders = ",".join(["?"] * len(worker_ids))
+        payload["accessLogs"] = [
+            row_to_dict(row)
+            for row in db.execute(
+                f"SELECT * FROM access_logs WHERE worker_id IN ({placeholders}) ORDER BY timestamp DESC",
+                worker_ids,
+            ).fetchall()
+        ]
+
+    filename = f"import-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}.json"
+    backup_path = backup_dir / filename
+    backup_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(backup_path)
+
+
+def run_dunning_job_once():
+    global DUNNING_LAST_RUN_AT, DUNNING_LAST_RESULT
+    with app.app_context():
+        db = get_db()
+        result = run_invoice_dunning_cycle(db)
+        suspended = check_and_apply_overdue_suspensions(db)
+        result["suspendedCompanies"] = len(suspended)
+        DUNNING_LAST_RUN_AT = now_iso()
+        DUNNING_LAST_RESULT = result
+
+
+def start_background_jobs():
+    global _background_started
+    with _background_lock:
+        if _background_started:
+            return
+        _background_started = True
+
+    interval_hours = max(1, int(os.getenv("BAUPASS_DUNNING_INTERVAL_HOURS", "24")))
+
+    def scheduler_loop():
+        while True:
+            try:
+                run_dunning_job_once()
+            except Exception:
+                pass
+            time.sleep(interval_hours * 3600)
+
+    threading.Thread(target=scheduler_loop, name="baupass-dunning-scheduler", daemon=True).start()
+
+
 def get_company_access_error(db, company_id):
     if not company_id:
         return None
@@ -1624,6 +1779,7 @@ def qr_data_url():
 
 
 @app.post("/api/login")
+@require_rate_limit("login")
 def login():
     def login_error(code, **extra):
         payload = {"ok": False, "error": code}
@@ -2522,6 +2678,88 @@ def export_workers_csv():
     )
 
 
+@app.get("/api/workers/export.pdf")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def export_workers_pdf():
+    include_deleted = request.args.get("includeDeleted", "0") == "1"
+    where_clause, params = visible_worker_clause(g.current_user, prefix="workers.")
+    if not include_deleted:
+        where_clause = f"{where_clause}{' AND' if where_clause else ' WHERE'} workers.deleted_at IS NULL"
+
+    rows = get_db().execute(
+        f"""
+        SELECT workers.*, companies.name AS company_name, subcompanies.name AS subcompany_name
+        FROM workers
+        JOIN companies ON companies.id = workers.company_id
+        LEFT JOIN subcompanies ON subcompanies.id = workers.subcompany_id
+        {where_clause}
+        ORDER BY workers.last_name, workers.first_name
+        """,
+        params,
+    ).fetchall()
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+    except Exception:
+        return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
+
+    buffer = io.BytesIO()
+    page_width, page_height = A4
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+
+    y = page_height - 42
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(36, y, "BauPass - Mitarbeiterliste")
+    y -= 16
+    pdf.setFont("Helvetica", 9)
+    pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    y -= 22
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(36, y, "Name")
+    pdf.drawString(200, y, "Firma")
+    pdf.drawString(340, y, "Subunternehmen")
+    pdf.drawString(470, y, "Status")
+    y -= 12
+    pdf.line(36, y, page_width - 36, y)
+    y -= 14
+
+    pdf.setFont("Helvetica", 9)
+    for row in rows:
+        if y < 48:
+            pdf.showPage()
+            y = page_height - 44
+            pdf.setFont("Helvetica-Bold", 9)
+            pdf.drawString(36, y, "Name")
+            pdf.drawString(200, y, "Firma")
+            pdf.drawString(340, y, "Subunternehmen")
+            pdf.drawString(470, y, "Status")
+            y -= 12
+            pdf.line(36, y, page_width - 36, y)
+            y -= 14
+            pdf.setFont("Helvetica", 9)
+
+        full_name = f"{(row['last_name'] or '').strip()}, {(row['first_name'] or '').strip()}".strip(", ")
+        pdf.drawString(36, y, full_name[:32])
+        pdf.drawString(200, y, str(row["company_name"] or "-")[:24])
+        pdf.drawString(340, y, str(row["subcompany_name"] or "-")[:21])
+        pdf.drawString(470, y, str(row["status"] or "-")[:11])
+        y -= 13
+
+    if not rows:
+        pdf.drawString(36, y, "Keine Mitarbeiter gefunden.")
+
+    pdf.save()
+    buffer.seek(0)
+    filename = f"mitarbeiterliste-{datetime.now().strftime('%Y-%m-%d')}.pdf"
+    return Response(
+        buffer.getvalue(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.post("/api/workers")
 @require_auth
 @require_roles("superadmin", "company-admin")
@@ -2872,6 +3110,7 @@ def create_worker_app_access(worker_id):
 
 
 @app.post("/api/worker-app/login")
+@require_rate_limit("worker_login")
 def worker_app_login():
     payload = request.get_json(silent=True) or {}
     access_token = (payload.get("accessToken") or "").strip()
@@ -3833,6 +4072,7 @@ def list_audit_logs():
     event_type = (request.args.get("eventType") or "").strip()
     actor_role = (request.args.get("actorRole") or "").strip()
     target_type = (request.args.get("targetType") or "").strip()
+    query_text = (request.args.get("q") or "").strip()
     from_date = (request.args.get("from") or "").strip()
     to_date = (request.args.get("to") or "").strip()
     limit = min(max(int(request.args.get("limit", "300")), 1), 1000)
@@ -3855,6 +4095,11 @@ def list_audit_logs():
     if target_type:
         conditions.append("target_type = ?")
         params.append(target_type)
+
+    if query_text:
+        conditions.append("(message LIKE ? OR event_type LIKE ? OR IFNULL(target_id, '') LIKE ?)")
+        pattern = f"%{query_text}%"
+        params.extend([pattern, pattern, pattern])
 
     if from_date:
         conditions.append("created_at >= ?")
@@ -3879,6 +4124,7 @@ def export_audit_csv():
     event_type = (request.args.get("eventType") or "").strip()
     actor_role = (request.args.get("actorRole") or "").strip()
     target_type = (request.args.get("targetType") or "").strip()
+    query_text = (request.args.get("q") or "").strip()
     from_date = (request.args.get("from") or "").strip()
     to_date = (request.args.get("to") or "").strip()
 
@@ -3896,6 +4142,10 @@ def export_audit_csv():
     if target_type:
         conditions.append("target_type = ?")
         params.append(target_type)
+    if query_text:
+        conditions.append("(message LIKE ? OR event_type LIKE ? OR IFNULL(target_id, '') LIKE ?)")
+        pattern = f"%{query_text}%"
+        params.extend([pattern, pattern, pattern])
     if from_date:
         conditions.append("created_at >= ?")
         params.append(f"{from_date}T00:00:00Z")
@@ -4118,10 +4368,12 @@ def export_payload():
 @app.post("/api/import")
 @require_auth
 @require_roles("superadmin", "company-admin")
+@require_rate_limit("import")
 def import_payload():
     payload = request.get_json(silent=True) or {}
     data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
     dry_run = int(payload.get("dryRun", 1)) == 1
+    import_only_changes = int(payload.get("importOnlyChanges", 0)) == 1
 
     if not isinstance(data, dict):
         return jsonify({"error": "invalid_payload"}), 400
@@ -4130,6 +4382,10 @@ def import_payload():
     user = g.current_user
     role = user.get("role")
     target_company_id = user.get("company_id") if role != "superadmin" else (payload.get("companyId") or "")
+    meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+    schema_version = str(meta.get("schemaVersion") or "").strip()
+    if schema_version and not schema_version.startswith("2026-04-export-v2"):
+        return jsonify({"error": "unsupported_schema_version", "message": f"Import-Version nicht unterstützt: {schema_version}"}), 400
 
     companies = data.get("companies") or []
     subcompanies = data.get("subcompanies") or []
@@ -4139,7 +4395,10 @@ def import_payload():
 
     summary = {
         "dryRun": dry_run,
+        "schemaVersion": schema_version or "unknown",
+        "importOnlyChanges": import_only_changes,
         "accepted": {"companies": 0, "subcompanies": 0, "workers": 0, "accessLogs": 0, "invoices": 0},
+        "unchanged": {"companies": 0, "subcompanies": 0, "workers": 0, "accessLogs": 0, "invoices": 0},
         "skipped": {"forbidden": 0, "invalid": 0},
         "conflicts": {"companies": 0, "subcompanies": 0, "workers": 0, "accessLogs": 0, "invoices": 0},
     }
@@ -4166,6 +4425,14 @@ def import_payload():
         exists = db.execute("SELECT 1 FROM companies WHERE id = ?", (cid,)).fetchone()
         if exists:
             summary["conflicts"]["companies"] += 1
+            if import_only_changes:
+                current = db.execute(
+                    "SELECT * FROM companies WHERE id = ?",
+                    (cid,),
+                ).fetchone()
+                if current and current["name"] == item.get("name", "") and current["contact"] == item.get("contact", "") and current["billing_email"] == item.get("billing_email", item.get("billingEmail", "")) and current["access_host"] == item.get("access_host", item.get("accessHost", "")) and normalize_company_plan(current["plan"]) == normalize_company_plan(item.get("plan")) and current["status"] == item.get("status", "aktiv"):
+                    summary["unchanged"]["companies"] += 1
+                    continue
         prepared_companies.append(
             (
                 cid,
@@ -4191,6 +4458,11 @@ def import_payload():
         exists = db.execute("SELECT 1 FROM subcompanies WHERE id = ?", (sid,)).fetchone()
         if exists:
             summary["conflicts"]["subcompanies"] += 1
+            if import_only_changes:
+                current = db.execute("SELECT * FROM subcompanies WHERE id = ?", (sid,)).fetchone()
+                if current and current["company_id"] == cid and current["name"] == item.get("name", "") and current["contact"] == item.get("contact", "") and current["status"] == item.get("status", "aktiv"):
+                    summary["unchanged"]["subcompanies"] += 1
+                    continue
         prepared_subcompanies.append(
             (
                 sid,
@@ -4214,6 +4486,11 @@ def import_payload():
         exists = db.execute("SELECT 1 FROM workers WHERE id = ?", (wid,)).fetchone()
         if exists:
             summary["conflicts"]["workers"] += 1
+            if import_only_changes:
+                current = db.execute("SELECT * FROM workers WHERE id = ?", (wid,)).fetchone()
+                if current and current["company_id"] == cid and (current["subcompany_id"] or "") == (item.get("subcompany_id", item.get("subcompanyId")) or "") and current["first_name"] == item.get("first_name", item.get("firstName", "")) and current["last_name"] == item.get("last_name", item.get("lastName", "")) and current["insurance_number"] == item.get("insurance_number", item.get("insuranceNumber", "")) and current["role"] == item.get("role", "") and current["site"] == item.get("site", "") and current["valid_until"] == item.get("valid_until", item.get("validUntil", "")) and current["status"] == item.get("status", "aktiv") and (current["badge_id"] or "") == (item.get("badge_id", item.get("badgeId", "")) or ""):
+                    summary["unchanged"]["workers"] += 1
+                    continue
         prepared_workers.append(
             (
                 wid,
@@ -4253,6 +4530,11 @@ def import_payload():
         exists = db.execute("SELECT 1 FROM access_logs WHERE id = ?", (lid,)).fetchone()
         if exists:
             summary["conflicts"]["accessLogs"] += 1
+            if import_only_changes:
+                current = db.execute("SELECT * FROM access_logs WHERE id = ?", (lid,)).fetchone()
+                if current and current["worker_id"] == worker_id and current["direction"] == item.get("direction", "check-in") and current["gate"] == item.get("gate", "") and current["note"] == item.get("note", "") and current["timestamp"] == item.get("timestamp", now_iso()):
+                    summary["unchanged"]["accessLogs"] += 1
+                    continue
         prepared_access_logs.append(
             (
                 lid,
@@ -4276,6 +4558,11 @@ def import_payload():
         exists = db.execute("SELECT 1 FROM invoices WHERE id = ?", (iid,)).fetchone()
         if exists:
             summary["conflicts"]["invoices"] += 1
+            if import_only_changes:
+                current = db.execute("SELECT * FROM invoices WHERE id = ?", (iid,)).fetchone()
+                if current and current["company_id"] == cid and current["invoice_number"] == item.get("invoice_number", item.get("invoiceNumber", "")) and current["recipient_email"] == item.get("recipient_email", item.get("recipientEmail", "")) and current["invoice_date"] == item.get("invoice_date", item.get("invoiceDate", "")) and current["invoice_period"] == item.get("invoice_period", item.get("invoicePeriod", "")) and current["description"] == item.get("description", "") and float(current["total_amount"] or 0) == float(item.get("total_amount", item.get("totalAmount", 0)) or 0) and current["status"] == item.get("status", "draft"):
+                    summary["unchanged"]["invoices"] += 1
+                    continue
         prepared_invoices.append(
             (
                 iid,
@@ -4312,6 +4599,8 @@ def import_payload():
 
     if dry_run:
         return jsonify({"ok": True, "summary": summary})
+
+    backup_path = create_import_rollback_backup(db, role, target_company_id)
 
     if role == "superadmin":
         db.executemany(
@@ -4351,14 +4640,46 @@ def import_payload():
 
     log_audit(
         "import.applied",
-        f"Import ausgefuehrt (companies={summary['accepted']['companies']}, workers={summary['accepted']['workers']}, logs={summary['accepted']['accessLogs']}, invoices={summary['accepted']['invoices']})",
+        f"Import ausgefuehrt (companies={summary['accepted']['companies']}, workers={summary['accepted']['workers']}, logs={summary['accepted']['accessLogs']}, invoices={summary['accepted']['invoices']}, backup={backup_path})",
         target_type="import",
         target_id=now_iso(),
         company_id=target_company_id,
         actor=user,
     )
 
-    return jsonify({"ok": True, "summary": summary})
+    return jsonify({"ok": True, "summary": summary, "backupPath": backup_path})
+
+
+@app.get("/api/health")
+def api_health():
+    db_ok = True
+    db_error = ""
+    try:
+        db = sqlite3.connect(DB_PATH)
+        db.execute("SELECT 1").fetchone()
+        db.close()
+    except Exception as exc:
+        db_ok = False
+        db_error = str(exc)
+
+    uptime_seconds = int((datetime.utcnow() - APP_STARTED_AT).total_seconds())
+    diagnostics = get_runtime_diagnostics()
+    status = "ok" if db_ok else "degraded"
+
+    return jsonify(
+        {
+            "status": status,
+            "uptimeSeconds": uptime_seconds,
+            "startedAt": APP_STARTED_AT.replace(microsecond=0).isoformat() + "Z",
+            "db": {"ok": db_ok, "error": db_error},
+            "dunning": {
+                "lastRunAt": DUNNING_LAST_RUN_AT,
+                "lastResult": DUNNING_LAST_RESULT,
+                "intervalHours": max(1, int(os.getenv("BAUPASS_DUNNING_INTERVAL_HOURS", "24"))),
+            },
+            "warnings": diagnostics.get("warnings", []),
+        }
+    ), (200 if db_ok else 503)
 
 
 @app.get("/")
@@ -4398,6 +4719,9 @@ def static_proxy(path):
     if target.exists() and target.is_file():
         return send_from_directory(BASE_DIR, path)
     return jsonify({"error": "not_found"}), 404
+
+
+start_background_jobs()
 
 
 if __name__ == "__main__":
