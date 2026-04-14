@@ -966,6 +966,42 @@ def init_db():
     if "last_reminder_error" not in invoice_columns:
         cur.execute("ALTER TABLE invoices ADD COLUMN last_reminder_error TEXT")
 
+    # Rechnungsnummern pro Firma eindeutig halten: Alt-Duplikate bereinigen und Unique-Index setzen.
+    duplicates = cur.execute(
+        """
+        SELECT company_id, invoice_number, COUNT(*) AS c
+        FROM invoices
+        WHERE invoice_number IS NOT NULL AND TRIM(invoice_number) <> ''
+        GROUP BY company_id, invoice_number
+        HAVING COUNT(*) > 1
+        """
+    ).fetchall()
+    for dup in duplicates:
+        rows = cur.execute(
+            """
+            SELECT id, invoice_number
+            FROM invoices
+            WHERE company_id = ? AND invoice_number = ?
+            ORDER BY created_at ASC, id ASC
+            """,
+            (dup[0], dup[1]),
+        ).fetchall()
+        for idx, row in enumerate(rows[1:], start=2):
+            base = str(row[1] or "RE").strip() or "RE"
+            candidate = f"{base}-{idx}"
+            suffix = idx
+            while cur.execute(
+                "SELECT 1 FROM invoices WHERE company_id = ? AND invoice_number = ? AND id <> ?",
+                (dup[0], candidate, row[0]),
+            ).fetchone():
+                suffix += 1
+                candidate = f"{base}-{suffix}"
+            cur.execute("UPDATE invoices SET invoice_number = ? WHERE id = ?", (candidate, row[0]))
+
+    cur.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_company_invoice_number_unique ON invoices(company_id, invoice_number)"
+    )
+
     db.commit()
     db.close()
 
@@ -3350,14 +3386,42 @@ def delete_company(company_id):
         return jsonify({"error": "default_company_protected"}), 400
 
     db = get_db()
+    force = request.args.get("force", "0") == "1"
+    company = db.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
+    if not company:
+        return jsonify({"error": "company_not_found"}), 404
+
     count = db.execute("SELECT COUNT(*) AS c FROM workers WHERE company_id = ? AND deleted_at IS NULL", (company_id,)).fetchone()["c"]
-    if count > 0:
+    if count > 0 and not force:
         return jsonify({"error": "company_has_workers"}), 400
 
-    db.execute("UPDATE companies SET deleted_at = ?, status = ? WHERE id = ?", (now_iso(), "pausiert", company_id))
+    if force:
+        now = now_iso()
+        worker_rows = db.execute("SELECT id FROM workers WHERE company_id = ?", (company_id,)).fetchall()
+        worker_ids = [row["id"] for row in worker_rows]
+
+        db.execute("UPDATE workers SET deleted_at = ?, status = 'gesperrt' WHERE company_id = ?", (now, company_id))
+        db.execute("UPDATE subcompanies SET deleted_at = ?, status = 'pausiert' WHERE company_id = ?", (now, company_id))
+        db.execute("UPDATE companies SET deleted_at = ?, status = ? WHERE id = ?", (now, "pausiert", company_id))
+        db.execute("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE company_id = ?)", (company_id,))
+
+        if worker_ids:
+            placeholders = ",".join(["?"] * len(worker_ids))
+            db.execute(f"DELETE FROM worker_app_tokens WHERE worker_id IN ({placeholders})", worker_ids)
+            db.execute(f"DELETE FROM worker_app_sessions WHERE worker_id IN ({placeholders})", worker_ids)
+    else:
+        db.execute("UPDATE companies SET deleted_at = ?, status = ? WHERE id = ?", (now_iso(), "pausiert", company_id))
+
     db.commit()
-    log_audit("company.deleted", f"Firma {company_id} geloescht", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
-    return jsonify({"ok": True})
+    log_audit(
+        "company.deleted",
+        f"Firma {company_id} gelöscht{' (force)' if force else ''}",
+        target_type="company",
+        target_id=company_id,
+        company_id=company_id,
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "force": force})
 
 
 @app.post("/api/companies/<company_id>/repair")
@@ -3991,7 +4055,7 @@ def send_invoice_email(invoice_row, company_row, settings_row):
 
 @app.get("/api/invoices")
 @require_auth
-@require_roles("superadmin", "company-admin")
+@require_roles("superadmin")
 def list_invoices():
     db = get_db()
     if g.current_user["role"] == "superadmin":
@@ -4021,7 +4085,7 @@ def list_invoices():
 
 @app.post("/api/invoices/send")
 @require_auth
-@require_roles("superadmin", "company-admin")
+@require_roles("superadmin")
 def send_invoice():
     payload = request.get_json(silent=True) or {}
     company_id = payload.get("companyId")
@@ -4038,6 +4102,13 @@ def send_invoice():
         return jsonify({"error": "forbidden_company"}), 403
 
     invoice_number = (payload.get("invoiceNumber") or "").strip() or f"RE-{datetime.now().year}-{secrets.token_hex(3).upper()}"
+    duplicate_invoice = db.execute(
+        "SELECT id FROM invoices WHERE company_id = ? AND invoice_number = ? LIMIT 1",
+        (company_id, invoice_number),
+    ).fetchone()
+    if duplicate_invoice:
+        return jsonify({"error": "duplicate_invoice_number", "message": "Rechnungsnummer ist bereits vergeben."}), 409
+
     invoice_date = (payload.get("invoiceDate") or datetime.now().date().isoformat()).strip()
     due_date_input = (payload.get("dueDate") or "").strip()
     invoice_date_obj = parse_iso_date(invoice_date) or datetime.utcnow().date()
@@ -4106,7 +4177,7 @@ def send_invoice():
 
 @app.put("/api/invoices/<invoice_id>/pay")
 @require_auth
-@require_roles("superadmin", "company-admin")
+@require_roles("superadmin")
 def mark_invoice_paid(invoice_id):
     """Mark an invoice as paid, optionally lifting company suspension if all invoices are now paid."""
     payload = request.get_json(silent=True) or {}
