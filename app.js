@@ -742,7 +742,7 @@ function renderReportingPanels() {
   }
 
   const role = String(getCurrentUser()?.role || "").toLowerCase();
-  if (role !== "superadmin" && role !== "company-admin") {
+  if (role !== "superadmin") {
     if (reportingPanels) {
       reportingPanels.style.display = "none";
     }

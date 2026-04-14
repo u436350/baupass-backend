@@ -3555,7 +3555,7 @@ def access_summary():
 
 @app.get("/api/reporting/summary")
 @require_auth
-@require_roles("superadmin", "company-admin")
+@require_roles("superadmin")
 def reporting_summary():
     db = get_db()
     user = g.current_user
