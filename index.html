@@ -190,6 +190,10 @@
                 <input id="site" type="text" placeholder="Neubau Mitte" required />
               </label>
               <label>
+                Physische Karten-ID (NFC/RFID)
+                <input id="physicalCardId" type="text" placeholder="UID oder Kartenkennung" />
+              </label>
+              <label>
                 Gueltig bis
                 <input id="validUntil" type="date" required />
               </label>
@@ -201,6 +205,11 @@
                   <option value="abgelaufen">Abgelaufen</option>
                 </select>
               </label>
+              <label>
+                Badge-PIN fuer App-Login
+                <input id="badgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4 bis 8 Ziffern" required />
+              </label>
+              <p class="helper-text">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
               <input id="photoData" type="hidden" />
               <input id="photoFileInput" type="file" accept="image/*" capture="user" hidden />
 

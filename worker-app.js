@@ -55,6 +55,7 @@ const API_BASE = resolveWorkerApiBase();
 const API_ROOT = resolveApiRoot(API_BASE);
 const WORKER_TOKEN_KEY = "baupass-worker-token";
 const WORKER_ACCESS_TOKEN_KEY = "baupass-worker-access-token";
+const WORKER_BADGE_LOGIN_KEY = "baupass-worker-badge-login";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
@@ -73,6 +74,7 @@ const elements = {
   workerNotice: document.querySelector("#workerNotice"),
   workerLoginForm: document.querySelector("#workerLoginForm"),
   workerAccessToken: document.querySelector("#workerAccessToken"),
+  workerBadgePin: document.querySelector("#workerBadgePin"),
   companyName: document.querySelector("#companyName"),
     workerSubcompany: document.querySelector("#workerSubcompany"),
   workerName: document.querySelector("#workerName"),
@@ -81,6 +83,7 @@ const elements = {
   workerPhoto: document.querySelector("#workerPhoto"),
   workerBadgeId: document.querySelector("#workerBadgeId"),
   workerSite: document.querySelector("#workerSite"),
+  workerSiteMapLink: document.querySelector("#workerSiteMapLink"),
   workerValidUntil: document.querySelector("#workerValidUntil"),
   workerQr: document.querySelector("#workerQr"),
   qrFallbackText: document.querySelector("#qrFallbackText"),
@@ -116,6 +119,7 @@ async function init() {
   const params = new URL(window.location.href).searchParams;
   const urlToken = (params.get("access") || "").trim();
   const storedAccessToken = (window.localStorage.getItem(WORKER_ACCESS_TOKEN_KEY) || "").trim();
+  const storedBadgeId = (window.localStorage.getItem(WORKER_BADGE_LOGIN_KEY) || "").trim();
   const bootstrapAccessToken = urlToken || storedAccessToken;
 
   if (bootstrapAccessToken) {
@@ -135,8 +139,10 @@ async function init() {
   }
 
   if (workerToken) {
-    await loadWorkerData();
-    return;
+    const loaded = await loadWorkerData();
+    if (loaded) {
+      return;
+    }
   }
 
   if (storedAccessToken) {
@@ -144,6 +150,15 @@ async function init() {
       elements.workerAccessToken.value = storedAccessToken;
     }
     await loginWithAccessToken(storedAccessToken, { keepUrlToken: false, silent: true });
+    if (workerToken) {
+      return;
+    }
+  }
+
+  if (storedBadgeId) {
+    if (elements.workerAccessToken) {
+      elements.workerAccessToken.value = storedBadgeId;
+    }
   }
 }
 
@@ -182,8 +197,13 @@ function bindEvents() {
   if (elements.workerLoginForm) {
     elements.workerLoginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const accessToken = (elements.workerAccessToken?.value || "").trim();
-      await loginWithAccessToken(accessToken);
+      const credential = (elements.workerAccessToken?.value || "").trim();
+      if (looksLikeBadgeId(credential)) {
+        const badgePin = (elements.workerBadgePin?.value || "").trim();
+        await loginWithBadgeId(credential, badgePin);
+        return;
+      }
+      await loginWithAccessToken(credential);
     });
   }
 
@@ -362,6 +382,7 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     workerToken = payload.token;
     localStorage.setItem(WORKER_TOKEN_KEY, workerToken);
     localStorage.setItem(WORKER_ACCESS_TOKEN_KEY, accessToken);
+    localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
     applyDynamicManifestStartUrl(accessToken);
     if (!keepUrlToken) {
       window.history.replaceState({}, document.title, "./worker.html");
@@ -390,10 +411,68 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
   }
 }
 
+async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
+  const normalizedBadgeId = normalizeBadgeIdInput(badgeId);
+  const normalizedBadgePin = normalizeBadgePinInput(badgePin);
+  if (!normalizedBadgeId) {
+    if (!silent) {
+      showWorkerNotice("Bitte Badge-ID eingeben.");
+    }
+    return;
+  }
+  if (!normalizedBadgePin) {
+    if (!silent) {
+      showWorkerNotice("Bitte Badge-PIN eingeben.");
+    }
+    return;
+  }
+
+  if (!silent) {
+    hideWorkerNotice();
+  }
+
+  try {
+    const payload = await fetchJson(`${API_BASE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ badgeId: normalizedBadgeId, badgePin: normalizedBadgePin })
+    });
+
+    workerToken = payload.token;
+    localStorage.setItem(WORKER_TOKEN_KEY, workerToken);
+    localStorage.setItem(WORKER_BADGE_LOGIN_KEY, normalizedBadgeId);
+    localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+    if (elements.workerAccessToken) {
+      elements.workerAccessToken.value = normalizedBadgeId;
+    }
+    if (elements.workerBadgePin) {
+      elements.workerBadgePin.value = normalizedBadgePin;
+    }
+    await loadWorkerData();
+
+    if (!isStandaloneMode() && elements.installButton) {
+      elements.installButton.hidden = false;
+      if (!silent) {
+        showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
+      }
+    }
+  } catch (error) {
+    if (silent) {
+      showLogin();
+      return;
+    }
+    if (error.code === "worker_app_disabled") {
+      showWorkerNotice("Mitarbeiter-App ist derzeit deaktiviert.");
+      return;
+    }
+    showWorkerNotice(`Anmeldung fehlgeschlagen: ${error.message}`);
+  }
+}
+
 async function loadWorkerData() {
   if (!workerToken) {
     showLogin();
-    return;
+    return false;
   }
 
   try {
@@ -402,10 +481,12 @@ async function loadWorkerData() {
     });
     renderWorker(payload);
     await syncOfflinePhotoQueue();
+    return true;
   } catch {
     localStorage.removeItem(WORKER_TOKEN_KEY);
     workerToken = "";
     showLogin();
+    return false;
   }
 }
 
@@ -413,6 +494,7 @@ function renderWorker(payload) {
   const worker = payload.worker || {};
   const company = payload.company || {};
     const subcompany = payload.subcompany || {};
+  const normalizedStatus = String(worker.status || "").trim().toLowerCase();
 
   if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
     if (elements.workerSubcompany) {
@@ -427,9 +509,13 @@ function renderWorker(payload) {
     }
   if (elements.workerName) elements.workerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim();
   if (elements.workerRole) elements.workerRole.textContent = worker.role || "-";
-  if (elements.workerStatus) elements.workerStatus.textContent = worker.status || "-";
+  if (elements.workerStatus) {
+    elements.workerStatus.textContent = worker.status || "-";
+    elements.workerStatus.dataset.status = normalizedStatus;
+  }
   if (elements.workerBadgeId) elements.workerBadgeId.textContent = worker.badgeId || "-";
   if (elements.workerSite) elements.workerSite.textContent = worker.site || "-";
+  updateSiteMapLink(worker.site || "");
   if (elements.workerValidUntil) elements.workerValidUntil.textContent = formatDate(worker.validUntil);
 
   if (elements.workerPhoto) {
@@ -485,11 +571,13 @@ function renderWorker(payload) {
 
   if (elements.loginCard) elements.loginCard.classList.add("hidden");
   if (elements.badgeCard) elements.badgeCard.classList.remove("hidden");
+  document.body.classList.add("worker-loaded");
 }
 
 function showLogin() {
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
+  document.body.classList.remove("worker-loaded");
 }
 
 function showWorkerNotice(message) {
@@ -521,6 +609,8 @@ async function workerLogout() {
   }
 
   localStorage.removeItem(WORKER_TOKEN_KEY);
+  localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
   workerToken = "";
   closeGateMode();
   showLogin();
@@ -549,6 +639,38 @@ function buildQrPayload(worker) {
   }
   const fallback = String(worker?.id || "").trim();
   return fallback;
+}
+
+function normalizeBadgeIdInput(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function normalizeBadgePinInput(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function looksLikeBadgeId(value) {
+  const normalized = normalizeBadgeIdInput(value);
+  return normalized.length >= 6 && normalized.length <= 32 && /^[A-Z0-9-]+$/.test(normalized) && normalized.includes("-");
+}
+
+function updateSiteMapLink(site) {
+  if (!elements.workerSiteMapLink) {
+    return;
+  }
+
+  const normalizedSite = String(site || "").trim();
+  if (!normalizedSite) {
+    elements.workerSiteMapLink.classList.add("hidden");
+    elements.workerSiteMapLink.removeAttribute("href");
+    return;
+  }
+
+  const mapsUrl = new URL("https://www.google.com/maps/search/");
+  mapsUrl.searchParams.set("api", "1");
+  mapsUrl.searchParams.set("query", normalizedSite);
+  elements.workerSiteMapLink.href = mapsUrl.toString();
+  elements.workerSiteMapLink.classList.remove("hidden");
 }
 
 function resolveApiRoot(workerApiBase) {

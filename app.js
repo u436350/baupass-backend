@@ -282,6 +282,10 @@ function clearWorkerEditor() {
   if (form) {
     form.reset();
   }
+  const badgePinInput = document.querySelector("#badgePin");
+  if (badgePinInput) {
+    badgePinInput.value = "";
+  }
   state.editingWorkerId = null;
   setPhotoEditorSource("", { resetOffset: true });
   syncWorkerEditorUi();
@@ -604,6 +608,7 @@ function renderWorkerList() {
             <span class="status-pill">${escapeHtml(worker.status || "-")}</span>
           </header>
           <p>${escapeHtml(worker.role || "-")} | ${escapeHtml(worker.site || "-")}</p>
+          <p>App-PIN: <strong>${worker.badgePinConfigured ? "gesetzt" : "fehlt"}</strong> | Karte: <strong>${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</strong></p>
           ${sub ? `<p>Subunternehmen: ${escapeHtml(sub)}</p>` : ""}
           <div class="button-row">
             <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Bearbeiten</button>
@@ -633,8 +638,10 @@ function bindWorkerRowActions() {
       document.querySelector("#insuranceNumber").value = worker.insuranceNumber || "";
       document.querySelector("#role").value = worker.role || "";
       document.querySelector("#site").value = worker.site || "";
+      document.querySelector("#physicalCardId").value = worker.physicalCardId || "";
       document.querySelector("#validUntil").value = worker.validUntil || "";
       document.querySelector("#workerStatus").value = worker.status || "aktiv";
+      document.querySelector("#badgePin").value = "";
       setPhotoEditorSource(worker.photoData || "", { resetOffset: true });
       syncWorkerEditorUi();
       setView("workers");
@@ -902,6 +909,8 @@ function showWorkerDetailOverlay(worker) {
       <p><strong>Baustelle:</strong> ${escapeHtml(worker.site)}</p>
       <p><strong>Gültig bis:</strong> ${formatDate(worker.validUntil)}</p>
       <p><strong>Status:</strong> ${escapeHtml(worker.status)}</p>
+      <p><strong>Badge-PIN:</strong> ${worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt"}</p>
+      <p><strong>Karten-ID:</strong> ${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</p>
       <div class="button-row">
         <button type="button" class="primary-button" id="workerCheckInBtn">Anmelden (Check-in)</button>
         <button type="button" class="ghost-button" id="workerCheckOutBtn">Abmelden (Check-out)</button>
@@ -962,8 +971,10 @@ window.triggerWorkerAccess = triggerWorkerAccess;
       document.querySelector("#insuranceNumber").value = worker.insuranceNumber;
       document.querySelector("#role").value = worker.role;
       document.querySelector("#site").value = worker.site;
+      document.querySelector("#physicalCardId").value = worker.physicalCardId || "";
       document.querySelector("#validUntil").value = worker.validUntil;
       document.querySelector("#workerStatus").value = worker.status;
+      document.querySelector("#badgePin").value = "";
       setPhotoEditorSource(worker.photoData || "", { resetOffset: true });
       syncWorkerEditorUi();
       setView("workers");
@@ -1188,8 +1199,10 @@ function renderBadge() {
         document.querySelector("#insuranceNumber").value = worker.insuranceNumber || "";
         document.querySelector("#role").value = worker.role || "";
         document.querySelector("#site").value = worker.site || "";
+        document.querySelector("#physicalCardId").value = worker.physicalCardId || "";
         document.querySelector("#validUntil").value = worker.validUntil || "";
         document.querySelector("#workerStatus").value = worker.status || "aktiv";
+        document.querySelector("#badgePin").value = "";
         syncWorkerEditorUi();
         setTimeout(() => {
           if (typeof setPhotoEditorSource === 'function') {
@@ -1342,6 +1355,8 @@ function renderDashboardWorkerDetail(worker) {
       <p><strong>Baustelle:</strong> ${escapeHtml(worker.site)}</p>
       <p><strong>Gültig bis:</strong> ${formatDate(worker.validUntil)}</p>
       <p><strong>Status:</strong> ${escapeHtml(worker.status)}</p>
+      <p><strong>Badge-PIN:</strong> ${worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt"}</p>
+      <p><strong>Karten-ID:</strong> ${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</p>
       <div class="button-row">
         <button type="button" class="primary-button" onclick="triggerWorkerAccess(state.workers.find(w=>w.id==='${worker.id}'),'check-in')">Anmelden (Check-in)</button>
         <button type="button" class="ghost-button" onclick="triggerWorkerAccess(state.workers.find(w=>w.id==='${worker.id}'),'check-out')">Abmelden (Check-out)</button>
@@ -1694,10 +1709,12 @@ async function handleWorkerSubmit(event) {
     insuranceNumber: document.querySelector("#insuranceNumber").value.trim(),
     role: document.querySelector("#role").value.trim(),
     site: document.querySelector("#site").value.trim(),
+    physicalCardId: document.querySelector("#physicalCardId").value.trim(),
     validUntil: document.querySelector("#validUntil").value,
     status: document.querySelector("#workerStatus").value,
     photoData: photoDataValue,
-    badgeId: buildBadgeId(firstName, lastName)
+    badgeId: buildBadgeId(firstName, lastName),
+    badgePin: document.querySelector("#badgePin").value.trim()
   };
 
   try {
@@ -1717,6 +1734,18 @@ async function handleWorkerSubmit(event) {
     refreshAll();
     setView("badge");
   } catch (error) {
+    if (error.message === "invalid_badge_pin") {
+      window.alert("Badge-PIN muss aus 4 bis 8 Ziffern bestehen.");
+      return;
+    }
+    if (error.message === "badge_pin_required") {
+      window.alert("Bitte eine Badge-PIN fuer den Mitarbeiter setzen.");
+      return;
+    }
+    if (error.message === "duplicate_physical_card_id") {
+      window.alert("Diese physische Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet.");
+      return;
+    }
     window.alert(`Mitarbeiter konnte nicht gespeichert werden: ${error.message}`);
   }
 }

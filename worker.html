@@ -16,28 +16,58 @@
   <link rel="stylesheet" href="./worker.css" />
 </head>
 <body>
+  <div class="app-backdrop" aria-hidden="true">
+    <span class="backdrop-orb orb-one"></span>
+    <span class="backdrop-orb orb-two"></span>
+    <span class="backdrop-grid"></span>
+  </div>
   <main class="app-shell">
-    <header class="top">
-      <p class="eyebrow">Mitarbeiter-App</p>
-      <h1>BauPass Mobile</h1>
-      <button id="installButton" class="ghost" hidden>App installieren</button>
-      <p id="installPlatformHint" class="platform-hint">Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.</p>
+    <header class="top top-panel">
+      <div class="top-copy">
+        <p class="eyebrow">Mitarbeiter-App</p>
+        <h1>BauPass Mobile</h1>
+        <p class="top-lead">Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.</p>
+      </div>
+      <div class="top-actions">
+        <button id="installButton" class="ghost install-cta" hidden>App installieren</button>
+        <p id="installPlatformHint" class="platform-hint">Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.</p>
+      </div>
     </header>
 
-    <section id="loginCard" class="card">
-      <h2>Digitalen Ausweis aktivieren</h2>
-      <p>Wenn du einen Mitarbeiter-Link erhalten hast, ist der Zugang meist automatisch gesetzt.</p>
+    <section id="loginCard" class="card login-card">
+      <div class="section-head">
+        <p class="section-kicker">Direkter Einstieg</p>
+        <h2>Digitalen Ausweis aktivieren</h2>
+      </div>
+      <p class="section-copy">Du kannst den Ausweis per Mitarbeiter-Link oder direkt mit deiner Badge-ID von der Karte aktivieren.</p>
       <div id="workerNotice" class="worker-notice hidden" role="alert" aria-live="polite"></div>
       <form id="workerLoginForm" class="grid">
         <label>
-          Zugangscode
-          <input id="workerAccessToken" type="text" placeholder="Token aus Link" required />
+          Link-Code oder Badge-ID
+          <input id="workerAccessToken" type="text" placeholder="Token aus Link oder BP-..." required />
+        </label>
+        <label>
+          Badge-PIN
+          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Nur fuer Badge-ID Login" />
         </label>
         <button class="primary" type="submit">Ausweis laden</button>
       </form>
+      <div class="login-tips" aria-hidden="true">
+        <span class="login-tip">Badge-ID plus PIN statt QR</span>
+        <span class="login-tip">Funktioniert als Homescreen-App</span>
+        <span class="login-tip">Direkter Weg zur Baustelle</span>
+      </div>
     </section>
 
-    <section id="badgeCard" class="card hidden">
+    <section id="badgeCard" class="card worker-pass hidden">
+      <div class="pass-stage">
+        <div class="section-head section-head-inline">
+          <div>
+            <p class="section-kicker">Digitaler Pass</p>
+            <h2>Dein BauPass fuer heute</h2>
+          </div>
+          <span class="pass-stage-chip">Live</span>
+        </div>
 
       <!-- ══════════ WALLET-CARD ══════════ -->
       <div class="wallet-card">
@@ -100,17 +130,41 @@
         </div>
       </div>
       <!-- ══════════════════════════════════ -->
+      </div>
 
-      <!-- Baustelle & Foto-Aktion -->
-      <div class="below-card">
-        <div class="info-row">
-          <span class="info-icon">📍</span>
-          <span class="info-label">Baustelle</span>
-          <span id="workerSite" class="info-value">–</span>
+      <div class="worker-panel-grid">
+        <!-- Baustelle & Foto-Aktion -->
+        <div class="below-card route-card">
+          <div class="section-head compact-head">
+            <p class="section-kicker">Heute unterwegs</p>
+            <h3>Baustelle und Route</h3>
+          </div>
+          <div class="info-row">
+            <span class="info-icon">📍</span>
+            <span class="info-label">Baustelle</span>
+            <span id="workerSite" class="info-value">–</span>
+          </div>
+          <div class="info-actions">
+            <a id="workerSiteMapLink" class="site-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">Route in Maps oeffnen</a>
+          </div>
+          <div class="photo-action-wrap">
+            <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
+            <button id="changePhotoButton" class="ghost small-btn photo-action-button" type="button">📷 Foto aufnehmen / hochladen</button>
+          </div>
         </div>
-        <div style="margin-top:10px;">
-          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
-          <button id="changePhotoButton" class="ghost small-btn" type="button">📷 Foto aufnehmen / hochladen</button>
+
+        <!-- QR-Code -->
+        <div class="qr-wrap scanner-card">
+          <div class="section-head compact-head scanner-head">
+            <div>
+              <p class="section-kicker">Einlass</p>
+              <h3>Scanner bereit</h3>
+            </div>
+            <span class="scanner-chip">Gate</span>
+          </div>
+          <p class="qr-label">Einlasskontrolle scannen</p>
+          <img id="workerQr" alt="QR Code" />
+          <p id="qrFallbackText" class="qr-fallback hidden"></p>
         </div>
       </div>
 
@@ -130,13 +184,6 @@
           <button id="retakePhotoButton" type="button" style="display:none;">Neu aufnehmen</button>
           <button id="closeCameraButton" type="button">Abbrechen</button>
         </div>
-      </div>
-
-      <!-- QR-Code -->
-      <div class="qr-wrap">
-        <p class="qr-label">Einlasskontrolle scannen</p>
-        <img id="workerQr" alt="QR Code" />
-        <p id="qrFallbackText" class="qr-fallback hidden"></p>
       </div>
 
       <div class="actions">

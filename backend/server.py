@@ -668,6 +668,8 @@ def init_db():
             status TEXT NOT NULL,
             photo_data TEXT NOT NULL,
             badge_id TEXT NOT NULL,
+            badge_pin_hash TEXT NOT NULL DEFAULT '',
+            physical_card_id TEXT,
             deleted_at TEXT,
             FOREIGN KEY(company_id) REFERENCES companies(id),
             FOREIGN KEY(subcompany_id) REFERENCES subcompanies(id)
@@ -836,6 +838,10 @@ def init_db():
         cur.execute("ALTER TABLE workers ADD COLUMN deleted_at TEXT")
     if "subcompany_id" not in worker_columns:
         cur.execute("ALTER TABLE workers ADD COLUMN subcompany_id TEXT")
+    if "badge_pin_hash" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN badge_pin_hash TEXT NOT NULL DEFAULT ''")
+    if "physical_card_id" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN physical_card_id TEXT")
 
     if "worker_app_enabled" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN worker_app_enabled INTEGER NOT NULL DEFAULT 1")
@@ -846,6 +852,9 @@ def init_db():
 
     db.commit()
     db.close()
+
+
+init_db()
 
 
 def row_to_dict(row):
@@ -1941,6 +1950,8 @@ def list_workers():
                 "status": row["status"],
                 "photoData": row["photo_data"],
                 "badgeId": row["badge_id"],
+                "badgePinConfigured": bool(row["badge_pin_hash"]),
+                "physicalCardId": row["physical_card_id"],
                 "deletedAt": row["deleted_at"],
             }
         )
@@ -1972,12 +1983,23 @@ def create_worker():
     if not photo_data:
         return jsonify({"error": "photo_required"}), 400
 
+    try:
+        badge_pin = validate_badge_pin_or_raise(payload.get("badgePin"))
+    except ValueError as error:
+        return jsonify({"error": str(error), "message": "Badge-PIN muss aus 4 bis 8 Ziffern bestehen."}), 400
+
+    physical_card_id = normalize_physical_card_id(payload.get("physicalCardId"))
+    try:
+        ensure_unique_physical_card_id_or_raise(db, physical_card_id)
+    except ValueError as error:
+        return jsonify({"error": str(error), "message": "Diese Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet."}), 409
+
     worker_id = f"wrk-{secrets.token_hex(6)}"
     db.execute(
         """
         INSERT INTO workers (
-            id, company_id, subcompany_id, first_name, last_name, insurance_number, role, site, valid_until, status, photo_data, badge_id, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, company_id, subcompany_id, first_name, last_name, insurance_number, role, site, valid_until, status, photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             worker_id,
@@ -1992,6 +2014,8 @@ def create_worker():
             payload.get("status", "aktiv"),
             photo_data,
             payload.get("badgeId", f"BP-{secrets.token_hex(3).upper()}"),
+            generate_password_hash(badge_pin),
+            physical_card_id,
             None,
         ),
     )
@@ -2012,6 +2036,8 @@ def create_worker():
             "status": row["status"],
             "photoData": row["photo_data"],
             "badgeId": row["badge_id"],
+            "badgePinConfigured": bool(row["badge_pin_hash"]),
+            "physicalCardId": row["physical_card_id"],
             "deletedAt": row["deleted_at"],
         }
     ), 201
@@ -2051,10 +2077,29 @@ def update_worker(worker_id):
     if not updated_photo_data:
         return jsonify({"error": "photo_required"}), 400
 
+    next_physical_card_id = normalize_physical_card_id(payload.get("physicalCardId", worker["physical_card_id"]))
+    try:
+        ensure_unique_physical_card_id_or_raise(db, next_physical_card_id, worker_id_to_exclude=worker_id)
+    except ValueError as error:
+        return jsonify({"error": str(error), "message": "Diese Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet."}), 409
+
+    next_badge_pin_hash = worker["badge_pin_hash"] or ""
+    raw_badge_pin = payload.get("badgePin")
+    if raw_badge_pin is not None:
+        normalized_candidate_pin = normalize_badge_pin(raw_badge_pin)
+        if normalized_candidate_pin:
+            try:
+                validated_pin = validate_badge_pin_or_raise(normalized_candidate_pin)
+            except ValueError as error:
+                return jsonify({"error": str(error), "message": "Badge-PIN muss aus 4 bis 8 Ziffern bestehen."}), 400
+            next_badge_pin_hash = generate_password_hash(validated_pin)
+        elif not next_badge_pin_hash:
+            return jsonify({"error": "badge_pin_required", "message": "Bitte eine Badge-PIN fuer diesen Mitarbeiter setzen."}), 400
+
     db.execute(
         """
         UPDATE workers
-        SET company_id = ?, subcompany_id = ?, first_name = ?, last_name = ?, insurance_number = ?, role = ?, site = ?, valid_until = ?, status = ?, photo_data = ?
+        SET company_id = ?, subcompany_id = ?, first_name = ?, last_name = ?, insurance_number = ?, role = ?, site = ?, valid_until = ?, status = ?, photo_data = ?, badge_pin_hash = ?, physical_card_id = ?
         WHERE id = ?
         """,
         (
@@ -2068,6 +2113,8 @@ def update_worker(worker_id):
             payload.get("validUntil", worker["valid_until"]),
             payload.get("status", worker["status"]),
             updated_photo_data,
+            next_badge_pin_hash,
+            next_physical_card_id,
             worker_id,
         ),
     )
@@ -2153,6 +2200,90 @@ def build_worker_app_access_payload(db, worker_id, actor_user):
     }, None
 
 
+def serialize_worker_for_app(worker):
+    return {
+        "id": worker["id"],
+        "subcompanyId": worker["subcompany_id"],
+        "firstName": worker["first_name"],
+        "lastName": worker["last_name"],
+        "role": worker["role"],
+        "site": worker["site"],
+        "validUntil": worker["valid_until"],
+        "status": worker["status"],
+        "photoData": worker["photo_data"],
+        "badgeId": worker["badge_id"],
+    }
+
+
+def normalize_badge_pin(value):
+    return re.sub(r"\s+", "", str(value or "").strip())
+
+
+def validate_badge_pin_or_raise(pin_value):
+    normalized_pin = normalize_badge_pin(pin_value)
+    if not re.fullmatch(r"\d{4,8}", normalized_pin):
+        raise ValueError("invalid_badge_pin")
+    return normalized_pin
+
+
+def normalize_physical_card_id(value):
+    normalized = str(value or "").strip().upper()
+    return normalized or None
+
+
+def ensure_unique_physical_card_id_or_raise(db, physical_card_id, worker_id_to_exclude=None):
+    if not physical_card_id:
+        return
+    if worker_id_to_exclude:
+        duplicate = db.execute(
+            """
+            SELECT id
+            FROM workers
+            WHERE physical_card_id = ? AND id != ? AND deleted_at IS NULL
+            LIMIT 1
+            """,
+            (physical_card_id, worker_id_to_exclude),
+        ).fetchone()
+    else:
+        duplicate = db.execute(
+            """
+            SELECT id
+            FROM workers
+            WHERE physical_card_id = ? AND deleted_at IS NULL
+            LIMIT 1
+            """,
+            (physical_card_id,),
+        ).fetchone()
+    if duplicate:
+        raise ValueError("duplicate_physical_card_id")
+
+
+def create_access_log_entry(db, worker_id, direction, gate, note, timestamp_value=None):
+    log_id = f"log-{secrets.token_hex(6)}"
+    db.execute(
+        "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            log_id,
+            worker_id,
+            direction,
+            gate,
+            note,
+            timestamp_value or now_iso(),
+        ),
+    )
+    return log_id
+
+
+def create_worker_app_session(db, worker):
+    session_token = secrets.token_urlsafe(28)
+    db.execute(
+        "INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)",
+        (session_token, worker["id"], worker_session_expiry_iso(days=30)),
+    )
+    db.commit()
+    return {"token": session_token, "worker": serialize_worker_for_app(worker)}
+
+
 @app.get("/api/workers/<worker_id>/app-access")
 @require_auth
 @require_roles("superadmin", "company-admin")
@@ -2180,48 +2311,57 @@ def create_worker_app_access(worker_id):
 def worker_app_login():
     payload = request.get_json(silent=True) or {}
     access_token = (payload.get("accessToken") or "").strip()
-    if not access_token:
-        return jsonify({"error": "missing_access_token"}), 400
+    badge_id = (payload.get("badgeId") or "").strip().upper()
+    badge_pin = normalize_badge_pin(payload.get("badgePin"))
+    if not access_token and not badge_id:
+        return jsonify({"error": "missing_worker_app_credentials"}), 400
 
     db = get_db()
     setting = db.execute("SELECT worker_app_enabled FROM settings WHERE id = 1").fetchone()
     if setting and int(setting["worker_app_enabled"]) == 0:
         return jsonify({"error": "worker_app_disabled", "message": "Die Mitarbeiter-App ist zurzeit nicht verfuegbar. Bitte spaeter erneut versuchen."}), 503
-    token_row = db.execute("SELECT * FROM worker_app_tokens WHERE token = ?", (access_token,)).fetchone()
-    if not token_row:
-        return jsonify({"error": "invalid_access_token"}), 401
 
-    if token_row["revoked_at"]:
-        return jsonify({"error": "access_token_revoked"}), 401
+    if access_token:
+        token_row = db.execute("SELECT * FROM worker_app_tokens WHERE token = ?", (access_token,)).fetchone()
+        if not token_row:
+            return jsonify({"error": "invalid_access_token"}), 401
 
-    if token_row["expires_at"] < now_iso():
-        return jsonify({"error": "access_token_expired"}), 401
+        if token_row["revoked_at"]:
+            return jsonify({"error": "access_token_revoked"}), 401
 
-    worker = db.execute("SELECT * FROM workers WHERE id = ?", (token_row["worker_id"],)).fetchone()
-    if not worker or worker["deleted_at"]:
-        return jsonify({"error": "worker_not_available"}), 401
+        if token_row["expires_at"] < now_iso():
+            return jsonify({"error": "access_token_expired"}), 401
 
-    session_token = secrets.token_urlsafe(28)
-    db.execute("INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)", (session_token, worker["id"], worker_session_expiry_iso(days=30)))
-    db.commit()
+        worker = db.execute("SELECT * FROM workers WHERE id = ?", (token_row["worker_id"],)).fetchone()
+        if not worker or worker["deleted_at"]:
+            return jsonify({"error": "worker_not_available"}), 401
 
-    return jsonify(
-        {
-            "token": session_token,
-            "worker": {
-                "id": worker["id"],
-                "subcompanyId": worker["subcompany_id"],
-                "firstName": worker["first_name"],
-                "lastName": worker["last_name"],
-                "role": worker["role"],
-                "site": worker["site"],
-                "validUntil": worker["valid_until"],
-                "status": worker["status"],
-                "photoData": worker["photo_data"],
-                "badgeId": worker["badge_id"],
-            },
-        }
-    )
+        return jsonify(create_worker_app_session(db, worker))
+
+    badge_matches = db.execute(
+        """
+        SELECT *
+        FROM workers
+        WHERE UPPER(badge_id) = ? AND deleted_at IS NULL
+        ORDER BY id
+        LIMIT 2
+        """,
+        (badge_id,),
+    ).fetchall()
+    if not badge_matches:
+        return jsonify({"error": "invalid_badge_id", "message": "Badge-ID wurde nicht gefunden."}), 401
+    if len(badge_matches) > 1:
+        return jsonify({"error": "duplicate_badge_id", "message": "Badge-ID ist mehrfach vergeben. Bitte Admin informieren."}), 409
+
+    worker = badge_matches[0]
+    if not worker["badge_pin_hash"]:
+        return jsonify({"error": "badge_pin_not_configured", "message": "Fuer diese Karte ist noch keine Badge-PIN hinterlegt."}), 403
+    if not badge_pin:
+        return jsonify({"error": "missing_badge_pin", "message": "Bitte Badge-PIN eingeben."}), 400
+    if not check_password_hash(worker["badge_pin_hash"], badge_pin):
+        return jsonify({"error": "invalid_badge_pin", "message": "Badge-ID oder PIN ist ungueltig."}), 401
+
+    return jsonify(create_worker_app_session(db, worker))
 
 
 @app.get("/api/worker-app/me")
@@ -2236,18 +2376,7 @@ def worker_app_me():
     setting = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
     return jsonify(
         {
-            "worker": {
-                "id": worker["id"],
-                "subcompanyId": worker["subcompany_id"],
-                "firstName": worker["first_name"],
-                "lastName": worker["last_name"],
-                "role": worker["role"],
-                "site": worker["site"],
-                "validUntil": worker["valid_until"],
-                "status": worker["status"],
-                "photoData": worker["photo_data"],
-                "badgeId": worker["badge_id"],
-            },
+            "worker": serialize_worker_for_app(worker),
             "company": {
                 "name": company["name"] if company else "",
             },
@@ -2661,22 +2790,91 @@ def create_access_log():
     if worker["status"] != "aktiv":
         return jsonify({"error": "worker_not_active"}), 400
 
-    log_id = f"log-{secrets.token_hex(6)}"
-    db.execute(
-        "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            log_id,
-            worker_id,
-            payload.get("direction", "check-in"),
-            payload.get("gate", "Drehkreuz Nord"),
-            payload.get("note", ""),
-            payload.get("timestamp", now_iso()),
-        ),
+    log_id = create_access_log_entry(
+        db,
+        worker_id,
+        payload.get("direction", "check-in"),
+        payload.get("gate", "Drehkreuz Nord"),
+        payload.get("note", ""),
+        payload.get("timestamp", now_iso()),
     )
     db.commit()
     log_audit("access.booked", f"Zutritt {payload.get('direction', 'check-in')} fuer Worker {worker_id}", target_type="worker", target_id=worker_id, company_id=worker["company_id"], actor=g.current_user)
     row = db.execute("SELECT * FROM access_logs WHERE id = ?", (log_id,)).fetchone()
     return jsonify(row_to_dict(row)), 201
+
+
+@app.post("/api/gates/tap")
+def gate_tap():
+    auto_close_open_entries_after_midnight(get_db())
+    expected_key = (os.getenv("BAUPASS_GATE_API_KEY") or "").strip()
+    if not expected_key:
+        return jsonify({"error": "gate_key_not_configured"}), 503
+
+    provided_key = (request.headers.get("X-Gate-Key") or "").strip()
+    if not provided_key or not secrets.compare_digest(provided_key, expected_key):
+        return jsonify({"error": "gate_unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    physical_card_id = normalize_physical_card_id(payload.get("physicalCardId") or payload.get("cardId"))
+    if not physical_card_id:
+        return jsonify({"error": "missing_physical_card_id"}), 400
+
+    direction = (payload.get("direction") or "check-in").strip().lower()
+    if direction not in {"check-in", "check-out"}:
+        return jsonify({"error": "invalid_direction"}), 400
+
+    gate_name = (payload.get("gate") or "NFC Gate").strip() or "NFC Gate"
+    gate_note = (payload.get("note") or "NFC Tap").strip()
+    timestamp_value = (payload.get("timestamp") or now_iso()).strip() or now_iso()
+
+    db = get_db()
+    workers = db.execute(
+        """
+        SELECT *
+        FROM workers
+        WHERE physical_card_id = ? AND deleted_at IS NULL
+        ORDER BY id
+        LIMIT 2
+        """,
+        (physical_card_id,),
+    ).fetchall()
+    if not workers:
+        return jsonify({"error": "card_not_assigned"}), 404
+    if len(workers) > 1:
+        return jsonify({"error": "duplicate_physical_card_id"}), 409
+
+    worker = workers[0]
+    if worker["status"] != "aktiv":
+        return jsonify({"error": "worker_not_active"}), 403
+
+    log_id = create_access_log_entry(db, worker["id"], direction, gate_name, gate_note, timestamp_value)
+    db.commit()
+    log_audit(
+        "access.gate_tap",
+        f"NFC Tap {direction} fuer Worker {worker['id']} an {gate_name}",
+        target_type="worker",
+        target_id=worker["id"],
+        company_id=worker["company_id"],
+        actor=None,
+    )
+
+    return jsonify(
+        {
+            "ok": True,
+            "logId": log_id,
+            "worker": {
+                "id": worker["id"],
+                "firstName": worker["first_name"],
+                "lastName": worker["last_name"],
+                "badgeId": worker["badge_id"],
+                "status": worker["status"],
+            },
+            "direction": direction,
+            "gate": gate_name,
+            "timestamp": timestamp_value,
+        }
+    ), 201
 
 
 def send_invoice_email(invoice_row, company_row, settings_row):
@@ -3009,7 +3207,6 @@ def static_proxy(path):
 
 
 if __name__ == "__main__":
-    init_db()
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8080"))
     ssl_context = get_ssl_context_from_env()
