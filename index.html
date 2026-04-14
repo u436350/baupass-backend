@@ -99,6 +99,7 @@
         <button class="nav-link" data-view="workers">Mitarbeiter</button>
         <button class="nav-link" data-view="badge">Ausweis</button>
         <button class="nav-link" data-view="access">Zutritt</button>
+        <button class="nav-link" data-view="invoices">Rechnungen</button>
         <button class="nav-link" data-view="admin">Admin</button>
       </nav>
       <div class="sidebar-card">
@@ -474,6 +475,39 @@
             </div>
 
             <div id="accessLogList" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="invoices">
+        <div class="panel-grid">
+          <article class="panel full-width">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Fakturierung</p>
+                <h3>Rechnungen und Zahlungsstatus</h3>
+              </div>
+            </div>
+            <div class="meta-box">
+              <p><strong>Rechnungs-Management</strong></p>
+              <p>Zeige offene und bezahlte Rechnungen an. Markiere Rechnungen als bezahlt um Firmensperrungen automatisch aufzuheben. Alle Aktivitäten werden im Audit-Log protokolliert.</p>
+            </div>
+            <div class="divider"></div>
+            
+            <div class="button-row" style="margin-bottom:16px; gap:10px;">
+              <input id="invoiceFilterCompany" type="text" placeholder="Nach Firma filtern..." style="flex:1;" />
+              <select id="invoiceFilterStatus" style="min-width:120px;">
+                <option value="">Alle Status</option>
+                <option value="draft">Entwurf</option>
+                <option value="sent">Versendet</option>
+                <option value="overdue">Überfällig</option>
+                <option value="bezahlt">Bezahlt</option>
+                <option value="send_failed">Fehler</option>
+              </select>
+              <button type="button" class="ghost-button" id="invoiceRefreshButton">Aktualisieren</button>
+            </div>
+
+            <div id="invoiceManagementList" class="list"></div>
           </article>
         </div>
       </section>

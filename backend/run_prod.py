@@ -4,7 +4,7 @@ import os
 
 from waitress import serve
 
-from server import app, get_runtime_diagnostics, init_db
+from server import app, get_runtime_diagnostics, init_db, check_and_apply_overdue_suspensions, get_db
 
 
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -23,6 +23,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     init_db()
+    db = get_db()
+    suspended = check_and_apply_overdue_suspensions(db)
+    if suspended:
+        print(f"[baupass] Auto-suspended {len(suspended)} company/ies due to overdue invoices")
     diagnostics = get_runtime_diagnostics()
     warnings = diagnostics.get("warnings", [])
     print(f"[baupass] Runtime-Check: {len(warnings)} Warnung(en)")

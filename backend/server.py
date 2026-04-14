@@ -868,6 +868,14 @@ def init_db():
     if "last_seen" not in session_columns:
         cur.execute("ALTER TABLE sessions ADD COLUMN last_seen TEXT")
 
+    invoice_columns = [row[1] for row in cur.execute("PRAGMA table_info(invoices)").fetchall()]
+    if "due_date" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN due_date TEXT")
+    if "paid_at" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN paid_at TEXT")
+    if "auto_suspend_triggered_at" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN auto_suspend_triggered_at TEXT")
+
     db.commit()
     db.close()
 
@@ -1049,6 +1057,48 @@ def visible_company_clause(user):
     if user["role"] == "superadmin":
         return "", []
     return " WHERE id = ?", [user["company_id"]]
+
+
+def check_and_apply_overdue_suspensions(db):
+    """Checks for overdue unpaid invoices and auto-locks companies."""
+    today = now_iso().split("T")[0]
+    overdue_rows = db.execute(
+        """
+        SELECT DISTINCT inv.company_id FROM invoices AS inv
+        WHERE inv.status IN ('sent', 'overdue')
+          AND inv.paid_at IS NULL
+          AND inv.due_date IS NOT NULL
+          AND DATE(inv.due_date) <= DATE(?)
+        """,
+        (today,),
+    ).fetchall()
+
+    suspended_companies = []
+    for row in overdue_rows:
+        company_id = row[0]
+        company = db.execute("SELECT id, name, status FROM companies WHERE id = ?", (company_id,)).fetchone()
+        if not company:
+            continue
+        if company["status"] != "gesperrt":
+            db.execute(
+                "UPDATE companies SET status = ? WHERE id = ?",
+                ("gesperrt", company_id),
+            )
+            db.execute(
+                "UPDATE invoices SET auto_suspend_triggered_at = ? WHERE company_id = ? AND paid_at IS NULL AND auto_suspend_triggered_at IS NULL",
+                (now_iso(), company_id),
+            )
+            log_audit(
+                "company.auto_suspended_overdue_invoice",
+                f"Firma '{company['name']}' automatically suspended due to overdue invoice",
+                target_type="company",
+                target_id=company_id,
+            )
+            suspended_companies.append(company_id)
+
+    if suspended_companies:
+        db.commit()
+    return suspended_companies
 
 
 def get_company_access_error(db, company_id):
@@ -3211,6 +3261,69 @@ def send_invoice():
 
     result = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
     return jsonify({"invoice": row_to_dict(result), "sent": sent_ok, "error": error_message if not sent_ok else ""})
+
+
+@app.put("/api/invoices/<invoice_id>/pay")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def mark_invoice_paid(invoice_id):
+    """Mark an invoice as paid, optionally lifting company suspension if all invoices are now paid."""
+    payload = request.get_json(silent=True) or {}
+    payment_date = (payload.get("paymentDate") or now_iso().split("T")[0]).strip()
+    notes = (payload.get("notes") or "").strip()
+
+    db = get_db()
+    invoice = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice:
+        return jsonify({"error": "invoice_not_found"}), 404
+
+    # Permission check: verify company_id matches current user
+    if g.current_user["role"] != "superadmin" and invoice["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_company"}), 403
+
+    invoice_number = invoice["invoice_number"]
+    company_id = invoice["company_id"]
+    company = db.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
+    if not company:
+        return jsonify({"error": "company_not_found"}), 404
+
+    # Mark as paid
+    db.execute(
+        "UPDATE invoices SET status = ?, paid_at = ? WHERE id = ?",
+        ("bezahlt", payment_date, invoice_id),
+    )
+    log_audit(
+        "invoice.marked_paid",
+        f"Rechnung {invoice_number} als bezahlt markiert",
+        target_type="invoice",
+        target_id=invoice_id,
+        company_id=company_id,
+        actor=g.current_user,
+    )
+
+    # Check if company should be unsuspended: all invoices are now either paid or cancelled
+    remaining_overdue = db.execute(
+        """
+        SELECT COUNT(*) as count FROM invoices
+        WHERE company_id = ? AND paid_at IS NULL AND auto_suspend_triggered_at IS NOT NULL
+        """,
+        (company_id,),
+    ).fetchone()
+
+    if remaining_overdue["count"] == 0 and company["status"] == "gesperrt":
+        # Lift suspension if all auto-suspended invoices are now paid
+        db.execute("UPDATE companies SET status = ? WHERE id = ?", ("aktiv", company_id))
+        log_audit(
+            "company.auto_unsuspended_invoices_paid",
+            f"Firma '{company['name']}' Sperrung aufgehoben - alle Rechnungen bezahlt",
+            target_type="company",
+            target_id=company_id,
+            actor=g.current_user,
+        )
+
+    db.commit()
+    result = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    return jsonify({"invoice": row_to_dict(result)})
 
 
 @app.get("/api/audit-logs")

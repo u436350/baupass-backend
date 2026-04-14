@@ -634,6 +634,7 @@ function refreshAll() {
   renderTurnstileQuickPanel();
   renderBadge();
   renderInvoiceHistory();
+  renderInvoiceManagementList();
   ensureInvoiceDefaults();
   refreshInvoicePreview({ silent: true });
 }
@@ -2749,6 +2750,118 @@ async function handleCompanySubmit(event) {
   }
 }
 
+async function loadAndRenderInvoices() {
+  try {
+    const response = await apiRequest(API_BASE + "/api/invoices");
+    state.invoices = response || [];
+    renderInvoiceManagementList();
+  } catch (error) {
+    console.error("Failed to load invoices:", error);
+    state.invoices = [];
+    renderInvoiceManagementList();
+  }
+}
+
+function renderInvoiceManagementList() {
+  const container = document.querySelector("#invoiceManagementList");
+  if (!container) return;
+
+  const filterCompany = (document.querySelector("#invoiceFilterCompany")?.value || "").toLowerCase();
+  const filterStatus = (document.querySelector("#invoiceFilterStatus")?.value || "");
+
+  let invoices = state.invoices || [];
+  
+  // Apply filters
+  if (filterCompany) {
+    invoices = invoices.filter(inv => {
+      const companyName = (inv.company_name || "").toLowerCase();
+      return companyName.includes(filterCompany);
+    });
+  }
+  
+  if (filterStatus) {
+    invoices = invoices.filter(inv => inv.status === filterStatus);
+  }
+
+  if (!invoices.length) {
+    container.innerHTML = '<div class="empty-state">Keine Rechnungen vorhanden oder keine Treffer.</div>';
+    return;
+  }
+
+  const rows = invoices
+    .map((inv) => {
+      const statusLabel = {
+        draft: "Entwurf",
+        sent: "Versendet",
+        overdue: "Überfällig",
+        bezahlt: "Bezahlt",
+        send_failed: "Fehler"
+      }[inv.status] || inv.status;
+
+      const statusClass = {
+        draft: "",
+        sent: "helper-text-info",
+        overdue: "helper-text-warning",
+        bezahlt: "helper-text-ok",
+        send_failed: "helper-text-warning"
+      }[inv.status] || "";
+
+      const isPaid = inv.status === "bezahlt" || Boolean(inv.paid_at);
+      const canMarkPaid = !isPaid && (getCurrentUser()?.role === "superadmin" || inv.company_id === getCurrentUser()?.company_id);
+
+      return `
+        <article class="card-item">
+          <div style="display:flex; justify-content:space-between; align-items:start;">
+            <div style="flex:1;">
+              <strong>${escapeHtml(inv.invoice_number || "RE-???")}</strong>
+              <p class="helper-text">${escapeHtml(inv.company_name || "Firma")}</p>
+              <p class="meta-text">
+                ${inv.invoice_date ? formatTimestamp(inv.invoice_date) : "-"} 
+                ${inv.paid_at ? ` • Bezahlt: ${formatTimestamp(inv.paid_at)}` : ""}
+              </p>
+            </div>
+            <div style="text-align:right; min-width:140px;">
+              <p class="meta-text">${inv.total_amount ? inv.total_amount.toFixed(2) : "0.00"} EUR</p>
+              <p class="helper-text ${statusClass}">Status: ${statusLabel}</p>
+            </div>
+          </div>
+
+          ${inv.due_date ? `<p class="helper-text">Fälligkeitsdatum: ${formatTimestamp(inv.due_date)}</p>` : ""}
+          ${inv.auto_suspend_triggered_at ? `<p class="helper-text helper-text-warning">Auto-Sperrung ausgelöst: ${formatTimestamp(inv.auto_suspend_triggered_at)}</p>` : ""}
+
+          <div class="button-row" style="margin-top:8px;">
+            ${canMarkPaid ? `<button type="button" class="ghost-button invoice-mark-paid" data-invoice-id="${escapeHtml(inv.id)}">Als bezahlt markieren</button>` : ""}
+            <span class="helper-text" style="flex:1; margin:0;">${inv.error_message ? `Fehler: ${escapeHtml(inv.error_message)}` : ""}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = rows;
+
+  // Bind mark-paid buttons
+  container.querySelectorAll("[data-invoice-id]").forEach(button => {
+    button.addEventListener("click", async (e) => {
+      const invId = e.target.dataset.invoiceId;
+      if (!invId || !window.confirm("Diese Rechnung als bezahlt markieren? Firmensperrung wird ggf. aufgehoben.")) return;
+      
+      try {
+        await apiRequest(API_BASE + `/api/invoices/${invId}/pay`, {
+          method: "PUT",
+          body: { paymentDate: new Date().toISOString().split("T")[0] }
+        });
+        window.alert("Rechnung als bezahlt markiert");
+        await loadAndRenderInvoices();
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Fehler: ${error.message}`);
+      }
+    });
+  });
+}
+
 async function handleLoginSubmit(event) {
   event.preventDefault();
   try {
@@ -4005,6 +4118,21 @@ if (accessResetButton) {
 const accessCsvButton = document.querySelector("#accessCsvButton");
 if (accessCsvButton) {
   accessCsvButton.addEventListener("click", exportAccessCsv);
+}
+
+const invoiceRefreshButton = document.querySelector("#invoiceRefreshButton");
+if (invoiceRefreshButton) {
+  invoiceRefreshButton.addEventListener("click", () => loadAndRenderInvoices());
+}
+
+const invoiceFilterCompany = document.querySelector("#invoiceFilterCompany");
+if (invoiceFilterCompany) {
+  invoiceFilterCompany.addEventListener("input", () => renderInvoiceManagementList());
+}
+
+const invoiceFilterStatus = document.querySelector("#invoiceFilterStatus");
+if (invoiceFilterStatus) {
+  invoiceFilterStatus.addEventListener("change", () => renderInvoiceManagementList());
 }
 
 const printDailyReportButton = document.querySelector("#printDailyReportButton");
