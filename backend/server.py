@@ -2517,8 +2517,8 @@ def export_workers_csv():
 
     return Response(
         output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=mitarbeiterliste.csv"},
+        mimetype="application/octet-stream",
+        headers={"Content-Disposition": 'attachment; filename="mitarbeiterliste.csv"'},
     )
 
 

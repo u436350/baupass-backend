@@ -2262,7 +2262,10 @@ async function exportWorkersCsv() {
     const link = document.createElement("a");
     link.href = url;
     link.download = `mitarbeiterliste-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.style.display = "none";
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
     window.alert(`Mitarbeiterlisten-Export fehlgeschlagen: ${error.message}`);
