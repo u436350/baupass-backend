@@ -733,6 +733,11 @@ select {
   gap: 12px;
 }
 
+.install-box {
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-height: 980px) {
   .auth-panel {
     padding: 20px;
@@ -1370,6 +1375,11 @@ select:focus {
 
 .helper-text-ok {
   color: #087443;
+  font-weight: 700;
+}
+
+.helper-text-info {
+  color: #165ed8;
   font-weight: 700;
 }
 

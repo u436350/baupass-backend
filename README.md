@@ -52,7 +52,10 @@ Serverbasierter MVP fuer digitale Baustellen-Ausweise mit Fotoaufnahme, Mitarbei
 2. Backend nur intern starten, z. B. mit `HOST=127.0.0.1`, `PORT=8000` und `python backend/run_prod.py`
 3. Im Reverse Proxy eine echte HTTPS-Domain davor setzen, Vorlage: `deploy/nginx.conf.example`
 4. Backend-Linkbasis setzen: `PUBLIC_BASE_URL=https://baupass.example.com`
-5. Optional als Windows-Task/Dienst installieren: `deploy/windows-service-install.ps1`
+5. Gate-Reader absichern: `BAUPASS_GATE_API_KEY=<starkes-geheimes-token>`
+6. Recovery absichern: `BAUPASS_RECOVERY_SECRET=<langes-notfall-secret>`
+7. Optional Recovery-Benutzer setzen: `BAUPASS_RECOVERY_USERNAME=superadmin`
+8. Optional als Windows-Task/Dienst installieren: `deploy/windows-service-install.ps1`
 
 Konkreter Ablauf mit echter Domain:
 
@@ -63,8 +66,12 @@ Konkreter Ablauf mit echter Domain:
 $env:HOST = "127.0.0.1"
 $env:PORT = "8000"
 $env:PUBLIC_BASE_URL = "https://baupass.example.com"
+$env:BAUPASS_GATE_API_KEY = "ein-langes-gate-secret"
+$env:BAUPASS_RECOVERY_SECRET = "ein-langes-recovery-secret"
 python backend/run_prod.py
 ```
+
+Beim Start gibt `backend/run_prod.py` jetzt Runtime-Warnungen aus, z. B. fuer fehlende Secrets, fehlende `PUBLIC_BASE_URL` oder Demo-Passwoerter (`1234`) auf Admin-/Terminal-Konten.
 
 ## Render Deploy
 
@@ -89,6 +96,12 @@ Wenn im Render-Dashboard weiter `Failed deploy` steht, sind die ersten Stellen z
 5. GitHub-Frontend mit API-Basis oeffnen:
 	`https://u436350.github.io/baupass-backend/?apiBase=https://<deine-railway-domain>`
 
+Fuer Recovery und Gate-Reader in Railway zusaetzlich setzen:
+
+- `BAUPASS_GATE_API_KEY`
+- `BAUPASS_RECOVERY_SECRET`
+- optional `BAUPASS_RECOVERY_USERNAME`
+
 3. Oder als Autostart-Task installieren:
 
 ```powershell
@@ -109,6 +122,23 @@ sudo certbot --nginx -d baupass.example.com
 ```bash
 curl -I https://baupass.example.com/api/health
 ```
+
+Fuer den vollstaendigen Runtime-Check als Superadmin nach Login:
+
+```bash
+curl https://baupass.example.com/api/system/runtime-check \
+	-H "Cookie: baupass_session=<deine-session>"
+```
+
+Fuer den Notfall-Passwortreset ohne bestehende Session:
+
+```bash
+curl -X POST https://baupass.example.com/api/system/recover-admin \
+	-H "Content-Type: application/json" \
+	-d '{"recoverySecret":"<recovery-secret>","username":"superadmin","newPassword":"NeuesSicheresPasswort1"}'
+```
+
+Der Recovery-Endpoint setzt das Passwort neu, loescht aktive Sessions des Zielkontos und entfernt Login-Sperren fuer den Benutzernamen.
 
 7. Admin-Oberflaeche neu ueber `https://baupass.example.com` oeffnen und einen neuen Mitarbeiter-QR erzeugen.
 

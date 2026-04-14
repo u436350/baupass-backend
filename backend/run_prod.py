@@ -4,7 +4,7 @@ import os
 
 from waitress import serve
 
-from server import app, init_db
+from server import app, get_runtime_diagnostics, init_db
 
 
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -23,4 +23,9 @@ if __name__ == "__main__":
         sys.exit(0)
 
     init_db()
+    diagnostics = get_runtime_diagnostics()
+    warnings = diagnostics.get("warnings", [])
+    print(f"[baupass] Runtime-Check: {len(warnings)} Warnung(en)")
+    for warning in warnings:
+        print(f"[baupass][warn] {warning['code']}: {warning['message']}")
     serve(app, host=HOST, port=PORT, threads=8)

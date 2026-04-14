@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#d95d39" />
+  <meta name="description" content="BauPass Mitarbeiter-App mit digitalem Ausweis, Navigation zur Baustelle und schnellem Check-in am Drehkreuz." />
+  <meta name="theme-color" content="#1c2128" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="BauPass" />
-  <link rel="apple-touch-icon" href="/worker-icon-192.png" />
+  <meta name="application-name" content="BauPass Mobile" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/worker-icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/worker-icon-192.svg" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/worker-icon-192.png" />
   <link rel="manifest" href="./worker-manifest.json" />
   <title>BauPass Mitarbeiter-App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,6 +22,31 @@
   <link rel="stylesheet" href="./worker.css" />
 </head>
 <body>
+  <!-- Splash screen – dismissed by JS after init; auto-hides via CSS after 9s if JS fails -->
+  <div id="splashScreen" class="splash-screen" aria-hidden="true">
+    <div class="splash-brand">
+      <div class="splash-icon">
+        <svg width="50" height="50" viewBox="0 0 50 50" fill="none" aria-hidden="true">
+          <rect x="19" y="8" width="12" height="5" rx="2.5" fill="rgba(255,216,184,.95)"/>
+          <path d="M6 26C6 16.6 13.8 9 25 9c11.2 0 19 7.6 19 17v4H6z" fill="rgba(255,247,235,.88)"/>
+          <rect x="5" y="28" width="40" height="6" rx="3" fill="rgba(10,18,28,.75)"/>
+          <rect x="10" y="37" width="7" height="11" rx="3.5" fill="rgba(255,247,235,.88)"/>
+          <rect x="21.5" y="34" width="7" height="14" rx="3.5" fill="rgba(255,216,184,.8)"/>
+          <rect x="33" y="37" width="7" height="11" rx="3.5" fill="rgba(255,247,235,.88)"/>
+        </svg>
+      </div>
+      <div class="splash-wordmark">
+        <span class="splash-title">BauPass</span>
+        <span class="splash-sub">Mitarbeiter-App</span>
+      </div>
+    </div>
+    <div class="splash-loader" role="status" aria-label="Laedt">
+      <span class="splash-dot"></span>
+      <span class="splash-dot"></span>
+      <span class="splash-dot"></span>
+    </div>
+  </div>
+
   <div class="app-backdrop" aria-hidden="true">
     <span class="backdrop-orb orb-one"></span>
     <span class="backdrop-orb orb-two"></span>

@@ -6,8 +6,16 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+  <meta name="description" content="BauPass Control fuer Desktop, Admin und Pforte. Installierbar als Programm auf Windows und anderen Rechnern." />
+  <meta name="theme-color" content="#0f4c5c" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BauPass Control" />
+  <meta name="application-name" content="BauPass Control" />
   <title>BauPass Control</title>
-  <link id="appFavicon" rel="icon" href="data:," />
+  <link rel="manifest" href="./control-manifest.json" />
+  <link rel="apple-touch-icon" sizes="192x192" href="./worker-icon-192.png" />
+  <link id="appFavicon" rel="icon" type="image/png" sizes="192x192" href="./worker-icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
@@ -68,6 +76,11 @@
           <p>Super-Admin: superadmin / 1234</p>
           <p>Firmen-Admin: firma / 1234</p>
           <p>Drehkreuz: drehkreuz / 1234</p>
+        </div>
+        <div class="meta-box install-box">
+          <p>Desktop-App</p>
+          <p id="desktopInstallHint" class="helper-text">Dieses Portal kann auf dem Computer wie ein Programm installiert werden.</p>
+          <button id="desktopInstallButton" type="button" class="ghost-button full-width" hidden>Auf diesem Computer installieren</button>
         </div>
       </div>
     </div>
@@ -622,6 +635,7 @@
                   <option value="aktiv">Aktiv</option>
                   <option value="test">Testphase</option>
                   <option value="pausiert">Pausiert</option>
+                  <option value="gesperrt">Gesperrt wegen Zahlungsverzug</option>
                 </select>
               </label>
               <button type="submit" class="ghost-button full-width">Baufirma anlegen</button>

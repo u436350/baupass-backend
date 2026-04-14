@@ -56,6 +56,7 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
+let deferredDesktopInstallPrompt = null;
 const elements = {
   body: document.body,
   authOverlay: document.querySelector("#authOverlay"),
@@ -65,6 +66,8 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
+  desktopInstallButton: document.querySelector("#desktopInstallButton"),
+  desktopInstallHint: document.querySelector("#desktopInstallHint"),
   logoutButton: document.querySelector("#logoutButton"),
   seedDataButton: document.querySelector("#seedDataButton"),
   exportButton: document.querySelector("#exportButton"),
@@ -156,6 +159,9 @@ const state = {
   accessInsights: { hourly: [], openEntries: [] },
   invoices: [],
   companyRepairHistory: {},
+  companyRepairBusy: {},
+  companyRepairStatus: {},
+  companyLockBusy: {},
   repairHistoryWindowDays: 30,
   onlyCompaniesWithRepairs: false,
   dayClose: null,
@@ -220,6 +226,112 @@ function userCanManageWorkers() {
 function userCanManageAccess() {
   const role = getCurrentUser()?.role;
   return role === "superadmin" || role === "company-admin" || role === "turnstile";
+}
+
+function canRepairCompany(company) {
+  const user = getCurrentUser();
+  if (!user || !company?.id) {
+    return false;
+  }
+  if (user.role === "superadmin") {
+    return true;
+  }
+  return user.role === "company-admin" && user.company_id === company.id;
+}
+
+function mapCompanyRepairError(error) {
+  const message = String(error?.message || error || "");
+  if (message === "forbidden") {
+    return "Du darfst nur deine eigene Firma reparieren.";
+  }
+  if (message === "backend_unreachable") {
+    return "Backend nicht erreichbar. Bitte Server und Netzwerk pruefen.";
+  }
+  if (message === "company_not_found") {
+    return "Die Firma wurde nicht gefunden oder wurde inzwischen geloescht.";
+  }
+  if (message === "company_locked") {
+    return "Diese Firma ist aktuell gesperrt.";
+  }
+  return message || "unbekannter_fehler";
+}
+
+function getCompanyStatusMeta(status) {
+  const normalized = String(status || "aktiv").trim().toLowerCase();
+  if (normalized === "gesperrt") {
+    return { label: "Gesperrt", className: "helper-text helper-text-warning" };
+  }
+  if (normalized === "pausiert") {
+    return { label: "Pausiert", className: "helper-text helper-text-info" };
+  }
+  if (normalized === "test") {
+    return { label: "Testphase", className: "helper-text helper-text-info" };
+  }
+  return { label: "Aktiv", className: "helper-text helper-text-ok" };
+}
+
+function isStandaloneDesktopApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function updateDesktopInstallHint() {
+  if (!elements.desktopInstallHint) {
+    return;
+  }
+  if (isStandaloneDesktopApp()) {
+    elements.desktopInstallHint.textContent = "BauPass Control ist auf diesem Geraet bereits als Desktop-App installiert.";
+    return;
+  }
+  elements.desktopInstallHint.textContent = "Dieses Portal kann auf Windows, macOS und Linux wie ein lokales Programm installiert werden.";
+}
+
+function registerControlServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+  navigator.serviceWorker.register("./control-sw.js").then((registration) => {
+    registration.update().catch(() => {
+      // ignore update check failures
+    });
+  }).catch(() => {
+    // ignore install failures
+  });
+}
+
+function wireDesktopInstallPrompt() {
+  updateDesktopInstallHint();
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredDesktopInstallPrompt = event;
+    if (elements.desktopInstallButton) {
+      elements.desktopInstallButton.hidden = false;
+    }
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredDesktopInstallPrompt = null;
+    if (elements.desktopInstallButton) {
+      elements.desktopInstallButton.hidden = true;
+    }
+    updateDesktopInstallHint();
+  });
+}
+
+async function triggerDesktopInstall() {
+  if (isStandaloneDesktopApp()) {
+    updateDesktopInstallHint();
+    return;
+  }
+  if (!deferredDesktopInstallPrompt) {
+    window.alert("Die Installation ist in diesem Browser gerade nicht direkt verfuegbar. In Chrome oder Edge kannst du im Browser-Menue 'App installieren' waehlen.");
+    return;
+  }
+  deferredDesktopInstallPrompt.prompt();
+  await deferredDesktopInstallPrompt.userChoice;
+  deferredDesktopInstallPrompt = null;
+  if (elements.desktopInstallButton) {
+    elements.desktopInstallButton.hidden = true;
+  }
+  updateDesktopInstallHint();
 }
 
 function getSubcompanyLabel(worker) {
@@ -715,7 +827,17 @@ function renderCompanyList() {
     .map((company) => {
       const companyId = company.id || "";
       const deleted = Boolean(company.deleted_at || company.deletedAt);
-      const canRepair = canRepairAny || (canRepairOwn && !deleted);
+      const statusMeta = getCompanyStatusMeta(company.status);
+      const canRepair = canRepairCompany(company);
+      const canToggleLock = userRole === "superadmin";
+      const isRepairing = Boolean(state.companyRepairBusy?.[companyId]);
+      const isLockBusy = Boolean(state.companyLockBusy?.[companyId]);
+      const repairStatus = state.companyRepairStatus?.[companyId] || null;
+      const repairStatusClass = repairStatus?.kind === "error"
+        ? "helper-text helper-text-warning"
+        : repairStatus?.kind === "success"
+          ? "helper-text helper-text-ok"
+          : "helper-text helper-text-info";
       const repairHistory = filterRepairHistoryByWindow(state.companyRepairHistory?.[companyId] || []);
       const historyMarkup = repairHistory.length
         ? repairHistory
@@ -726,12 +848,15 @@ function renderCompanyList() {
         <article class="card-item ${deleted ? "is-deleted" : ""}">
           <strong>${escapeHtml(company.name || "Firma")}</strong>
           <span>${escapeHtml(company.plan || "-")}</span>
+          <p class="${statusMeta.className}">Status: ${escapeHtml(statusMeta.label)}</p>
           <div class="meta-box">
             <p><strong>Letzte Reparaturen</strong></p>
             ${historyMarkup}
           </div>
+          ${repairStatus ? `<p class="${repairStatusClass}">${escapeHtml(repairStatus.message || "")}</p>` : ""}
           <div class="button-row">
-            <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted ? "" : "disabled"}>Firma reparieren</button>
+            <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Reparatur laeuft..." : "Firma reparieren"}</button>
+            <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
           </div>
         </article>
       `;
@@ -803,37 +928,109 @@ function bindCompanyHistoryControls() {
 }
 
 function bindCompanyRowActions() {
-  if (!elements.companyList) return;
+  if (!elements.companyList || elements.companyList.dataset.repairBound === "1") return;
 
-  elements.companyList.querySelectorAll("[data-company-repair]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const companyId = button.dataset.companyRepair;
+  elements.companyList.dataset.repairBound = "1";
+  elements.companyList.addEventListener("click", async (event) => {
+    const lockButton = event.target.closest("[data-company-toggle-lock]");
+    if (lockButton && !lockButton.disabled && elements.companyList.contains(lockButton)) {
+      const companyId = lockButton.dataset.companyToggleLock;
       if (!companyId) {
         return;
       }
       const company = state.companies.find((entry) => entry.id === companyId);
       const companyName = company?.name || "diese Firma";
-      if (!window.confirm(`Firmen-Reparatur fuer ${companyName} starten? Dabei werden inkonsistente Eintraege automatisch korrigiert.`)) {
+      const currentStatus = String(company?.status || "aktiv").toLowerCase();
+      const nextStatus = currentStatus === "gesperrt" ? "aktiv" : "gesperrt";
+      const promptText = nextStatus === "gesperrt"
+        ? `Firma ${companyName} jetzt sperren? Firmen-Admin, Drehkreuz und Mitarbeiter-App dieser Firma werden blockiert.`
+        : `Sperre fuer ${companyName} jetzt aufheben? Die Firma kann sich danach wieder anmelden.`;
+      if (!window.confirm(promptText)) {
         return;
       }
 
-      button.disabled = true;
+      state.companyLockBusy[companyId] = true;
+      state.companyRepairStatus[companyId] = {
+        kind: "info",
+        message: nextStatus === "gesperrt" ? "Firma wird gesperrt..." : "Sperre wird aufgehoben..."
+      };
+      renderCompanyList();
+
       try {
-        const payload = await apiRequest(`${API_BASE}/api/companies/${companyId}/repair`, { method: "POST", body: {} });
-        const fixed = Array.isArray(payload?.fixed) ? payload.fixed : [];
+        await apiRequest(`${API_BASE}/api/companies/${companyId}`, { method: "PUT", body: { status: nextStatus } });
+        state.companyRepairStatus[companyId] = {
+          kind: nextStatus === "gesperrt" ? "error" : "success",
+          message: nextStatus === "gesperrt" ? "Firma ist jetzt gesperrt." : "Firma ist wieder aktiv."
+        };
         await loadAllData();
         refreshAll();
-        if (fixed.length) {
-          window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen:\n- ${fixed.join("\n- ")}`);
-        } else {
-          window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen.`);
-        }
+        window.alert(nextStatus === "gesperrt"
+          ? `Firma ${companyName} wurde gesperrt.`
+          : `Sperre fuer ${companyName} wurde aufgehoben.`);
       } catch (error) {
-        window.alert(`Firmen-Reparatur fuer ${companyName} fehlgeschlagen: ${error.message}`);
+        const repairMessage = mapCompanyRepairError(error);
+        state.companyRepairStatus[companyId] = {
+          kind: "error",
+          message: repairMessage
+        };
+        renderCompanyList();
+        window.alert(`Statuswechsel fuer ${companyName} fehlgeschlagen: ${repairMessage}`);
       } finally {
-        button.disabled = false;
+        delete state.companyLockBusy[companyId];
+        renderCompanyList();
       }
-    });
+      return;
+    }
+
+    const button = event.target.closest("[data-company-repair]");
+    if (!button || button.disabled || !elements.companyList.contains(button)) {
+      return;
+    }
+
+    const companyId = button.dataset.companyRepair;
+    if (!companyId) {
+      return;
+    }
+
+    const company = state.companies.find((entry) => entry.id === companyId);
+    const companyName = company?.name || "diese Firma";
+    if (!window.confirm(`Firmen-Reparatur fuer ${companyName} starten? Dabei werden inkonsistente Eintraege automatisch korrigiert.`)) {
+      return;
+    }
+
+    state.companyRepairBusy[companyId] = true;
+    state.companyRepairStatus[companyId] = {
+      kind: "info",
+      message: "Reparatur wird ausgefuehrt..."
+    };
+    renderCompanyList();
+
+    try {
+      const payload = await apiRequest(`${API_BASE}/api/companies/${companyId}/repair`, { method: "POST", body: {} });
+      const fixed = Array.isArray(payload?.fixed) ? payload.fixed : [];
+      state.companyRepairStatus[companyId] = {
+        kind: "success",
+        message: fixed.length ? fixed[0] : "Firma erfolgreich geprueft."
+      };
+      await loadAllData();
+      refreshAll();
+      if (fixed.length) {
+        window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen:\n- ${fixed.join("\n- ")}`);
+      } else {
+        window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen.`);
+      }
+    } catch (error) {
+      const repairMessage = mapCompanyRepairError(error);
+      state.companyRepairStatus[companyId] = {
+        kind: "error",
+        message: repairMessage
+      };
+      renderCompanyList();
+      window.alert(`Firmen-Reparatur fuer ${companyName} fehlgeschlagen: ${repairMessage}`);
+    } finally {
+      delete state.companyRepairBusy[companyId];
+      renderCompanyList();
+    }
   });
 }
 
@@ -2602,6 +2799,10 @@ async function handleLoginSubmit(event) {
       window.alert("Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.");
       return;
     }
+    if (error.message === "company_locked") {
+      window.alert("Diese Firma ist gesperrt. Bitte zuerst offene Rechnungen begleichen oder die Sperre im Superadmin aufheben.");
+      return;
+    }
     if (error.message === "invalid_credentials") {
       window.alert("Benutzername oder Passwort ist falsch. Bitte Daten pruefen und erneut versuchen.");
       return;
@@ -3835,6 +4036,14 @@ if (companyForm) {
   companyForm.addEventListener("submit", handleCompanySubmit);
 }
 
+if (elements.desktopInstallButton) {
+  elements.desktopInstallButton.addEventListener("click", () => {
+    triggerDesktopInstall().catch(() => {
+      window.alert("Desktop-Installation konnte nicht gestartet werden.");
+    });
+  });
+}
+
 const passwordForm = document.querySelector("#passwordForm");
 if (passwordForm) {
   passwordForm.addEventListener("submit", handlePasswordChange);
@@ -3942,6 +4151,9 @@ if (addSubcompanyButton) {
     }
   });
 }
+
+registerControlServiceWorker();
+wireDesktopInstallPrompt();
 
 (async () => {
   try {

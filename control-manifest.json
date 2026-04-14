@@ -1,15 +1,15 @@
 {
-  "id": "/worker.html",
-  "name": "BauPass Mitarbeiter-App",
+  "id": "/index.html",
+  "name": "BauPass Control",
   "short_name": "BauPass",
-  "description": "Digitaler Mitarbeiterausweis fuer Einlasskontrolle am Drehkreuz.",
-  "start_url": "/worker.html",
+  "description": "Installierbares BauPass Control Portal fuer Admin und Pforte auf dem Desktop.",
+  "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "landscape",
   "background_color": "#f6f1e8",
-  "theme_color": "#1c2128",
-  "scope": "/",
-  "orientation": "portrait",
+  "theme_color": "#0f4c5c",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {

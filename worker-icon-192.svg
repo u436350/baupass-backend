@@ -1,10 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#d95d39" />
-      <stop offset="100%" stop-color="#121417" />
+      <stop offset="0%" stop-color="#e9804a" />
+      <stop offset="45%" stop-color="#cb5730" />
+      <stop offset="100%" stop-color="#1c2128" />
     </linearGradient>
+    <radialGradient id="glow" cx="28%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="#ffd7b9" stop-opacity="0.78" />
+      <stop offset="100%" stop-color="#ffd7b9" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="grid" width="14" height="14" patternUnits="userSpaceOnUse">
+      <path d="M14 0H0V14" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+    </pattern>
   </defs>
-  <rect width="192" height="192" rx="34" fill="url(#bg)" />
-  <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="82" font-weight="700" fill="#fff7ef">BP</text>
+  <rect width="192" height="192" rx="42" fill="url(#bg)" />
+  <rect width="192" height="192" rx="42" fill="url(#glow)" />
+  <rect x="14" y="14" width="164" height="164" rx="32" fill="url(#grid)" opacity="0.55" />
+  <rect x="16" y="16" width="160" height="160" rx="30" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+  <circle cx="96" cy="98" r="50" fill="rgba(12,16,22,0.28)" stroke="rgba(255,245,236,0.24)" stroke-width="2" />
+  <rect x="80" y="48" width="32" height="12" rx="6" fill="#ffd8b8" opacity="0.95" />
+  <path d="M58 98C58 72.6 75 58 96 58c21 0 38 14.6 38 40v8H58z" fill="#fff7ef" />
+  <rect x="56" y="100" width="80" height="14" rx="7" fill="#1f2731" />
+  <rect x="64" y="127" width="10" height="26" rx="5" fill="#fff7ef" />
+  <rect x="91" y="120" width="10" height="33" rx="5" fill="#ffd8b8" />
+  <rect x="118" y="127" width="10" height="26" rx="5" fill="#fff7ef" />
+  <text x="96" y="152" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="2" fill="#fff0e4">BP</text>
 </svg>

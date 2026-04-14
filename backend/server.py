@@ -240,6 +240,15 @@ def clear_login_failures(throttle_key):
     failed_login_attempts.pop(throttle_key, None)
 
 
+def clear_login_failures_for_username(username):
+    normalized_username = str(username or "").strip().lower()
+    if not normalized_username:
+        return
+    keys_to_delete = [key for key in failed_login_attempts.keys() if key.endswith(f"|{normalized_username}")]
+    for key in keys_to_delete:
+        failed_login_attempts.pop(key, None)
+
+
 def get_user_from_session_token(token_value):
     if not token_value:
         return None
@@ -951,6 +960,13 @@ def require_auth(handler):
         if not is_tenant_host_valid(db, user_payload):
             return jsonify({"error": "forbidden_tenant_host"}), 403
 
+        if user_payload.get("role") != "superadmin":
+            company_error = get_company_access_error(db, user_payload.get("company_id"))
+            if company_error:
+                db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+                db.commit()
+                return jsonify(company_error), 403
+
         if user_payload.get("role") in ["superadmin", "company-admin"]:
             settings_row = db.execute("SELECT admin_ip_whitelist FROM settings WHERE id = 1").fetchone()
             whitelist = parse_ip_whitelist(settings_row["admin_ip_whitelist"] if settings_row else "")
@@ -1003,6 +1019,12 @@ def require_worker_session(handler):
         if not worker or worker["deleted_at"]:
             return jsonify({"error": "worker_not_available"}), 401
 
+        company_error = get_company_access_error(db, worker["company_id"])
+        if company_error:
+            db.execute("DELETE FROM worker_app_sessions WHERE token = ?", (token,))
+            db.commit()
+            return jsonify(company_error), 403
+
         g.worker = row_to_dict(worker)
         g.worker_token = token
         return handler(*args, **kwargs)
@@ -1027,6 +1049,27 @@ def visible_company_clause(user):
     if user["role"] == "superadmin":
         return "", []
     return " WHERE id = ?", [user["company_id"]]
+
+
+def get_company_access_error(db, company_id):
+    if not company_id:
+        return None
+
+    company = db.execute("SELECT id, name, status, deleted_at FROM companies WHERE id = ?", (company_id,)).fetchone()
+    if not company:
+        return {"error": "company_not_found", "companyStatus": "unbekannt", "companyName": "Unbekannte Firma"}
+    if company["deleted_at"]:
+        return {"error": "company_deleted", "companyStatus": "geloescht", "companyName": company["name"]}
+
+    status = (company["status"] or "aktiv").strip().lower()
+    if status == "gesperrt":
+        return {
+            "error": "company_locked",
+            "companyStatus": status,
+            "companyName": company["name"],
+            "message": f"Firma {company['name']} ist wegen offener Zahlung gesperrt.",
+        }
+    return None
 
 
 def visible_worker_clause(user, prefix=""):
@@ -1194,7 +1237,16 @@ def auto_close_open_entries_after_midnight(db):
 
 @app.get("/api/health")
 def health():
-    return jsonify({"status": "ok", "time": now_iso()})
+    diagnostics = get_runtime_diagnostics()
+    return jsonify(
+        {
+            "status": "ok",
+            "time": now_iso(),
+            "warnings": len(diagnostics["warnings"]),
+            "recoveryEnabled": diagnostics["recoveryEnabled"],
+            "gateApiConfigured": diagnostics["gateApiConfigured"],
+        }
+    )
 
 
 @app.get("/api/phone-test")
@@ -1261,6 +1313,63 @@ def phone_test_page():
 </body>
 </html>
 """
+
+
+def get_runtime_diagnostics():
+    diagnostics = {
+        "warnings": [],
+        "recoveryEnabled": bool((os.getenv("BAUPASS_RECOVERY_SECRET") or "").strip()),
+        "gateApiConfigured": bool((os.getenv("BAUPASS_GATE_API_KEY") or "").strip()),
+        "publicBaseUrlConfigured": bool((os.getenv("PUBLIC_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").strip()),
+    }
+
+    if not diagnostics["recoveryEnabled"]:
+        diagnostics["warnings"].append(
+            {
+                "code": "missing_recovery_secret",
+                "message": "BAUPASS_RECOVERY_SECRET ist nicht gesetzt. Admin-Recovery ist deaktiviert.",
+            }
+        )
+    if not diagnostics["gateApiConfigured"]:
+        diagnostics["warnings"].append(
+            {
+                "code": "missing_gate_api_key",
+                "message": "BAUPASS_GATE_API_KEY ist nicht gesetzt. NFC-Gate-Tap ist deaktiviert.",
+            }
+        )
+    if not diagnostics["publicBaseUrlConfigured"]:
+        diagnostics["warnings"].append(
+            {
+                "code": "missing_public_base_url",
+                "message": "PUBLIC_BASE_URL ist nicht gesetzt. Externe Links koennen auf lokalen Host zeigen.",
+            }
+        )
+
+    db = None
+    try:
+        db = sqlite3.connect(DB_PATH)
+        db.row_factory = sqlite3.Row
+        admin_rows = db.execute("SELECT username, role, password_hash FROM users WHERE role IN ('superadmin', 'company-admin', 'turnstile')").fetchall()
+        weak_users = [row["username"] for row in admin_rows if check_password_hash(row["password_hash"], "1234")]
+        if weak_users:
+            diagnostics["warnings"].append(
+                {
+                    "code": "default_passwords_present",
+                    "message": f"Standardpasswort 1234 noch aktiv fuer: {', '.join(weak_users[:10])}",
+                }
+            )
+    except Exception as exc:
+        diagnostics["warnings"].append(
+            {
+                "code": "runtime_diagnostics_failed",
+                "message": f"Runtime-Diagnose konnte nicht vollstaendig gelesen werden: {exc}",
+            }
+        )
+    finally:
+        if db is not None:
+            db.close()
+
+    return diagnostics
 
 
 @app.get("/api/qr.png")
@@ -1361,6 +1470,12 @@ def login():
         register_login_failure(throttle_key)
         return login_error("forbidden_tenant_host")
 
+    if user["role"] != "superadmin":
+        company_error = get_company_access_error(db, user["company_id"])
+        if company_error:
+            log_audit("login.blocked", f"Login fuer {user['username']} wegen Firmensperre blockiert", target_type="company", target_id=user["company_id"])
+            return login_error(company_error["error"], companyStatus=company_error["companyStatus"], companyName=company_error["companyName"], message=company_error.get("message", ""))
+
     clear_login_failures(throttle_key)
 
     token = secrets.token_urlsafe(24)
@@ -1415,6 +1530,13 @@ def session_bootstrap():
     db = get_db()
     if not is_tenant_host_valid(db, user):
         return jsonify({"error": "forbidden_tenant_host"}), 403
+
+    if user.get("role") != "superadmin":
+        company_error = get_company_access_error(db, user.get("company_id"))
+        if company_error:
+            db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            db.commit()
+            return jsonify(company_error), 403
 
     if user.get("role") in ["superadmin", "company-admin"]:
         settings_row = db.execute("SELECT admin_ip_whitelist FROM settings WHERE id = 1").fetchone()
@@ -1514,6 +1636,51 @@ def system_status():
             "workerAppEnabled": int(setting["worker_app_enabled"]) == 1 if setting else True,
         }
     )
+
+
+@app.get("/api/system/runtime-check")
+@require_auth
+@require_roles("superadmin")
+def system_runtime_check():
+    diagnostics = get_runtime_diagnostics()
+    return jsonify({"ok": True, "serverTime": now_iso(), **diagnostics})
+
+
+@app.post("/api/system/recover-admin")
+def system_recover_admin():
+    configured_secret = (os.getenv("BAUPASS_RECOVERY_SECRET") or "").strip()
+    if not configured_secret:
+        return jsonify({"ok": False, "error": "recovery_disabled"}), 503
+
+    payload = request.get_json(silent=True) or {}
+    provided_secret = (payload.get("recoverySecret") or request.headers.get("X-Recovery-Secret") or "").strip()
+    if not provided_secret or not secrets.compare_digest(provided_secret, configured_secret):
+        log_audit("system.recovery_failed", "Recovery-Versuch mit ungueltigem Secret")
+        return jsonify({"ok": False, "error": "invalid_recovery_secret"}), 401
+
+    username = (payload.get("username") or os.getenv("BAUPASS_RECOVERY_USERNAME") or "superadmin").strip().lower()
+    new_password = payload.get("newPassword") or ""
+    if len(new_password) < 8:
+        return jsonify({"ok": False, "error": "password_too_short"}), 400
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE lower(username) = ?", (username,)).fetchone()
+    if not user:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+    if user["role"] not in {"superadmin", "company-admin", "turnstile"}:
+        return jsonify({"ok": False, "error": "recovery_not_allowed_for_role"}), 403
+
+    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(new_password), user["id"]))
+    db.execute("DELETE FROM sessions WHERE user_id = ?", (user["id"],))
+    db.commit()
+    clear_login_failures_for_username(username)
+    log_audit(
+        "system.recovery_password_reset",
+        f"Recovery-Passwortreset fuer {username}",
+        target_type="user",
+        target_id=user["id"],
+    )
+    return jsonify({"ok": True, "username": username, "role": user["role"]})
 
 
 @app.post("/api/system/repair")
@@ -2350,6 +2517,10 @@ def worker_app_login():
         if not worker or worker["deleted_at"]:
             return jsonify({"error": "worker_not_available"}), 401
 
+        company_error = get_company_access_error(db, worker["company_id"])
+        if company_error:
+            return jsonify(company_error), 403
+
         return jsonify(create_worker_app_session(db, worker))
 
     badge_matches = db.execute(
@@ -2374,6 +2545,10 @@ def worker_app_login():
         return jsonify({"error": "missing_badge_pin", "message": "Bitte Badge-PIN eingeben."}), 400
     if not check_password_hash(worker["badge_pin_hash"], badge_pin):
         return jsonify({"error": "invalid_badge_pin", "message": "Badge-ID oder PIN ist ungueltig."}), 401
+
+    company_error = get_company_access_error(db, worker["company_id"])
+    if company_error:
+        return jsonify(company_error), 403
 
     return jsonify(create_worker_app_session(db, worker))
 
@@ -2505,7 +2680,7 @@ def repair_company(company_id):
         fixed.append(f"{len(bad_status)} ungueltige Mitarbeiter-Status korrigiert")
 
     if not fixed:
-        fixed.append("Keine Probleme gefunden – System ist in Ordnung")
+        fixed.append("Keine Probleme gefunden - System ist in Ordnung")
 
     db.commit()
     log_audit("company.repair", f"Firma-Diagnose: {'; '.join(fixed)}", actor=user, target_type="company", target_id=company_id)
@@ -2801,6 +2976,10 @@ def create_access_log():
     if user["role"] != "superadmin" and worker["company_id"] != user.get("company_id"):
         return jsonify({"error": "forbidden_worker"}), 403
 
+    company_error = get_company_access_error(db, worker["company_id"])
+    if company_error:
+        return jsonify(company_error), 403
+
     if worker["status"] != "aktiv":
         return jsonify({"error": "worker_not_active"}), 400
 
@@ -2859,6 +3038,9 @@ def gate_tap():
         return jsonify({"error": "duplicate_physical_card_id"}), 409
 
     worker = workers[0]
+    company_error = get_company_access_error(db, worker["company_id"])
+    if company_error:
+        return jsonify(company_error), 403
     if worker["status"] != "aktiv":
         return jsonify({"error": "worker_not_active"}), 403
 

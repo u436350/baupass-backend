@@ -112,7 +112,23 @@ const elements = {
   deletePhotoButton: document.querySelector("#deletePhotoButton")
 };
 
-init();
+const splashStartedAt = performance.now();
+const SPLASH_MIN_MS = 1050;
+
+function dismissSplash() {
+  const elapsed = performance.now() - splashStartedAt;
+  const delay = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => {
+    document.body.classList.add("splash-released");
+    const el = document.getElementById("splashScreen");
+    if (!el) return;
+    el.classList.add("splash-done");
+    el.addEventListener("transitionend", () => el.remove(), { once: true });
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 800);
+  }, delay);
+}
+
+init().finally(dismissSplash);
 
 async function init() {
   bindEvents();
