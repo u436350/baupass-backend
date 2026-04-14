@@ -4417,6 +4417,74 @@ async function handleTopbarLogout() {
   await handleLogout();
 }
 
+function showImportDryRunDialog(summary) {
+  return new Promise((resolve) => {
+    const accepted = summary?.accepted || {};
+    const conflicts = summary?.conflicts || {};
+    const skipped = summary?.skipped || {};
+
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.background = "rgba(10, 16, 26, 0.52)";
+    overlay.style.display = "grid";
+    overlay.style.placeItems = "center";
+    overlay.style.zIndex = "9999";
+
+    const panel = document.createElement("div");
+    panel.style.width = "min(860px, 94vw)";
+    panel.style.maxHeight = "80vh";
+    panel.style.overflow = "auto";
+    panel.style.background = "#ffffff";
+    panel.style.borderRadius = "14px";
+    panel.style.padding = "18px";
+    panel.style.boxShadow = "0 12px 38px rgba(0,0,0,0.22)";
+
+    panel.innerHTML = `
+      <h3 style="margin:0 0 8px;">Import Vorschau (Dry-Run)</h3>
+      <p class="helper-text" style="margin:0 0 12px;">Bitte Zahlen pruefen, bevor der Import angewendet wird.</p>
+      <table style="width:100%; border-collapse:collapse; font-size:0.95rem; margin-bottom:12px;">
+        <thead>
+          <tr style="background:#f5f7fa; text-align:left;">
+            <th style="padding:8px; border:1px solid #d8dee8;">Bereich</th>
+            <th style="padding:8px; border:1px solid #d8dee8;">Accepted</th>
+            <th style="padding:8px; border:1px solid #d8dee8;">Conflicts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Companies</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.companies || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.companies || 0))}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Subcompanies</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.subcompanies || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.subcompanies || 0))}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Workers</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.workers || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.workers || 0))}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Access Logs</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.accessLogs || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.accessLogs || 0))}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Invoices</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.invoices || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.invoices || 0))}</td></tr>
+        </tbody>
+      </table>
+      <p class="helper-text" style="margin:0 0 14px; color:#9a3412;">Skipped: forbidden=${escapeHtml(String(skipped.forbidden || 0))}, invalid=${escapeHtml(String(skipped.invalid || 0))}</p>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" class="ghost-button" data-import-preview="cancel">Abbrechen</button>
+        <button type="button" class="primary-button" data-import-preview="apply">Import anwenden</button>
+      </div>
+    `;
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const cleanup = (result) => {
+      overlay.remove();
+      resolve(result);
+    };
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        cleanup(false);
+      }
+    });
+
+    panel.querySelector('[data-import-preview="cancel"]')?.addEventListener("click", () => cleanup(false));
+    panel.querySelector('[data-import-preview="apply"]')?.addEventListener("click", () => cleanup(true));
+  });
+}
+
 async function handleTopbarImport() {
   if (!token || !state.currentUser) {
     window.alert("Bitte zuerst anmelden.");
@@ -4447,18 +4515,7 @@ async function handleTopbarImport() {
       });
 
       const summary = dryRunResult?.summary || {};
-      const accepted = summary.accepted || {};
-      const skipped = summary.skipped || {};
-      const conflicts = summary.conflicts || {};
-
-      const proceed = window.confirm(
-        "Import-Dry-Run fertig:\n" +
-        `Companies: ${accepted.companies || 0}, Subcompanies: ${accepted.subcompanies || 0}, Workers: ${accepted.workers || 0}\n` +
-        `Logs: ${accepted.accessLogs || 0}, Invoices: ${accepted.invoices || 0}\n` +
-        `Conflicts -> C:${conflicts.companies || 0}, S:${conflicts.subcompanies || 0}, W:${conflicts.workers || 0}, L:${conflicts.accessLogs || 0}, I:${conflicts.invoices || 0}\n` +
-        `Skipped -> Forbidden: ${skipped.forbidden || 0}, Invalid: ${skipped.invalid || 0}\n\n` +
-        "Import jetzt wirklich anwenden?"
-      );
+      const proceed = await showImportDryRunDialog(summary);
 
       if (!proceed) {
         return;
