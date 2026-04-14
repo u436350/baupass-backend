@@ -67,6 +67,7 @@ let lastCameraPhotoDataUrl = null;
 let lastCameraPhotoRotation = 0;
 let wakeLockHandle = null;
 let dynamicManifestUrl = "";
+let workerSessionExpiryTimeout = null;
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -85,6 +86,7 @@ const elements = {
   workerSite: document.querySelector("#workerSite"),
   workerSiteMapLink: document.querySelector("#workerSiteMapLink"),
   workerValidUntil: document.querySelector("#workerValidUntil"),
+  workerDayCardValidity: document.querySelector("#workerDayCardValidity"),
   workerQr: document.querySelector("#workerQr"),
   qrFallbackText: document.querySelector("#qrFallbackText"),
   refreshButton: document.querySelector("#refreshButton"),
@@ -517,9 +519,13 @@ async function loadWorkerData() {
     updateConnectionState();
     await syncOfflinePhotoQueue();
     return true;
-  } catch {
+  } catch (error) {
     localStorage.removeItem(WORKER_TOKEN_KEY);
     workerToken = "";
+    clearWorkerSessionExpiryTimer();
+    if (error?.code === "worker_session_expired" || error?.code === "invalid_worker_session") {
+      showWorkerNotice("Digitale Tageskarte abgelaufen. Bitte fuer heute neu anmelden.");
+    }
     showLogin();
     return false;
   }
@@ -530,6 +536,7 @@ function renderWorker(payload) {
   const company = payload.company || {};
     const subcompany = payload.subcompany || {};
   const normalizedStatus = String(worker.status || "").trim().toLowerCase();
+  const sessionExpiresAt = String(payload.sessionExpiresAt || "").trim();
 
   if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
     if (elements.workerSubcompany) {
@@ -552,6 +559,8 @@ function renderWorker(payload) {
   if (elements.workerSite) elements.workerSite.textContent = worker.site || "-";
   updateSiteMapLink(worker.site || "");
   if (elements.workerValidUntil) elements.workerValidUntil.textContent = formatDate(worker.validUntil);
+  renderDayCardValidity(sessionExpiresAt);
+  scheduleWorkerSessionExpiry(sessionExpiresAt);
 
   if (elements.workerPhoto) {
     if (worker.photoData && String(worker.photoData).startsWith("data:image")) {
@@ -630,6 +639,7 @@ function renderWorker(payload) {
 }
 
 function showLogin() {
+  clearWorkerSessionExpiryTimer();
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
   document.body.classList.remove("worker-loaded");
@@ -680,6 +690,7 @@ async function workerLogout() {
   localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
   localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
   workerToken = "";
+  clearWorkerSessionExpiryTimer();
   closeGateMode();
   showLogin();
 }
@@ -1152,6 +1163,69 @@ function formatDate(value) {
     month: "2-digit",
     year: "numeric"
   }).format(new Date(value));
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(parsed);
+}
+
+function renderDayCardValidity(expiresAt) {
+  if (!elements.workerDayCardValidity) {
+    return;
+  }
+  if (!expiresAt) {
+    elements.workerDayCardValidity.textContent = "Digitale Tageskarte: gueltig bis heute 00:00 Uhr.";
+    return;
+  }
+  elements.workerDayCardValidity.textContent = `Digitale Tageskarte: gueltig bis ${formatDateTime(expiresAt)} Uhr.`;
+}
+
+function clearWorkerSessionExpiryTimer() {
+  if (workerSessionExpiryTimeout !== null) {
+    window.clearTimeout(workerSessionExpiryTimeout);
+    workerSessionExpiryTimeout = null;
+  }
+}
+
+function expireDailyCardInClient() {
+  localStorage.removeItem(WORKER_TOKEN_KEY);
+  workerToken = "";
+  clearWorkerSessionExpiryTimer();
+  closeGateMode();
+  showLogin();
+  showWorkerNotice("Digitale Tageskarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.");
+}
+
+function scheduleWorkerSessionExpiry(expiresAt) {
+  clearWorkerSessionExpiryTimer();
+  if (!expiresAt) {
+    return;
+  }
+  const parsed = new Date(expiresAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return;
+  }
+  const msUntilExpiry = parsed.getTime() - Date.now();
+  if (msUntilExpiry <= 0) {
+    expireDailyCardInClient();
+    return;
+  }
+  workerSessionExpiryTimeout = window.setTimeout(() => {
+    expireDailyCardInClient();
+  }, msUntilExpiry);
 }
 
 function createAvatar(firstName, lastName) {

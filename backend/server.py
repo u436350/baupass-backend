@@ -13,6 +13,7 @@ import threading
 import time
 from functools import wraps
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from email.message import EmailMessage
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -229,8 +230,24 @@ def expiry_iso(hours=SESSION_TTL_HOURS):
     return (datetime.utcnow() + timedelta(hours=hours)).replace(microsecond=0).isoformat() + "Z"
 
 
-def worker_session_expiry_iso(days=30):
-    return (datetime.utcnow() + timedelta(days=days)).replace(microsecond=0).isoformat() + "Z"
+def worker_session_expiry_iso():
+    # Worker app sessions are daily cards and expire at next local midnight.
+    timezone_name = os.getenv("BAUPASS_TIMEZONE", "Europe/Berlin")
+    try:
+        local_tz = ZoneInfo(timezone_name)
+    except Exception:
+        local_tz = timezone.utc
+
+    local_now = datetime.now(local_tz)
+    next_midnight_local = (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    next_midnight_utc = next_midnight_local.astimezone(timezone.utc)
+    return next_midnight_utc.replace(tzinfo=None).isoformat() + "Z"
+
+
+def purge_expired_worker_app_sessions(db, now_value=None):
+    timestamp = now_value or now_iso()
+    result = db.execute("DELETE FROM worker_app_sessions WHERE expires_at < ?", (timestamp,))
+    return int(result.rowcount or 0)
 
 
 def normalize_company_plan(plan_value):
@@ -1140,6 +1157,8 @@ def require_worker_session(handler):
 
         token = auth_header.split(" ", 1)[1]
         db = get_db()
+        purge_expired_worker_app_sessions(db)
+        db.commit()
         session = db.execute("SELECT worker_id, expires_at FROM worker_app_sessions WHERE token = ?", (token,)).fetchone()
         if not session:
             return jsonify({"error": "invalid_worker_session"}), 401
@@ -1161,6 +1180,7 @@ def require_worker_session(handler):
 
         g.worker = row_to_dict(worker)
         g.worker_token = token
+        g.worker_session_expires_at = session["expires_at"]
         return handler(*args, **kwargs)
 
     return wrapper
@@ -1516,6 +1536,7 @@ def start_background_jobs():
         _background_started = True
 
     interval_hours = max(1, int(os.getenv("BAUPASS_DUNNING_INTERVAL_HOURS", "24")))
+    session_cleanup_seconds = max(60, int(os.getenv("BAUPASS_WORKER_SESSION_CLEANUP_SECONDS", "300")))
 
     def scheduler_loop():
         while True:
@@ -1546,7 +1567,21 @@ def start_background_jobs():
                     )
             time.sleep(interval_hours * 3600)
 
+    def worker_session_cleanup_loop():
+        while True:
+            try:
+                with app.app_context():
+                    db = get_db()
+                    deleted = purge_expired_worker_app_sessions(db)
+                    if deleted > 0:
+                        db.commit()
+            except Exception:
+                # Ignore cleanup loop failures; auth still enforces token expiry.
+                pass
+            time.sleep(session_cleanup_seconds)
+
     threading.Thread(target=scheduler_loop, name="baupass-dunning-scheduler", daemon=True).start()
+    threading.Thread(target=worker_session_cleanup_loop, name="baupass-worker-session-cleanup", daemon=True).start()
 
 
 def get_company_access_error(db, company_id):
@@ -3218,12 +3253,18 @@ def create_access_log_entry(db, worker_id, direction, gate, note, timestamp_valu
 
 def create_worker_app_session(db, worker):
     session_token = secrets.token_urlsafe(28)
+    expires_at = worker_session_expiry_iso()
     db.execute(
         "INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)",
-        (session_token, worker["id"], worker_session_expiry_iso(days=30)),
+        (session_token, worker["id"], expires_at),
     )
     db.commit()
-    return {"token": session_token, "worker": serialize_worker_for_app(worker)}
+    return {
+        "token": session_token,
+        "worker": serialize_worker_for_app(worker),
+        "sessionExpiresAt": expires_at,
+        "cardType": "day",
+    }
 
 
 @app.get("/api/workers/<worker_id>/app-access")
@@ -3260,6 +3301,9 @@ def worker_app_login():
         return jsonify({"error": "missing_worker_app_credentials"}), 400
 
     db = get_db()
+    deleted = purge_expired_worker_app_sessions(db)
+    if deleted > 0:
+        db.commit()
     setting = db.execute("SELECT worker_app_enabled FROM settings WHERE id = 1").fetchone()
     if setting and int(setting["worker_app_enabled"]) == 0:
         return jsonify({"error": "worker_app_disabled", "message": "Die Mitarbeiter-App ist zurzeit nicht verfuegbar. Bitte spaeter erneut versuchen."}), 503
@@ -3338,6 +3382,8 @@ def worker_app_me():
                 "platformName": setting["platform_name"],
                 "operatorName": setting["operator_name"],
             },
+            "sessionExpiresAt": getattr(g, "worker_session_expires_at", ""),
+            "cardType": "day",
         }
     )
 
