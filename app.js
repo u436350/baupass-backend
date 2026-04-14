@@ -736,16 +736,24 @@ function renderReportingPanels() {
   const summaryGrid = elements.reportingSummaryGrid;
   const topOverdueList = elements.reportingTopOverdueList;
   const accessDailyList = elements.reportingAccessDaily;
+  const reportingPanels = document.querySelector("#reportingPanels");
   if (!summaryGrid || !topOverdueList || !accessDailyList) {
     return;
   }
 
   const role = String(getCurrentUser()?.role || "").toLowerCase();
   if (role !== "superadmin" && role !== "company-admin") {
+    if (reportingPanels) {
+      reportingPanels.style.display = "none";
+    }
     summaryGrid.innerHTML = "";
     topOverdueList.innerHTML = "";
     accessDailyList.innerHTML = "";
     return;
+  }
+
+  if (reportingPanels) {
+    reportingPanels.style.display = "grid";
   }
 
   const kpis = state.reporting?.kpis || {};
