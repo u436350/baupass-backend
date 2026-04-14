@@ -578,6 +578,7 @@ async function loadAllData() {
   if (workers.status === "fulfilled") state.workers = workers.value || [];
   if (accessLogs.status === "fulfilled") state.accessLogs = (accessLogs.value || []).map(normalizeLog);
   if (invoices.status === "fulfilled") state.invoices = invoices.value || [];
+  if (invoices.status !== "fulfilled") state.invoices = [];
   if (summary.status === "fulfilled") state.accessInsights = summary.value || state.accessInsights;
   if (reporting.status === "fulfilled") state.reporting = reporting.value || state.reporting;
   if (dayClose.status === "fulfilled") state.dayClose = dayClose.value || null;

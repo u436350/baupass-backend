@@ -4375,7 +4375,7 @@ def export_payload():
     workers = list_workers().json
     logs = list_access_logs().json
     invoices = []
-    if user["role"] in ["superadmin", "company-admin"]:
+    if user["role"] == "superadmin":
         if requested_company_id:
             invoice_rows = db.execute(
                 """
@@ -4722,6 +4722,9 @@ def import_payload():
         )
 
     for item in invoices:
+        if role != "superadmin":
+            summary["skipped"]["forbidden"] += 1
+            continue
         iid = item.get("id")
         cid = item.get("company_id", item.get("companyId"))
         if not iid or not cid:
