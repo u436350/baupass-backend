@@ -109,7 +109,10 @@ const elements = {
   closeCameraButton: document.querySelector("#closeCameraButton"),
   photoPreviewWrap: document.querySelector("#photoPreviewWrap"),
   rotatePhotoButton: document.querySelector("#rotatePhotoButton"),
-  deletePhotoButton: document.querySelector("#deletePhotoButton")
+  deletePhotoButton: document.querySelector("#deletePhotoButton"),
+  workerStatusBanner: document.querySelector("#workerStatusBanner"),
+  workerStatusText: document.querySelector("#workerStatusText"),
+  gateStatusFeedback: document.querySelector("#gateStatusFeedback")
 };
 
 const splashStartedAt = performance.now();
@@ -132,6 +135,12 @@ init().finally(dismissSplash);
 
 async function init() {
   bindEvents();
+  
+  // Enable Dark Mode support
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.style.colorScheme = "dark";
+  }
+  
   const params = new URL(window.location.href).searchParams;
   const urlToken = (params.get("access") || "").trim();
   const storedAccessToken = (window.localStorage.getItem(WORKER_ACCESS_TOKEN_KEY) || "").trim();
@@ -585,6 +594,26 @@ function renderWorker(payload) {
     elements.gateWorkerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim() || "Mitarbeiter";
   }
 
+  // Update Status Banner
+  if (elements.workerStatusBanner && elements.workerStatusText) {
+    const banned = String(worker.banned || "false").trim().toLowerCase() === "true";
+    const validUntilDate = new Date(worker.validUntil || "");
+    const isExpired = validUntilDate < new Date();
+    
+    elements.workerStatusBanner.style.display = "flex";
+    
+    if (banned) {
+      elements.workerStatusBanner.className = "status-banner error";
+      elements.workerStatusText.textContent = "❌ Zugang entzogen";
+    } else if (isExpired) {
+      elements.workerStatusBanner.className = "status-banner warning";
+      elements.workerStatusText.textContent = "⚠ Ausweis abgelaufen";
+    } else {
+      elements.workerStatusBanner.className = "status-banner active";
+      elements.workerStatusText.textContent = "✓ Aktiv und berechtigt";
+    }
+  }
+
   if (elements.loginCard) elements.loginCard.classList.add("hidden");
   if (elements.badgeCard) elements.badgeCard.classList.remove("hidden");
   document.body.classList.add("worker-loaded");
@@ -637,6 +666,13 @@ async function openGateMode() {
     return;
   }
   elements.gateScannerOverlay.classList.remove("hidden");
+  
+  // Show feedback
+  if (elements.gateStatusFeedback) {
+    elements.gateStatusFeedback.textContent = "📱 Bereit zum Scannen...";
+    elements.gateStatusFeedback.style.color = "rgba(255, 255, 255, 0.7)";
+  }
+  
   showBrightnessHintTemporarily();
   await requestWakeLock();
 }
@@ -644,6 +680,9 @@ async function openGateMode() {
 function closeGateMode() {
   if (elements.gateScannerOverlay) {
     elements.gateScannerOverlay.classList.add("hidden");
+  }
+  if (elements.gateStatusFeedback) {
+    elements.gateStatusFeedback.textContent = "";
   }
   releaseWakeLock();
 }

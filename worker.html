@@ -91,6 +91,11 @@
     </section>
 
     <section id="badgeCard" class="card worker-pass hidden">
+      <div id="workerStatusBanner" class="status-banner active" style="display:none;">
+        <span class="status-banner-icon">✓</span>
+        <span id="workerStatusText">Aktiv und berechtigt</span>
+      </div>
+
       <div class="pass-stage">
         <div class="section-head section-head-inline">
           <div>
@@ -229,9 +234,13 @@
         <p class="eyebrow">Wallet Pass</p>
         <h2 id="gateWorkerName">Mitarbeiter</h2>
         <p class="gate-sub">Drehkreuz-Modus aktiv - QR unter Scanner halten</p>
-        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">Bitte Display-Helligkeit auf Maximum stellen fuer schnellen Scan.</p>
-        <img id="gateQr" alt="Einlass QR" />
+        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">⚠ Bitte Display-Helligkeit auf Maximum stellen fuer schnellen Scan.</p>
+        <div style="position: relative; display: inline-block; margin: 16px 0;">
+          <div style="position: absolute; inset: -12px; border: 2px dashed rgba(240, 132, 74, 0.4); border-radius: 20px; animation: scannerGlow 2s ease-in-out infinite;"></div>
+          <img id="gateQr" alt="Einlass QR" />
+        </div>
         <p id="gateBadgeId" class="gate-badge-id">-</p>
+        <p id="gateStatusFeedback" style="margin: 8px 0 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); height: 20px;"></p>
         <div class="actions">
           <button id="closeGateModeButton" class="ghost" type="button">Schliessen</button>
         </div>
