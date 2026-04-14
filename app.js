@@ -71,6 +71,7 @@ const elements = {
   logoutButton: document.querySelector("#logoutButton"),
   seedDataButton: document.querySelector("#seedDataButton"),
   exportButton: document.querySelector("#exportButton"),
+  importButton: document.querySelector("#importButton"),
   sessionCard: document.querySelector("#sessionCard"),
   views: Array.from(document.querySelectorAll(".view")),
   navLinks: Array.from(document.querySelectorAll(".nav-link")),
@@ -681,6 +682,13 @@ function updateTopbarActionsState(loggedIn) {
   if (elements.exportButton) {
     elements.exportButton.style.display = loggedIn ? "inline-flex" : "none";
     elements.exportButton.disabled = false;
+  }
+
+  if (elements.importButton) {
+    const canImport = role === "superadmin" || role === "company-admin";
+    elements.importButton.style.display = loggedIn ? "inline-flex" : "none";
+    elements.importButton.disabled = !canImport;
+    elements.importButton.title = canImport ? "" : "Nur fuer Admin-Rollen";
   }
 
   if (elements.logoutButton) {
@@ -2225,6 +2233,37 @@ async function exportAccessCsv() {
     URL.revokeObjectURL(url);
   } catch (error) {
     window.alert(`Zutritts-CSV Export fehlgeschlagen: ${error.message}`);
+  }
+}
+
+async function exportWorkersCsv() {
+  try {
+    const includeDeleted = window.confirm("Geloeschte Mitarbeiter ebenfalls exportieren?");
+    const query = new URLSearchParams();
+    if (includeDeleted) {
+      query.set("includeDeleted", "1");
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    const response = await fetch(`${API_BASE}/api/workers/export.csv${suffix}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Fehler ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mitarbeiterliste-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    window.alert(`Mitarbeiterlisten-Export fehlgeschlagen: ${error.message}`);
   }
 }
 
@@ -4378,6 +4417,72 @@ async function handleTopbarLogout() {
   await handleLogout();
 }
 
+async function handleTopbarImport() {
+  if (!token || !state.currentUser) {
+    window.alert("Bitte zuerst anmelden.");
+    return;
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const payloadData = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
+
+      const dryRunResult = await apiRequest(`${API_BASE}/api/import`, {
+        method: "POST",
+        body: {
+          data: payloadData,
+          dryRun: 1,
+        }
+      });
+
+      const summary = dryRunResult?.summary || {};
+      const accepted = summary.accepted || {};
+      const skipped = summary.skipped || {};
+      const conflicts = summary.conflicts || {};
+
+      const proceed = window.confirm(
+        "Import-Dry-Run fertig:\n" +
+        `Companies: ${accepted.companies || 0}, Subcompanies: ${accepted.subcompanies || 0}, Workers: ${accepted.workers || 0}\n` +
+        `Logs: ${accepted.accessLogs || 0}, Invoices: ${accepted.invoices || 0}\n` +
+        `Conflicts -> C:${conflicts.companies || 0}, S:${conflicts.subcompanies || 0}, W:${conflicts.workers || 0}, L:${conflicts.accessLogs || 0}, I:${conflicts.invoices || 0}\n` +
+        `Skipped -> Forbidden: ${skipped.forbidden || 0}, Invalid: ${skipped.invalid || 0}\n\n` +
+        "Import jetzt wirklich anwenden?"
+      );
+
+      if (!proceed) {
+        return;
+      }
+
+      await apiRequest(`${API_BASE}/api/import`, {
+        method: "POST",
+        body: {
+          data: payloadData,
+          dryRun: 0,
+        }
+      });
+
+      await loadAllData();
+      refreshAll();
+      window.alert("Import erfolgreich angewendet.");
+    } catch (error) {
+      window.alert(`Import fehlgeschlagen: ${error.message}`);
+    }
+  };
+
+  input.click();
+}
+
 function buildBadgeId(firstName, lastName) {
   const stamp = Date.now().toString(36).slice(-5).toUpperCase();
   const initials = `${firstName[0] || "X"}${lastName[0] || "X"}`.toUpperCase();
@@ -4469,6 +4574,15 @@ if (elements.seedDataButton) {
 
 if (elements.exportButton) {
   elements.exportButton.addEventListener("click", handleTopbarExport);
+}
+
+if (elements.importButton) {
+  elements.importButton.addEventListener("click", handleTopbarImport);
+}
+
+const workerCsvButton = document.querySelector("#workerCsvButton");
+if (workerCsvButton) {
+  workerCsvButton.addEventListener("click", exportWorkersCsv);
 }
 
 const workerForm = document.querySelector("#workerForm");

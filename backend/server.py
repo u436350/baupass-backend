@@ -2452,6 +2452,76 @@ def list_workers():
     return jsonify(workers)
 
 
+@app.get("/api/workers/export.csv")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def export_workers_csv():
+    include_deleted = request.args.get("includeDeleted", "0") == "1"
+    where_clause, params = visible_worker_clause(g.current_user, prefix="workers.")
+    if not include_deleted:
+        where_clause = f"{where_clause}{' AND' if where_clause else ' WHERE'} workers.deleted_at IS NULL"
+
+    rows = get_db().execute(
+        f"""
+        SELECT workers.*, companies.name AS company_name, subcompanies.name AS subcompany_name
+        FROM workers
+        JOIN companies ON companies.id = workers.company_id
+        LEFT JOIN subcompanies ON subcompanies.id = workers.subcompany_id
+        {where_clause}
+        ORDER BY workers.last_name, workers.first_name
+        """,
+        params,
+    ).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "id",
+            "company_id",
+            "company_name",
+            "subcompany_id",
+            "subcompany_name",
+            "first_name",
+            "last_name",
+            "insurance_number",
+            "role",
+            "site",
+            "valid_until",
+            "status",
+            "badge_id",
+            "physical_card_id",
+            "deleted_at",
+        ]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["id"],
+                row["company_id"],
+                row["company_name"],
+                row["subcompany_id"],
+                row["subcompany_name"],
+                row["first_name"],
+                row["last_name"],
+                row["insurance_number"],
+                row["role"],
+                row["site"],
+                row["valid_until"],
+                row["status"],
+                row["badge_id"],
+                row["physical_card_id"],
+                row["deleted_at"],
+            ]
+        )
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=mitarbeiterliste.csv"},
+    )
+
+
 @app.post("/api/workers")
 @require_auth
 @require_roles("superadmin", "company-admin")
@@ -4043,6 +4113,252 @@ def export_payload():
             "exportedAt": now_iso(),
         }
     )
+
+
+@app.post("/api/import")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def import_payload():
+    payload = request.get_json(silent=True) or {}
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    dry_run = int(payload.get("dryRun", 1)) == 1
+
+    if not isinstance(data, dict):
+        return jsonify({"error": "invalid_payload"}), 400
+
+    db = get_db()
+    user = g.current_user
+    role = user.get("role")
+    target_company_id = user.get("company_id") if role != "superadmin" else (payload.get("companyId") or "")
+
+    companies = data.get("companies") or []
+    subcompanies = data.get("subcompanies") or []
+    workers = data.get("workers") or []
+    access_logs = data.get("accessLogs") or []
+    invoices = data.get("invoices") or []
+
+    summary = {
+        "dryRun": dry_run,
+        "accepted": {"companies": 0, "subcompanies": 0, "workers": 0, "accessLogs": 0, "invoices": 0},
+        "skipped": {"forbidden": 0, "invalid": 0},
+        "conflicts": {"companies": 0, "subcompanies": 0, "workers": 0, "accessLogs": 0, "invoices": 0},
+    }
+
+    def company_allowed(company_id):
+        if role == "superadmin":
+            return True if not target_company_id else str(company_id or "") == str(target_company_id)
+        return str(company_id or "") == str(target_company_id or "")
+
+    prepared_companies = []
+    prepared_subcompanies = []
+    prepared_workers = []
+    prepared_access_logs = []
+    prepared_invoices = []
+
+    for item in companies:
+        cid = item.get("id")
+        if not cid:
+            summary["skipped"]["invalid"] += 1
+            continue
+        if not company_allowed(cid):
+            summary["skipped"]["forbidden"] += 1
+            continue
+        exists = db.execute("SELECT 1 FROM companies WHERE id = ?", (cid,)).fetchone()
+        if exists:
+            summary["conflicts"]["companies"] += 1
+        prepared_companies.append(
+            (
+                cid,
+                item.get("name", ""),
+                item.get("contact", ""),
+                item.get("billing_email", item.get("billingEmail", "")),
+                item.get("access_host", item.get("accessHost", "")),
+                normalize_company_plan(item.get("plan")),
+                item.get("status", "aktiv"),
+                item.get("deleted_at", item.get("deletedAt")),
+            )
+        )
+
+    for item in subcompanies:
+        sid = item.get("id")
+        cid = item.get("company_id", item.get("companyId"))
+        if not sid or not cid:
+            summary["skipped"]["invalid"] += 1
+            continue
+        if not company_allowed(cid):
+            summary["skipped"]["forbidden"] += 1
+            continue
+        exists = db.execute("SELECT 1 FROM subcompanies WHERE id = ?", (sid,)).fetchone()
+        if exists:
+            summary["conflicts"]["subcompanies"] += 1
+        prepared_subcompanies.append(
+            (
+                sid,
+                cid,
+                item.get("name", ""),
+                item.get("contact", ""),
+                item.get("status", "aktiv"),
+                item.get("deleted_at", item.get("deletedAt")),
+            )
+        )
+
+    for item in workers:
+        wid = item.get("id")
+        cid = item.get("company_id", item.get("companyId"))
+        if not wid or not cid:
+            summary["skipped"]["invalid"] += 1
+            continue
+        if not company_allowed(cid):
+            summary["skipped"]["forbidden"] += 1
+            continue
+        exists = db.execute("SELECT 1 FROM workers WHERE id = ?", (wid,)).fetchone()
+        if exists:
+            summary["conflicts"]["workers"] += 1
+        prepared_workers.append(
+            (
+                wid,
+                cid,
+                item.get("subcompany_id", item.get("subcompanyId")),
+                item.get("first_name", item.get("firstName", "")),
+                item.get("last_name", item.get("lastName", "")),
+                item.get("insurance_number", item.get("insuranceNumber", "")),
+                item.get("role", ""),
+                item.get("site", ""),
+                item.get("valid_until", item.get("validUntil", "")),
+                item.get("status", "aktiv"),
+                item.get("photo_data", item.get("photoData", "")),
+                item.get("badge_id", item.get("badgeId", "")),
+                "",
+                item.get("physical_card_id", item.get("physicalCardId")),
+                item.get("deleted_at", item.get("deletedAt")),
+            )
+        )
+
+    known_worker_ids = {row[0] for row in prepared_workers}
+    if not dry_run:
+        existing_worker_rows = db.execute("SELECT id, company_id FROM workers").fetchall()
+        for row in existing_worker_rows:
+            if company_allowed(row["company_id"]):
+                known_worker_ids.add(row["id"])
+
+    for item in access_logs:
+        lid = item.get("id")
+        worker_id = item.get("worker_id", item.get("workerId"))
+        if not lid or not worker_id:
+            summary["skipped"]["invalid"] += 1
+            continue
+        if worker_id not in known_worker_ids:
+            summary["skipped"]["invalid"] += 1
+            continue
+        exists = db.execute("SELECT 1 FROM access_logs WHERE id = ?", (lid,)).fetchone()
+        if exists:
+            summary["conflicts"]["accessLogs"] += 1
+        prepared_access_logs.append(
+            (
+                lid,
+                worker_id,
+                item.get("direction", "check-in"),
+                item.get("gate", ""),
+                item.get("note", ""),
+                item.get("timestamp", now_iso()),
+            )
+        )
+
+    for item in invoices:
+        iid = item.get("id")
+        cid = item.get("company_id", item.get("companyId"))
+        if not iid or not cid:
+            summary["skipped"]["invalid"] += 1
+            continue
+        if not company_allowed(cid):
+            summary["skipped"]["forbidden"] += 1
+            continue
+        exists = db.execute("SELECT 1 FROM invoices WHERE id = ?", (iid,)).fetchone()
+        if exists:
+            summary["conflicts"]["invoices"] += 1
+        prepared_invoices.append(
+            (
+                iid,
+                item.get("invoice_number", item.get("invoiceNumber", "")),
+                cid,
+                item.get("recipient_email", item.get("recipientEmail", "")),
+                item.get("invoice_date", item.get("invoiceDate", "")),
+                item.get("invoice_period", item.get("invoicePeriod", "")),
+                item.get("description", ""),
+                float(item.get("net_amount", item.get("netAmount", 0)) or 0),
+                float(item.get("vat_rate", item.get("vatRate", 0)) or 0),
+                float(item.get("vat_amount", item.get("vatAmount", 0)) or 0),
+                float(item.get("total_amount", item.get("totalAmount", 0)) or 0),
+                item.get("status", "draft"),
+                item.get("error_message", item.get("errorMessage", "")),
+                item.get("sent_at", item.get("sentAt")),
+                item.get("rendered_html", item.get("renderedHtml", "<html><body>Imported invoice</body></html>")),
+                user.get("id"),
+                item.get("created_at", item.get("createdAt", now_iso())),
+                item.get("due_date", item.get("dueDate")),
+                item.get("paid_at", item.get("paidAt")),
+                item.get("auto_suspend_triggered_at", item.get("autoSuspendTriggeredAt")),
+                int(item.get("reminder_stage", item.get("reminderStage", 0)) or 0),
+                item.get("last_reminder_sent_at", item.get("lastReminderSentAt")),
+                item.get("last_reminder_error", item.get("lastReminderError", "")),
+            )
+        )
+
+    summary["accepted"]["companies"] = len(prepared_companies)
+    summary["accepted"]["subcompanies"] = len(prepared_subcompanies)
+    summary["accepted"]["workers"] = len(prepared_workers)
+    summary["accepted"]["accessLogs"] = len(prepared_access_logs)
+    summary["accepted"]["invoices"] = len(prepared_invoices)
+
+    if dry_run:
+        return jsonify({"ok": True, "summary": summary})
+
+    if role == "superadmin":
+        db.executemany(
+            "INSERT OR REPLACE INTO companies (id, name, contact, billing_email, access_host, plan, status, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            prepared_companies,
+        )
+
+    db.executemany(
+        "INSERT OR REPLACE INTO subcompanies (id, company_id, name, contact, status, deleted_at) VALUES (?, ?, ?, ?, ?, ?)",
+        prepared_subcompanies,
+    )
+    db.executemany(
+        """
+        INSERT OR REPLACE INTO workers (
+            id, company_id, subcompany_id, first_name, last_name, insurance_number, role, site, valid_until, status,
+            photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        prepared_workers,
+    )
+    db.executemany(
+        "INSERT OR REPLACE INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+        prepared_access_logs,
+    )
+    db.executemany(
+        """
+        INSERT OR REPLACE INTO invoices (
+            id, invoice_number, company_id, recipient_email, invoice_date, invoice_period, description,
+            net_amount, vat_rate, vat_amount, total_amount, status, error_message, sent_at,
+            rendered_html, created_by_user_id, created_at, due_date, paid_at,
+            auto_suspend_triggered_at, reminder_stage, last_reminder_sent_at, last_reminder_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        prepared_invoices,
+    )
+    db.commit()
+
+    log_audit(
+        "import.applied",
+        f"Import ausgefuehrt (companies={summary['accepted']['companies']}, workers={summary['accepted']['workers']}, logs={summary['accepted']['accessLogs']}, invoices={summary['accepted']['invoices']})",
+        target_type="import",
+        target_id=now_iso(),
+        company_id=target_company_id,
+        actor=user,
+    )
+
+    return jsonify({"ok": True, "summary": summary})
 
 
 @app.get("/")
