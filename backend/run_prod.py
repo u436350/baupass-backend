@@ -23,8 +23,9 @@ if __name__ == "__main__":
         sys.exit(0)
 
     init_db()
-    db = get_db()
-    suspended = check_and_apply_overdue_suspensions(db)
+    with app.app_context():
+        db = get_db()
+        suspended = check_and_apply_overdue_suspensions(db)
     if suspended:
         print(f"[baupass] Auto-suspended {len(suspended)} company/ies due to overdue invoices")
     diagnostics = get_runtime_diagnostics()
