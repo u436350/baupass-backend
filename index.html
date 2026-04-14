@@ -531,6 +531,24 @@
             </div>
 
             <div id="invoiceManagementList" class="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Inkasso</p>
+                <h3>Ueberfaellig, vor Sperre, gesperrt</h3>
+              </div>
+            </div>
+            <div class="button-row" style="margin-bottom:16px; gap:10px;">
+              <select id="collectionsFilter" style="min-width:180px;">
+                <option value="all">Alle offenen Positionen</option>
+                <option value="overdue">Ueberfaellig</option>
+                <option value="prelock">Vor Sperre</option>
+                <option value="locked">Bereits gesperrt</option>
+              </select>
+            </div>
+            <div id="collectionsList" class="list"></div>
           </article>
         </div>
       </section>

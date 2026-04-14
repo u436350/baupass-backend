@@ -2900,6 +2900,7 @@ function renderInvoiceManagementList() {
 
   if (!invoices.length) {
     container.innerHTML = '<div class="empty-state">Keine Rechnungen vorhanden oder keine Treffer.</div>';
+    renderCollectionsList();
     return;
   }
 
@@ -2975,6 +2976,162 @@ function renderInvoiceManagementList() {
       }
     });
   });
+
+  renderCollectionsList();
+}
+
+function toDateOnly(value) {
+  const raw = String(value || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return null;
+  }
+  const parsed = new Date(`${raw}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getInvoiceCollectionsMeta(invoice) {
+  const today = toDateOnly(new Date().toISOString().slice(0, 10));
+  const due = toDateOnly(invoice?.due_date);
+  const isPaid = String(invoice?.status || "") === "bezahlt" || Boolean(invoice?.paid_at);
+  const company = state.companies.find((entry) => entry.id === invoice?.company_id);
+  const companyLocked = String(company?.status || "aktiv").toLowerCase() === "gesperrt";
+
+  if (isPaid || !due || !today) {
+    return { open: false, overdue: false, prelock: false, locked: false, daysOverdue: 0, companyLocked };
+  }
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysOverdue = Math.floor((today.getTime() - due.getTime()) / msPerDay);
+  const overdue = daysOverdue > 0;
+  const prelock = daysOverdue >= 0 && daysOverdue <= 3 && !companyLocked;
+  const locked = companyLocked;
+
+  return {
+    open: true,
+    overdue,
+    prelock,
+    locked,
+    daysOverdue,
+    companyLocked,
+  };
+}
+
+function renderCollectionsList() {
+  const container = document.querySelector("#collectionsList");
+  if (!container) {
+    return;
+  }
+
+  const filter = String(document.querySelector("#collectionsFilter")?.value || "all");
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  const canToggleLock = role === "superadmin";
+
+  let rows = (state.invoices || [])
+    .map((invoice) => ({ invoice, meta: getInvoiceCollectionsMeta(invoice) }))
+    .filter((entry) => entry.meta.open);
+
+  if (filter === "overdue") {
+    rows = rows.filter((entry) => entry.meta.overdue);
+  } else if (filter === "prelock") {
+    rows = rows.filter((entry) => entry.meta.prelock);
+  } else if (filter === "locked") {
+    rows = rows.filter((entry) => entry.meta.locked);
+  }
+
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state">Keine Inkasso-Faelle fuer den gewaehlten Filter.</div>';
+    return;
+  }
+
+  container.innerHTML = rows
+    .sort((a, b) => {
+      const aDue = String(a.invoice?.due_date || "");
+      const bDue = String(b.invoice?.due_date || "");
+      return aDue.localeCompare(bDue);
+    })
+    .map(({ invoice, meta }) => {
+      const stage = Number(invoice?.reminder_stage || 0);
+      const dueText = invoice?.due_date ? formatDate(invoice.due_date) : "-";
+      const overdueText = meta.daysOverdue > 0 ? `${meta.daysOverdue} Tag(e) ueberfaellig` : "noch nicht ueberfaellig";
+      const badge = meta.locked
+        ? '<span class="helper-text helper-text-warning">Firma gesperrt</span>'
+        : meta.prelock
+          ? '<span class="helper-text helper-text-warning">Vor Sperre</span>'
+          : meta.overdue
+            ? '<span class="helper-text helper-text-warning">Ueberfaellig</span>'
+            : '<span class="helper-text helper-text-info">Offen</span>';
+      return `
+        <article class="card-item">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+            <div style="flex:1;">
+              <strong>${escapeHtml(invoice.invoice_number || "RE-???")}</strong>
+              <p class="helper-text">${escapeHtml(invoice.company_name || "Firma")}</p>
+              <p class="helper-text">Faellig: ${escapeHtml(dueText)} | ${escapeHtml(overdueText)}</p>
+              <p class="helper-text">Mahnstufe: ${escapeHtml(String(stage))}</p>
+            </div>
+            <div style="text-align:right; min-width:160px;">
+              <p class="meta-text">${formatCurrency(invoice.total_amount)}</p>
+              ${badge}
+            </div>
+          </div>
+          <div class="button-row" style="margin-top:8px;">
+            <button type="button" class="ghost-button" data-collections-mark-paid="${escapeHtml(invoice.id || "")}">Als bezahlt markieren</button>
+            ${canToggleLock ? `<button type="button" class="ghost-button" data-collections-toggle-lock="${escapeHtml(invoice.company_id || "")}">${meta.companyLocked ? "Sperre aufheben" : "Firma sperren"}</button>` : ""}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.onclick = async (event) => {
+    const paidButton = event.target.closest("[data-collections-mark-paid]");
+    if (paidButton && container.contains(paidButton)) {
+      const invoiceId = paidButton.dataset.collectionsMarkPaid;
+      if (!invoiceId || !window.confirm("Rechnung jetzt als bezahlt markieren?")) {
+        return;
+      }
+      try {
+        await apiRequest(`${API_BASE}/api/invoices/${invoiceId}/pay`, {
+          method: "PUT",
+          body: { paymentDate: new Date().toISOString().slice(0, 10) }
+        });
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Aktion fehlgeschlagen: ${error.message}`);
+      }
+      return;
+    }
+
+    const lockButton = event.target.closest("[data-collections-toggle-lock]");
+    if (lockButton && container.contains(lockButton)) {
+      const companyId = lockButton.dataset.collectionsToggleLock;
+      const company = state.companies.find((entry) => entry.id === companyId);
+      if (!companyId || !company) {
+        return;
+      }
+      const currentStatus = String(company.status || "aktiv").toLowerCase();
+      const nextStatus = currentStatus === "gesperrt" ? "aktiv" : "gesperrt";
+      const ok = window.confirm(nextStatus === "gesperrt"
+        ? `Firma ${company.name} jetzt manuell sperren?`
+        : `Sperre fuer ${company.name} jetzt aufheben?`
+      );
+      if (!ok) {
+        return;
+      }
+
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}`, {
+          method: "PUT",
+          body: { status: nextStatus }
+        });
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Statuswechsel fehlgeschlagen: ${error.message}`);
+      }
+    }
+  };
 }
 
 async function handleLoginSubmit(event) {
@@ -4248,6 +4405,11 @@ if (invoiceFilterCompany) {
 const invoiceFilterStatus = document.querySelector("#invoiceFilterStatus");
 if (invoiceFilterStatus) {
   invoiceFilterStatus.addEventListener("change", () => renderInvoiceManagementList());
+}
+
+const collectionsFilter = document.querySelector("#collectionsFilter");
+if (collectionsFilter) {
+  collectionsFilter.addEventListener("change", () => renderCollectionsList());
 }
 
 const printDailyReportButton = document.querySelector("#printDailyReportButton");
