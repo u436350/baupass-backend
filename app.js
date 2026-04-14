@@ -4423,6 +4423,41 @@ function showImportDryRunDialog(summary) {
     const conflicts = summary?.conflicts || {};
     const skipped = summary?.skipped || {};
 
+    const formatBadge = (value, mode) => {
+      const numeric = Number(value || 0);
+      const text = escapeHtml(String(numeric));
+      let bg = "#eef2f7";
+      let color = "#1f2937";
+
+      if (mode === "accepted") {
+        if (numeric > 0) {
+          bg = "#dcfce7";
+          color = "#166534";
+        }
+      } else if (mode === "conflict") {
+        if (numeric > 5) {
+          bg = "#fee2e2";
+          color = "#991b1b";
+        } else if (numeric > 0) {
+          bg = "#fef3c7";
+          color = "#92400e";
+        } else {
+          bg = "#dcfce7";
+          color = "#166534";
+        }
+      } else if (mode === "skip") {
+        if (numeric > 0) {
+          bg = "#fef3c7";
+          color = "#92400e";
+        } else {
+          bg = "#dcfce7";
+          color = "#166534";
+        }
+      }
+
+      return `<span style="display:inline-flex; min-width:38px; justify-content:center; padding:2px 8px; border-radius:999px; background:${bg}; color:${color}; font-weight:700;">${text}</span>`;
+    };
+
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.inset = "0";
@@ -4452,14 +4487,14 @@ function showImportDryRunDialog(summary) {
           </tr>
         </thead>
         <tbody>
-          <tr><td style="padding:8px; border:1px solid #d8dee8;">Companies</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.companies || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.companies || 0))}</td></tr>
-          <tr><td style="padding:8px; border:1px solid #d8dee8;">Subcompanies</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.subcompanies || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.subcompanies || 0))}</td></tr>
-          <tr><td style="padding:8px; border:1px solid #d8dee8;">Workers</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.workers || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.workers || 0))}</td></tr>
-          <tr><td style="padding:8px; border:1px solid #d8dee8;">Access Logs</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.accessLogs || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.accessLogs || 0))}</td></tr>
-          <tr><td style="padding:8px; border:1px solid #d8dee8;">Invoices</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(accepted.invoices || 0))}</td><td style="padding:8px; border:1px solid #d8dee8;">${escapeHtml(String(conflicts.invoices || 0))}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Companies</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.companies, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.companies, "conflict")}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Subcompanies</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.subcompanies, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.subcompanies, "conflict")}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Workers</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.workers, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.workers, "conflict")}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Access Logs</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.accessLogs, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.accessLogs, "conflict")}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #d8dee8;">Invoices</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(accepted.invoices, "accepted")}</td><td style="padding:8px; border:1px solid #d8dee8;">${formatBadge(conflicts.invoices, "conflict")}</td></tr>
         </tbody>
       </table>
-      <p class="helper-text" style="margin:0 0 14px; color:#9a3412;">Skipped: forbidden=${escapeHtml(String(skipped.forbidden || 0))}, invalid=${escapeHtml(String(skipped.invalid || 0))}</p>
+      <p class="helper-text" style="margin:0 0 14px; color:#6b7280;">Skipped: forbidden=${formatBadge(skipped.forbidden, "skip")}, invalid=${formatBadge(skipped.invalid, "skip")}</p>
       <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button type="button" class="ghost-button" data-import-preview="cancel">Abbrechen</button>
         <button type="button" class="primary-button" data-import-preview="apply">Import anwenden</button>
