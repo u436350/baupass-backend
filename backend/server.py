@@ -115,7 +115,7 @@ def get_cors_origins():
 
 @app.route("/user/<id>")
 def user(id):
-    return f"Baustellenausweis fuer User {id}"
+    return f"Baustellenausweis für User {id}"
 
 from flask_cors import CORS
 # CORS mit erlaubten Origins und Credentials aktivieren (kein Wildcard!)
@@ -138,6 +138,8 @@ AUTO_SUSPEND_GRACE_DAYS = 3
 APP_STARTED_AT = datetime.utcnow()
 DUNNING_LAST_RUN_AT = None
 DUNNING_LAST_RESULT = {"remindersSent": 0, "reminderFailures": 0, "overdueUpdated": 0, "suspendedCompanies": 0}
+BACKUP_RETENTION_DAYS = max(1, int(os.getenv("BAUPASS_BACKUP_RETENTION_DAYS", "30")))
+ALERT_DEDUP_MINUTES = max(5, int(os.getenv("BAUPASS_ALERT_DEDUP_MINUTES", "30")))
 
 REQUEST_RATE_LIMITS = {
     "import": {"max": 10, "window_seconds": 60},
@@ -524,7 +526,7 @@ def render_login_page():
                             })
                         });
                     } catch {
-                        showError('Backend nicht erreichbar. Bitte Seite neu laden und Server pruefen.');
+                        showError('Backend nicht erreichbar. Bitte Seite neu laden und Server prüfen.');
                         return;
                     }
                     p = await res.json().catch(() => ({ error: 'login_failed' }));
@@ -535,19 +537,19 @@ def render_login_page():
                             return;
                         }
                         if (code === 'invalid_credentials') {
-                            showError('Benutzername oder Passwort ist falsch. Bitte Daten pruefen.');
+                            showError('Benutzername oder Passwort ist falsch. Bitte Daten prüfen.');
                             return;
                         }
                         if (code === 'otp_required') {
-                            showError('Fuer dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.');
+                            showError('Für dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.');
                             return;
                         }
                         if (code === 'otp_invalid') {
-                            showError('OTP-Code ist ungueltig oder abgelaufen. Bitte neuen Code eingeben.');
+                            showError('OTP-Code ist ungültig oder abgelaufen. Bitte neuen Code eingeben.');
                             return;
                         }
                         if (code === 'forbidden_tenant_host') {
-                            showError('Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.');
+                            showError('Dieser Zugang ist nur über die freigegebene Firmen-Domain erlaubt.');
                             return;
                         }
                         if (code === 'admin_ip_not_allowed') {
@@ -555,7 +557,7 @@ def render_login_page():
                             return;
                         }
                         if (code === 'login_scope_mismatch') {
-                            showError('Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswaehlen.');
+                            showError('Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswählen.');
                             return;
                         }
                         showError('Login fehlgeschlagen: ' + code);
@@ -743,6 +745,15 @@ def init_db():
             target_type TEXT,
             target_id TEXT,
             message TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS system_alerts (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            message TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL
         );
 
@@ -1186,11 +1197,11 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
     if not smtp_host or not smtp_sender:
         return False, "SMTP ist nicht konfiguriert"
 
-    stage_label = {1: "Erinnerung", 2: "Letzte Erinnerung", 3: "Ueberfaellig"}.get(stage, "Erinnerung")
+    stage_label = {1: "Erinnerung", 2: "Letzte Erinnerung", 3: "Überfällig"}.get(stage, "Erinnerung")
     due_label = invoice_row["due_date"] or "-"
 
     if days_until_due < 0:
-        timing_text = f"seit {abs(days_until_due)} Tag(en) ueberfaellig"
+        timing_text = f"seit {abs(days_until_due)} Tag(en) überfällig"
     elif days_until_due == 0:
         timing_text = "heute faellig"
     else:
@@ -1203,12 +1214,12 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
     message.set_content(
         (
             f"Guten Tag,\n\n"
-            f"dies ist eine Zahlungs-{stage_label.lower()} fuer die Rechnung {invoice_row['invoice_number']} "
+            f"dies ist eine Zahlungs-{stage_label.lower()} für die Rechnung {invoice_row['invoice_number']} "
             f"({company_row['name']}).\n"
             f"Faelligkeit: {due_label} ({timing_text})\n"
             f"Offener Betrag: {float(invoice_row['total_amount'] or 0):.2f} EUR\n\n"
             f"Bitte begleichen Sie den Betrag zeitnah, um eine Sperrung zu vermeiden.\n\n"
-            f"Viele Gruesse\n{settings_row['operator_name']}"
+            f"Viele Grüße\n{settings_row['operator_name']}"
         )
     )
 
@@ -1289,7 +1300,7 @@ def run_invoice_dunning_cycle(db):
             )
             log_audit(
                 "invoice.reminder_sent",
-                f"Mahnstufe {target_stage} fuer Rechnung {row['invoice_number']} versendet",
+                f"Mahnstufe {target_stage} für Rechnung {row['invoice_number']} versendet",
                 target_type="invoice",
                 target_id=invoice_id,
                 company_id=row["company_id"],
@@ -1303,7 +1314,7 @@ def run_invoice_dunning_cycle(db):
             )
             log_audit(
                 "invoice.reminder_failed",
-                f"Mahnstufe {target_stage} fuer Rechnung {row['invoice_number']} fehlgeschlagen: {error_message}",
+                f"Mahnstufe {target_stage} für Rechnung {row['invoice_number']} fehlgeschlagen: {error_message}",
                 target_type="invoice",
                 target_id=invoice_id,
                 company_id=row["company_id"],
@@ -1315,9 +1326,56 @@ def run_invoice_dunning_cycle(db):
     return result
 
 
+def create_system_alert(db, code, severity, message, details="", dedup_minutes=ALERT_DEDUP_MINUTES):
+    details_text = details if isinstance(details, str) else json.dumps(details, ensure_ascii=False)
+    threshold = (datetime.utcnow() - timedelta(minutes=dedup_minutes)).replace(microsecond=0).isoformat() + "Z"
+    recent = db.execute(
+        """
+        SELECT id
+        FROM system_alerts
+        WHERE code = ? AND severity = ? AND message = ? AND created_at >= ?
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (code, severity, message, threshold),
+    ).fetchone()
+    if recent:
+        return None
+
+    alert_id = f"alert-{secrets.token_hex(6)}"
+    db.execute(
+        "INSERT INTO system_alerts (id, code, severity, message, details, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (alert_id, code, severity, message, details_text, now_iso()),
+    )
+    db.commit()
+    return alert_id
+
+
+def rotate_import_backups(backup_dir):
+    now_dt = datetime.utcnow()
+    removed = 0
+    kept = 0
+    errors = 0
+
+    for path in backup_dir.glob("import-backup-*.json"):
+        try:
+            mtime = datetime.utcfromtimestamp(path.stat().st_mtime)
+            age_days = (now_dt - mtime).days
+            if age_days >= BACKUP_RETENTION_DAYS:
+                path.unlink(missing_ok=True)
+                removed += 1
+            else:
+                kept += 1
+        except Exception:
+            errors += 1
+
+    return {"removed": removed, "kept": kept, "errors": errors, "retentionDays": BACKUP_RETENTION_DAYS}
+
+
 def create_import_rollback_backup(db, role, target_company_id):
     backup_dir = BASE_DIR / "backend" / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
+    rotation = rotate_import_backups(backup_dir)
 
     company_clause = ""
     company_params = []
@@ -1375,6 +1433,14 @@ def create_import_rollback_backup(db, role, target_company_id):
     filename = f"import-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}.json"
     backup_path = backup_dir / filename
     backup_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if rotation.get("errors"):
+        create_system_alert(
+            db,
+            code="backup_rotation_errors",
+            severity="warning",
+            message="Backup-Rotation hatte Fehler.",
+            details=rotation,
+        )
     return str(backup_path)
 
 
@@ -1385,6 +1451,23 @@ def run_dunning_job_once():
         result = run_invoice_dunning_cycle(db)
         suspended = check_and_apply_overdue_suspensions(db)
         result["suspendedCompanies"] = len(suspended)
+        if int(result.get("reminderFailures", 0)) > 0:
+            create_system_alert(
+                db,
+                code="dunning_reminder_failures",
+                severity="warning",
+                message=f"Dunning hatte {int(result.get('reminderFailures', 0))} fehlgeschlagene Erinnerungen.",
+                details=result,
+            )
+        if int(result.get("suspendedCompanies", 0)) > 0:
+            create_system_alert(
+                db,
+                code="dunning_company_suspensions",
+                severity="info",
+                message=f"Dunning hat {int(result.get('suspendedCompanies', 0))} Firmen gesperrt.",
+                details=result,
+                dedup_minutes=10,
+            )
         DUNNING_LAST_RUN_AT = now_iso()
         DUNNING_LAST_RESULT = result
 
@@ -1402,8 +1485,29 @@ def start_background_jobs():
         while True:
             try:
                 run_dunning_job_once()
-            except Exception:
-                pass
+                with app.app_context():
+                    db = get_db()
+                    backup_dir = BASE_DIR / "backend" / "backups"
+                    backup_dir.mkdir(parents=True, exist_ok=True)
+                    rotation = rotate_import_backups(backup_dir)
+                    if rotation.get("errors"):
+                        create_system_alert(
+                            db,
+                            code="backup_rotation_errors",
+                            severity="warning",
+                            message="Geplante Backup-Rotation hatte Fehler.",
+                            details=rotation,
+                        )
+            except Exception as exc:
+                with app.app_context():
+                    db = get_db()
+                    create_system_alert(
+                        db,
+                        code="dunning_scheduler_error",
+                        severity="critical",
+                        message="Dunning-Scheduler ist fehlgeschlagen.",
+                        details={"error": str(exc)},
+                    )
             time.sleep(interval_hours * 3600)
 
     threading.Thread(target=scheduler_loop, name="baupass-dunning-scheduler", daemon=True).start()
@@ -4666,6 +4770,38 @@ def api_health():
     diagnostics = get_runtime_diagnostics()
     status = "ok" if db_ok else "degraded"
 
+    alerts = []
+    try:
+        alerts_db = sqlite3.connect(DB_PATH)
+        alerts_db.row_factory = sqlite3.Row
+        alert_rows = alerts_db.execute(
+            "SELECT * FROM system_alerts ORDER BY created_at DESC LIMIT 20"
+        ).fetchall()
+        alerts = [row_to_dict(row) for row in alert_rows]
+        alerts_db.close()
+    except Exception:
+        alerts = []
+
+    if not db_ok:
+        try:
+            db = get_db()
+            create_system_alert(db, "health_db_down", "critical", "Health-Check: Datenbank nicht erreichbar.", {"error": db_error})
+        except Exception:
+            pass
+    elif diagnostics.get("warnings"):
+        try:
+            db = get_db()
+            create_system_alert(
+                db,
+                "health_runtime_warnings",
+                "warning",
+                f"Health-Check meldet {len(diagnostics.get('warnings', []))} Warnungen.",
+                diagnostics.get("warnings", []),
+                dedup_minutes=60,
+            )
+        except Exception:
+            pass
+
     return jsonify(
         {
             "status": status,
@@ -4678,8 +4814,47 @@ def api_health():
                 "intervalHours": max(1, int(os.getenv("BAUPASS_DUNNING_INTERVAL_HOURS", "24"))),
             },
             "warnings": diagnostics.get("warnings", []),
+            "alerts": alerts,
         }
     ), (200 if db_ok else 503)
+
+
+@app.get("/api/health/live")
+def api_health_live():
+    return jsonify({"status": "alive", "startedAt": APP_STARTED_AT.replace(microsecond=0).isoformat() + "Z"})
+
+
+@app.get("/api/health/ready")
+def api_health_ready():
+    try:
+        db = sqlite3.connect(DB_PATH)
+        db.execute("SELECT 1").fetchone()
+        db.close()
+        return jsonify({"status": "ready"}), 200
+    except Exception as exc:
+        return jsonify({"status": "not_ready", "error": str(exc)}), 503
+
+
+@app.get("/api/system-alerts")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def list_system_alerts():
+    limit = min(max(int(request.args.get("limit", "100")), 1), 500)
+    severity = (request.args.get("severity") or "").strip().lower()
+
+    conditions = []
+    params = []
+    if severity:
+        conditions.append("severity = ?")
+        params.append(severity)
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    rows = get_db().execute(
+        f"SELECT * FROM system_alerts {where_clause} ORDER BY created_at DESC LIMIT ?",
+        [*params, limit],
+    ).fetchall()
+
+    return jsonify([row_to_dict(row) for row in rows])
 
 
 @app.get("/")

@@ -250,10 +250,10 @@ function mapCompanyRepairError(error) {
     return "Du darfst nur deine eigene Firma reparieren.";
   }
   if (message === "backend_unreachable") {
-    return "Backend nicht erreichbar. Bitte Server und Netzwerk pruefen.";
+    return "Backend nicht erreichbar. Bitte Server und Netzwerk prüfen.";
   }
   if (message === "company_not_found") {
-    return "Die Firma wurde nicht gefunden oder wurde inzwischen geloescht.";
+    return "Die Firma wurde nicht gefunden oder wurde inzwischen gelöscht.";
   }
   if (message === "company_locked") {
     return "Diese Firma ist aktuell gesperrt.";
@@ -327,7 +327,7 @@ async function triggerDesktopInstall() {
     return;
   }
   if (!deferredDesktopInstallPrompt) {
-    window.alert("Die Installation ist in diesem Browser gerade nicht direkt verfuegbar. In Chrome oder Edge kannst du im Browser-Menue 'App installieren' waehlen.");
+    window.alert("Die Installation ist in diesem Browser gerade nicht direkt verfügbar. In Chrome oder Edge kannst du im Browser-Menü 'App installieren' wählen.");
     return;
   }
   deferredDesktopInstallPrompt.prompt();
@@ -676,21 +676,21 @@ function updateTopbarActionsState(loggedIn) {
   if (elements.seedDataButton) {
     elements.seedDataButton.style.display = loggedIn ? "inline-flex" : "none";
     elements.seedDataButton.disabled = !canSeed;
-    elements.seedDataButton.title = canSeed ? "" : "Nur fuer Admin-Rollen";
+    elements.seedDataButton.title = canSeed ? "" : "Nur für Admin-Rollen";
   }
 
   if (elements.exportButton) {
     const canExport = role === "superadmin" || role === "company-admin";
     elements.exportButton.style.display = loggedIn && canExport ? "inline-flex" : "none";
     elements.exportButton.disabled = !canExport;
-    elements.exportButton.title = canExport ? "" : "Nur fuer Admin-Rollen";
+    elements.exportButton.title = canExport ? "" : "Nur für Admin-Rollen";
   }
 
   if (elements.importButton) {
     const canImport = role === "superadmin" || role === "company-admin";
     elements.importButton.style.display = loggedIn && canImport ? "inline-flex" : "none";
     elements.importButton.disabled = !canImport;
-    elements.importButton.title = canImport ? "" : "Nur fuer Admin-Rollen";
+    elements.importButton.title = canImport ? "" : "Nur für Admin-Rollen";
   }
 
   if (elements.logoutButton) {
@@ -761,8 +761,8 @@ function renderReportingPanels() {
   const summaryCards = [
     ["Bezahlt", formatCurrencyEur(kpis.paidTotal)],
     ["Offen", formatCurrencyEur(kpis.openTotal)],
-    ["Ueberfaellig", `${Number(kpis.overdueInvoiceCount || 0)} Rechnungen`],
-    ["Ueberfaellige Summe", formatCurrencyEur(kpis.overdueTotal)],
+    ["Überfällig", `${Number(kpis.overdueInvoiceCount || 0)} Rechnungen`],
+    ["Überfällige Summe", formatCurrencyEur(kpis.overdueTotal)],
     ["Gesperrte Firmen", String(Number(kpis.lockedCompanies || 0))],
     ["Auto-Sperren (30d)", String(Number(kpis.suspensionsLast30d || 0))]
   ];
@@ -778,13 +778,13 @@ function renderReportingPanels() {
 
   const topCompanies = state.reporting?.topOverdueCompanies || [];
   if (!topCompanies.length) {
-    topOverdueList.innerHTML = '<div class="empty-state">Keine ueberfaelligen Firmen vorhanden.</div>';
+    topOverdueList.innerHTML = '<div class="empty-state">Keine überfälligen Firmen vorhanden.</div>';
   } else {
     topOverdueList.innerHTML = topCompanies
       .map((entry) => `
         <article class="card-item">
           <strong>${escapeHtml(entry.companyName || "Firma")}</strong>
-          <p class="helper-text">${Number(entry.overdueCount || 0)} ueberfaellige Rechnungen</p>
+          <p class="helper-text">${Number(entry.overdueCount || 0)} überfällige Rechnungen</p>
           <p>${escapeHtml(formatCurrencyEur(entry.overdueTotal))}</p>
         </article>
       `)
@@ -793,7 +793,7 @@ function renderReportingPanels() {
 
   const dailyRows = state.reporting?.accessDaily || [];
   if (!dailyRows.length) {
-    accessDailyList.innerHTML = '<div class="empty-state">Keine Zutrittsdaten fuer die letzten 7 Tage.</div>';
+    accessDailyList.innerHTML = '<div class="empty-state">Keine Zutrittsdaten für die letzten 7 Tage.</div>';
   } else {
     const maxDaily = Math.max(
       ...dailyRows.map((entry) => Number(entry.checkIn || 0) + Number(entry.checkOut || 0)),
@@ -851,7 +851,7 @@ function renderWorkerList() {
           ${sub ? `<p>Subunternehmen: ${escapeHtml(sub)}</p>` : ""}
           <div class="button-row">
             <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Bearbeiten</button>
-            <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Loeschen</button>
+            <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Löschen</button>
             <button type="button" class="ghost-button" data-worker-restore="${escapeHtml(worker.id)}" ${deleted ? "" : "disabled"}>Wiederherstellen</button>
             <button type="button" class="ghost-button" data-worker-app-link="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>App-Link</button>
           </div>
@@ -889,7 +889,7 @@ function bindWorkerRowActions() {
 
   elements.workerList.querySelectorAll("[data-worker-delete]").forEach((button) => {
     button.onclick = async () => {
-      if (!window.confirm("Mitarbeiter wirklich loeschen?")) return;
+      if (!window.confirm("Mitarbeiter wirklich löschen?")) return;
       try {
         await apiRequest(`${API_BASE}/api/workers/${button.dataset.workerDelete}`, { method: "DELETE" });
         await loadAllData();
@@ -3271,15 +3271,15 @@ async function handleLoginSubmit(event) {
     refreshAll();
   } catch (error) {
     if (error.message === "backend_unreachable") {
-      window.alert("Backend nicht erreichbar. Bitte pruefe, ob der Server laeuft und lade die Seite neu.");
+      window.alert("Backend nicht erreichbar. Bitte prüfe, ob der Server läuft und lade die Seite neu.");
       return;
     }
     if (error.message === "otp_required") {
-      window.alert("Fuer dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.");
+      window.alert("Für dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.");
       return;
     }
     if (error.message === "otp_invalid") {
-      window.alert("OTP-Code ist ungueltig oder abgelaufen. Bitte neuen Code eingeben.");
+      window.alert("OTP-Code ist ungültig oder abgelaufen. Bitte neuen Code eingeben.");
       return;
     }
     if (error.message === "too_many_attempts") {
@@ -3287,7 +3287,7 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "forbidden_tenant_host") {
-      window.alert("Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.");
+      window.alert("Dieser Zugang ist nur über die freigegebene Firmen-Domain erlaubt.");
       return;
     }
     if (error.message === "company_locked") {
@@ -3303,16 +3303,16 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "login_scope_mismatch") {
-      window.alert("Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswaehlen.");
+      window.alert("Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswählen.");
       return;
     }
     if (error.message === "http_405") {
       const targetInfo = API_BASE || window.location.origin;
-      window.alert(`Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf ${targetInfo}. Fuer GitHub Pages muss das Frontend dein Render-Backend nutzen.`);
+      window.alert(`Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf ${targetInfo}. Für GitHub Pages muss das Frontend dein Render-Backend nutzen.`);
       return;
     }
     if (error.message === "invalid_login_response") {
-      window.alert("Login-Antwort vom Server ist unvollstaendig. Bitte Seite neu laden und erneut versuchen.");
+      window.alert("Login-Antwort vom Server ist unvollständig. Bitte Seite neu laden und erneut versuchen.");
       return;
     }
     window.alert(`Login fehlgeschlagen: ${error.message}`);

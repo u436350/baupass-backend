@@ -887,14 +887,14 @@ function updatePlatformInstallHint() {
 
   if (isAndroidDevice()) {
       if (isAndroidChrome()) {
-        elements.installPlatformHint.textContent = "Android (Chrome): Menue > App installieren. Danach wie eine normale Handy-App nutzbar.";
+        elements.installPlatformHint.textContent = "Android (Chrome): Menü > App installieren. Danach wie eine normale Handy-App nutzbar.";
       } else {
-        elements.installPlatformHint.textContent = "Android: Bitte in Google Chrome oeffnen, dann Menue > App installieren.";
+        elements.installPlatformHint.textContent = "Android: Bitte in Google Chrome öffnen, dann Menü > App installieren.";
       }
     return;
   }
 
-  elements.installPlatformHint.textContent = "Fuer iPhone und Android optimiert. Installiere die App fuer schnellen Zugriff am Drehkreuz.";
+  elements.installPlatformHint.textContent = "Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.";
 }
 
 async function requestWakeLock() {
@@ -927,7 +927,7 @@ function openCameraOverlay() {
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    showWorkerNotice("Safari blockiert hier die Browser-Kamera. Bitte Foto direkt aus Kamera oder Mediathek waehlen.");
+    showWorkerNotice("Safari blockiert hier die Browser-Kamera. Bitte Foto direkt aus Kamera oder Mediathek wählen.");
     elements.photoInput?.click();
     return;
   }
@@ -952,7 +952,7 @@ function openCameraOverlay() {
       showWorkerNotice(
         window.isSecureContext
           ? "Kamera konnte nicht gestartet werden."
-          : "Safari erlaubt die Browser-Kamera meist nur ueber HTTPS. Bitte Foto direkt aus Kamera oder Mediathek waehlen."
+          : "Safari erlaubt die Browser-Kamera meist nur über HTTPS. Bitte Foto direkt aus Kamera oder Mediathek wählen."
       );
       closeCameraOverlay();
       elements.photoInput?.click();
