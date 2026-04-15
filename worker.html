@@ -208,7 +208,11 @@
             <span class="scanner-chip">Gate</span>
           </div>
           <p class="qr-label">Einlasskontrolle scannen</p>
-          <img id="workerQr" alt="QR Code" />
+          <div class="qr-stage">
+            <div class="qr-frame" aria-hidden="true"></div>
+            <img id="workerQr" alt="QR Code" />
+          </div>
+          <button id="quickGateModeButton" class="ghost small-btn qr-fullscreen-button" type="button">QR im Vollbild anzeigen</button>
           <p id="qrFallbackText" class="qr-fallback hidden"></p>
         </div>
       </div>

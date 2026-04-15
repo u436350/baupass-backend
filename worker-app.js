@@ -101,6 +101,7 @@ const elements = {
   installButton: document.querySelector("#installButton"),
   installPlatformHint: document.querySelector("#installPlatformHint"),
   gateModeButton: document.querySelector("#gateModeButton"),
+  quickGateModeButton: document.querySelector("#quickGateModeButton"),
   gateScannerOverlay: document.querySelector("#gateScannerOverlay"),
   gateQr: document.querySelector("#gateQr"),
   gateBadgeId: document.querySelector("#gateBadgeId"),
@@ -261,6 +262,10 @@ function bindEvents() {
 
   if (elements.gateModeButton) {
     elements.gateModeButton.addEventListener("click", openGateMode);
+  }
+
+  if (elements.quickGateModeButton) {
+    elements.quickGateModeButton.addEventListener("click", openGateMode);
   }
 
   if (elements.closeGateModeButton) {
@@ -611,13 +616,16 @@ function renderWorker(payload) {
   }
 
   const qrPayload = buildQrPayload(worker);
+  const isCompactViewport = window.matchMedia("(max-width: 520px)").matches;
+  const workerQrSize = isCompactViewport ? 420 : 340;
+  const gateQrSize = isCompactViewport ? 520 : 420;
   if (elements.workerQr) {
     if (!qrPayload) {
       elements.workerQr.removeAttribute("src");
       elements.workerQr.classList.add("hidden");
     } else {
       elements.workerQr.classList.remove("hidden");
-      void setQrImage(elements.workerQr, qrPayload, 280);
+      void setQrImage(elements.workerQr, qrPayload, workerQrSize);
     }
   }
 
@@ -637,7 +645,7 @@ function renderWorker(payload) {
       elements.gateQr.classList.add("hidden");
     } else {
       elements.gateQr.classList.remove("hidden");
-      void setQrImage(elements.gateQr, qrPayload, 420);
+      void setQrImage(elements.gateQr, qrPayload, gateQrSize);
     }
   }
 
