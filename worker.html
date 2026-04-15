@@ -137,39 +137,35 @@
           </svg>
         </div>
 
-        <!-- QR: zentriert, großes Hauptelement -->
-        <div class="wc-qr-section">
+        <!-- Mitte: QR-Chip + Foto -->
+        <div class="wc-middle">
           <div class="wc-qr-holder">
             <div class="wc-qr-frame" aria-hidden="true"></div>
             <img id="workerQr" class="wc-qr" alt="QR Code für Einlass" />
           </div>
-        </div>
-
-        <!-- Identität: Foto + Name/Rolle/Status -->
-        <div class="wc-identity">
           <img id="workerPhoto" class="wc-photo" alt="Mitarbeiterfoto" />
-          <div class="wc-id-text">
-            <p id="workerName" class="wc-name">Mitarbeiter</p>
-            <p id="workerRole" class="wc-role-text">Rolle</p>
-            <div id="workerStatus" class="wc-status">Aktiv</div>
-          </div>
         </div>
 
-        <!-- Felder: Badge-ID, Gültig bis, Firma -->
-        <div class="wc-footer">
-          <div class="wc-fields">
-            <div class="wc-field">
-              <span class="wc-field-label">Badge-ID</span>
-              <span id="workerBadgeId" class="wc-field-value">–</span>
+        <!-- Unten: Name + Felder -->
+        <div class="wc-bottom">
+          <p id="workerName" class="wc-name">Mitarbeiter</p>
+          <p id="workerRole" class="wc-role-text">Rolle</p>
+          <div class="wc-footer">
+            <div class="wc-fields">
+              <div class="wc-field">
+                <span class="wc-field-label">Badge-ID</span>
+                <span id="workerBadgeId" class="wc-field-value">–</span>
+              </div>
+              <div class="wc-field">
+                <span class="wc-field-label">Gültig bis</span>
+                <span id="workerValidUntil" class="wc-field-value">–</span>
+              </div>
             </div>
-            <div class="wc-field">
-              <span class="wc-field-label">Gültig bis</span>
-              <span id="workerValidUntil" class="wc-field-value">–</span>
+            <div class="wc-right">
+              <div id="workerStatus" class="wc-status">Aktiv</div>
+              <p id="companyName" class="wc-company">Baufirma</p>
+              <p id="workerSubcompany" class="wc-subcompany hidden">Subunternehmen</p>
             </div>
-          </div>
-          <div class="wc-right">
-            <p id="companyName" class="wc-company">Baufirma</p>
-            <p id="workerSubcompany" class="wc-subcompany hidden">Subunternehmen</p>
           </div>
         </div>
         <div id="workerVisitorMeta" class="worker-visitor-meta hidden">
