@@ -75,6 +75,9 @@ let sessionExpiringSoonNotified = false;
 let ambientLightSensorHandle = null;
 let ambientLowLightRecommended = false;
 let gateAutoOpenTriggered = false;
+let lastUserInteractionAt = Date.now();
+
+const AUTO_OPEN_ACTIVITY_WINDOW_MS = 30 * 1000;
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -243,8 +246,21 @@ function applyDynamicManifestStartUrl(accessToken) {
 }
 
 function bindEvents() {
+  const markUserInteraction = () => {
+    lastUserInteractionAt = Date.now();
+  };
+
   window.addEventListener("online", updateConnectionState);
   window.addEventListener("offline", updateConnectionState);
+  window.addEventListener("pointerdown", markUserInteraction, { passive: true });
+  window.addEventListener("touchstart", markUserInteraction, { passive: true });
+  window.addEventListener("keydown", markUserInteraction, { passive: true });
+  window.addEventListener("scroll", markUserInteraction, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      markUserInteraction();
+    }
+  });
 
   if (elements.workerLoginForm) {
     elements.workerLoginForm.addEventListener("submit", async (event) => {
@@ -1400,7 +1416,8 @@ function renderWorkerSessionCountdown(expiresAt) {
       }
 
       const gateIsClosed = Boolean(elements.gateScannerOverlay?.classList.contains("hidden"));
-      if (totalSeconds <= 120 && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible") {
+      const recentlyActive = (Date.now() - lastUserInteractionAt) <= AUTO_OPEN_ACTIVITY_WINDOW_MS;
+      if (totalSeconds <= 120 && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible" && recentlyActive) {
         gateAutoOpenTriggered = true;
         showWorkerNotice("Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.");
         void openGateMode();
