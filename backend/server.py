@@ -230,8 +230,7 @@ def expiry_iso(hours=SESSION_TTL_HOURS):
     return (datetime.utcnow() + timedelta(hours=hours)).replace(microsecond=0).isoformat() + "Z"
 
 
-def worker_session_expiry_iso():
-    # Worker app sessions are daily cards and expire at next local midnight.
+def _next_local_midnight_utc():
     timezone_name = os.getenv("BAUPASS_TIMEZONE", "Europe/Berlin")
     try:
         local_tz = ZoneInfo(timezone_name)
@@ -239,9 +238,22 @@ def worker_session_expiry_iso():
         local_tz = timezone.utc
 
     local_now = datetime.now(local_tz)
-    next_midnight_local = (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    next_midnight_utc = next_midnight_local.astimezone(timezone.utc)
+    return (local_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+
+
+def worker_session_expiry_iso():
+    # Worker app sessions are daily cards and expire at next local midnight.
+    next_midnight_utc = _next_local_midnight_utc().replace(microsecond=0)
     return next_midnight_utc.replace(tzinfo=None).isoformat() + "Z"
+
+
+def worker_access_token_expiry_iso():
+    # Visitor-card link expires after a short window, but never later than local midnight.
+    max_hours = max(1, int(os.getenv("BAUPASS_VISITOR_LINK_HOURS", "12")))
+    now_utc = datetime.now(timezone.utc)
+    by_hours_utc = now_utc + timedelta(hours=max_hours)
+    expires_utc = min(by_hours_utc, _next_local_midnight_utc()).replace(microsecond=0)
+    return expires_utc.replace(tzinfo=None).isoformat() + "Z"
 
 
 def purge_expired_worker_app_sessions(db, now_value=None):
@@ -3147,32 +3159,27 @@ def build_worker_app_access_payload(db, worker_id, actor_user):
     if worker["deleted_at"]:
         return None, (jsonify({"error": "worker_deleted"}), 400)
 
-    token_row = db.execute(
-        """
-        SELECT token
-        FROM worker_app_tokens
-        WHERE worker_id = ? AND revoked_at IS NULL AND expires_at >= ?
-        ORDER BY expires_at DESC
-        LIMIT 1
-        """,
-        (worker_id, now_iso()),
-    ).fetchone()
+    now = now_iso()
+    db.execute(
+        "UPDATE worker_app_tokens SET revoked_at = ? WHERE worker_id = ? AND revoked_at IS NULL AND expires_at >= ?",
+        (now, worker_id, now),
+    )
 
-    access_token = token_row["token"] if token_row else secrets.token_urlsafe(32)
-    created = False
-    if not token_row:
-        db.execute(
-            "INSERT INTO worker_app_tokens (token, worker_id, expires_at, revoked_at, created_by_user_id) VALUES (?, ?, ?, NULL, ?)",
-            (access_token, worker_id, worker_session_expiry_iso(days=30), actor_user["id"]),
-        )
-        db.commit()
-        created = True
+    access_token = secrets.token_urlsafe(32)
+    access_expires_at = worker_access_token_expiry_iso()
+    db.execute(
+        "INSERT INTO worker_app_tokens (token, worker_id, expires_at, revoked_at, created_by_user_id) VALUES (?, ?, ?, NULL, ?)",
+        (access_token, worker_id, access_expires_at, actor_user["id"]),
+    )
+    db.commit()
 
     link = f"{get_public_base_url()}/worker.html?access={access_token}"
     return {
         "accessToken": access_token,
         "link": link,
-        "created": created,
+        "created": True,
+        "oneTime": True,
+        "accessExpiresAt": access_expires_at,
         "workerId": worker_id,
     }, None
 
@@ -3263,7 +3270,7 @@ def create_worker_app_session(db, worker):
         "token": session_token,
         "worker": serialize_worker_for_app(worker),
         "sessionExpiresAt": expires_at,
-        "cardType": "day",
+        "cardType": "visitor",
     }
 
 
@@ -3314,7 +3321,7 @@ def worker_app_login():
             return jsonify({"error": "invalid_access_token"}), 401
 
         if token_row["revoked_at"]:
-            return jsonify({"error": "access_token_revoked"}), 401
+            return jsonify({"error": "access_token_already_used", "message": "Dieser Besucherkarten-Link wurde bereits genutzt."}), 401
 
         if token_row["expires_at"] < now_iso():
             return jsonify({"error": "access_token_expired"}), 401
@@ -3326,6 +3333,14 @@ def worker_app_login():
         company_error = get_company_access_error(db, worker["company_id"])
         if company_error:
             return jsonify(company_error), 403
+
+        consumed_at = now_iso()
+        consumed = db.execute(
+            "UPDATE worker_app_tokens SET revoked_at = ? WHERE token = ? AND revoked_at IS NULL",
+            (consumed_at, access_token),
+        )
+        if int(consumed.rowcount or 0) == 0:
+            return jsonify({"error": "access_token_already_used", "message": "Dieser Besucherkarten-Link wurde bereits genutzt."}), 401
 
         return jsonify(create_worker_app_session(db, worker))
 
@@ -3383,7 +3398,7 @@ def worker_app_me():
                 "operatorName": setting["operator_name"],
             },
             "sessionExpiresAt": getattr(g, "worker_session_expires_at", ""),
-            "cardType": "day",
+            "cardType": "visitor",
         }
     )
 

@@ -429,7 +429,7 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
       }
     }
   } catch (error) {
-    if (["invalid_access_token", "access_token_revoked", "access_token_expired"].includes(error.code)) {
+    if (["invalid_access_token", "access_token_revoked", "access_token_expired", "access_token_already_used"].includes(error.code)) {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
     }
     if (silent) {

@@ -922,7 +922,7 @@ function bindWorkerRowActions() {
         const payload = await apiRequest(`${API_BASE}/api/workers/${button.dataset.workerAppLink}/app-access`, { method: "POST" });
         const absoluteLink = normalizeWorkerAppLink(payload.link);
         const worker = state.workers.find((entry) => entry.id === button.dataset.workerAppLink) || null;
-        showWorkerAppQrDialog(worker, absoluteLink);
+        showWorkerAppQrDialog(worker, absoluteLink, payload);
       } catch (error) {
         window.alert(`App-Link konnte nicht erzeugt werden: ${error.message}`);
       }
@@ -1375,7 +1375,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         const payload = await apiRequest(API_BASE + `/api/workers/${button.dataset.workerAppLink}/app-access`, { method: "POST" });
         const absoluteLink = normalizeWorkerAppLink(payload.link);
         const worker = state.workers.find((entry) => entry.id === button.dataset.workerAppLink) || null;
-        showWorkerAppQrDialog(worker, absoluteLink);
+        showWorkerAppQrDialog(worker, absoluteLink, payload);
       } catch (error) {
         window.alert(`App-Link konnte nicht erzeugt werden: ${error.message}`);
       }
@@ -1425,19 +1425,23 @@ function printWorkerAppQr(workerName, qrSrc) {
   w.document.close();
 }
 
-function showWorkerAppQrDialog(worker, absoluteLink) {
+function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
   closeWorkerAppQrDialog();
 
   const workerName = worker ? `${worker.firstName} ${worker.lastName}` : "Mitarbeiter";
+  const linkExpiresAt = payload?.accessExpiresAt ? formatDateTime(payload.accessExpiresAt) : "-";
+  const oneTimeHint = payload?.oneTime ? "Einmal-Link: Nach erstem Login ungueltig." : "";
   const dialog = document.createElement("div");
   dialog.className = "worker-app-qr-overlay";
 
   const qrId = `workerAppQr-${Date.now()}`;
   dialog.innerHTML = `
     <div class="worker-app-qr-card">
-      <h3>Mitarbeiter-App QR</h3>
+      <h3>Besucherkarte QR</h3>
       <p>Fuer: <strong>${escapeHtml(workerName)}</strong></p>
-      <p>Code mit der Kamera scannen, um die App zu oeffnen/installieren.</p>
+      <p>Code mit der Kamera scannen, um die Besucherkarte zu oeffnen/installieren.</p>
+      <p class="helper-text">Gueltig bis: ${escapeHtml(linkExpiresAt)} Uhr</p>
+      ${oneTimeHint ? `<p class="helper-text">${escapeHtml(oneTimeHint)}</p>` : ""}
       <img id="${qrId}" alt="Mitarbeiter App QR" />
       <div class="button-row">
         <button type="button" class="primary-button" data-worker-app-print>QR drucken</button>
