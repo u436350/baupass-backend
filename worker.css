@@ -453,49 +453,55 @@ button:hover,
 .wallet-card {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 310px;
   margin: 0 auto;
-  aspect-ratio: 85.6 / 54;
   border-radius: 22px;
-  padding: 5.5% 6%;
+  padding: 0;
   background: linear-gradient(
-    135deg,
+    160deg,
     #0f1923 0%,
-    #1a2d3d 45%,
+    #1a2d3d 55%,
     #0d1520 100%
   );
   box-shadow:
-    0 28px 60px rgba(0, 0, 0, .55),
+    0 32px 70px rgba(0, 0, 0, .6),
     0  4px 20px rgba(0, 0, 0, .35),
     0  0   0  1px rgba(255, 255, 255, .07),
     inset 0 1px 0 rgba(255, 255, 255, .1);
   color: #fff;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
   user-select: none;
-  transform: rotate(-1.4deg);
 }
 
 .worker-loaded .wallet-card {
   animation: cardFloat 1s ease;
 }
 
-/* Farbstreifen oben */
+/* Gold accent stripe at top */
 .wallet-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 22px 22px 0 0;
   background: linear-gradient(
     90deg,
-    var(--accent) 0%,
-    #f0844a 50%,
-    var(--accent) 100%
+    #c8a84b 0%,
+    #e8c96b 30%,
+    #f5e08a 50%,
+    #e8c96b 70%,
+    #c8a84b 100%
   );
-  height: 3px;
-  bottom: auto;
+  background-size: 200% 100%;
+  animation: goldBar 3s ease-in-out infinite;
+  z-index: 10;
+}
+
+@keyframes goldBar {
+  0%, 100% { background-position: 0% 0%; }
+  50%       { background-position: 100% 0%; }
 }
 
 /* Holographischer Shimmer */
@@ -534,11 +540,13 @@ button:hover,
   pointer-events: none;
 }
 
-/* ── Top Row ────────────────────────────────────── */
+/* ── Header bar ─────────────────────────────────── */
 .wc-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
   position: relative;
   z-index: 1;
 }
@@ -550,8 +558,8 @@ button:hover,
 }
 
 .wc-brand-mark {
-  width: clamp(26px, 7%, 32px);
-  height: clamp(26px, 7%, 32px);
+  width: 28px;
+  height: 28px;
   background: linear-gradient(135deg, var(--accent), var(--accent-dark));
   border-radius: 7px;
   display: flex;
@@ -569,7 +577,7 @@ button:hover,
 
 .wc-brand-name {
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(.55rem, 2.4vw, .82rem);
+  font-size: .78rem;
   font-weight: 700;
   letter-spacing: .16em;
   line-height: 1;
@@ -577,7 +585,7 @@ button:hover,
 }
 
 .wc-brand-sub {
-  font-size: clamp(.4rem, 1.6vw, .58rem);
+  font-size: .55rem;
   color: rgba(255, 255, 255, .45);
   letter-spacing: .09em;
   text-transform: uppercase;
@@ -589,11 +597,12 @@ button:hover,
   flex-shrink: 0;
 }
 
-/* ── Middle Row ─────────────────────────────────── */
-.wc-middle {
+/* ── QR Section (zentriert, Hauptelement) ───────── */
+.wc-qr-section {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  padding: 24px 20px 20px;
   position: relative;
   z-index: 1;
 }
@@ -601,8 +610,8 @@ button:hover,
 /* QR-Code Container mit Gold-Glanz */
 .wc-qr-holder {
   position: relative;
-  width: clamp(120px, 32%, 150px);
-  height: clamp(120px, 32%, 150px);
+  width: 180px;
+  height: 180px;
   flex-shrink: 0;
 }
 
@@ -610,10 +619,10 @@ button:hover,
   width: 100%;
   height: 100%;
   display: block;
-  border-radius: 12px;
+  border-radius: 10px;
   object-fit: contain;
-  background: rgba(255, 255, 255, .95);
-  padding: 4px;
+  background: #fff;
+  padding: 6px;
   box-sizing: border-box;
   position: relative;
   z-index: 2;
@@ -621,77 +630,85 @@ button:hover,
 
 .wc-qr-frame {
   position: absolute;
-  inset: -8px;
-  border-radius: 16px;
+  inset: -10px;
+  border-radius: 18px;
   background: linear-gradient(
     135deg,
     #e8c96b 0%,
-    #d4a843 30%,
-    #c8a84b 50%,
-    #a87832 75%,
-    #e8c96b 100%
+    #d4a843 20%,
+    #f5e08a 45%,
+    #a87832 65%,
+    #e8c96b 85%,
+    #d4a843 100%
   );
   box-shadow:
-    0 8px 24px rgba(200, 168, 75, .6),
-    0 2px 8px rgba(0, 0, 0, .3),
-    inset 0 1px 0 rgba(255, 255, 255, .4),
-    inset 0 -1px 0 rgba(0, 0, 0, .2);
+    0 10px 32px rgba(200, 168, 75, .7),
+    0 2px 10px rgba(0, 0, 0, .35),
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    inset 0 -1px 0 rgba(0, 0, 0, .25);
   z-index: 1;
   background-size: 200% 200%;
   animation: goldGloss 4s ease-in-out infinite;
 }
 
 @keyframes goldGloss {
-  0%, 100% {
-    background-position: 0% 0%;
-    box-shadow:
-      0 8px 24px rgba(200, 168, 75, .6),
-      0 2px 8px rgba(0, 0, 0, .3),
-      inset 0 1px 0 rgba(255, 255, 255, .4),
-      inset 0 -1px 0 rgba(0, 0, 0, .2);
-  }
-  50% {
-    background-position: 100% 100%;
-    box-shadow:
-      0 12px 32px rgba(200, 168, 75, .8),
-      0 2px 8px rgba(0, 0, 0, .3),
-      inset 0 1px 0 rgba(255, 255, 255, .6),
-      inset 0 -1px 0 rgba(0, 0, 0, .2);
-  }
+  0%, 100% { background-position: 0% 0%; }
+  50%       { background-position: 100% 100%; }
 }
 
-/* Mitarbeiterfoto */
-.wc-photo {
-  width: clamp(76px, 22%, 104px);
-  height: clamp(76px, 22%, 104px);
-  border-radius: 24px;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, .22);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, .34);
-  flex-shrink: 0;
-}
-
-/* ── Bottom Row ─────────────────────────────────── */
-.wc-bottom {
+/* ── Identität: Foto + Name ──────────────────────── */
+.wc-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
   position: relative;
   z-index: 1;
 }
 
+/* Mitarbeiterfoto (klein, Identitätsreihe) */
+.wc-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+  flex-shrink: 0;
+}
+
+.wc-id-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Bottom Row ─────────────────────────────────── */
+.wc-bottom {
+  display: none;
+}
+
 .wc-name {
-  margin: 0 0 1px;
+  margin: 0;
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(.7rem, 2.8vw, 1rem);
+  font-size: .95rem;
   font-weight: 700;
-  letter-spacing: .07em;
+  letter-spacing: .04em;
   text-transform: uppercase;
   color: #fff;
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wc-role-text {
-  margin: 0 0 5px;
-  font-size: clamp(.5rem, 1.9vw, .68rem);
-  color: rgba(255, 255, 255, .55);
+  margin: 0;
+  font-size: .6rem;
+  color: rgba(255, 255, 255, .5);
   text-transform: uppercase;
   letter-spacing: .1em;
 }
@@ -700,12 +717,16 @@ button:hover,
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  padding: 12px 16px 16px;
+  position: relative;
+  z-index: 1;
   gap: 8px;
 }
 
 .wc-fields {
   display: flex;
-  gap: clamp(10px, 4%, 20px);
+  flex-direction: column;
+  gap: 6px;
 }
 
 .wc-field {
@@ -715,8 +736,8 @@ button:hover,
 }
 
 .wc-field-label {
-  font-size: clamp(.38rem, 1.4vw, .52rem);
-  color: rgba(255, 255, 255, .38);
+  font-size: .48rem;
+  color: rgba(255, 255, 255, .35);
   text-transform: uppercase;
   letter-spacing: .12em;
   line-height: 1;
@@ -724,7 +745,7 @@ button:hover,
 
 .wc-field-value {
   font-family: "Space Grotesk", monospace;
-  font-size: clamp(.52rem, 1.9vw, .72rem);
+  font-size: .72rem;
   font-weight: 600;
   color: rgba(255, 255, 255, .9);
   letter-spacing: .04em;
@@ -743,17 +764,25 @@ button:hover,
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: clamp(.42rem, 1.6vw, .6rem);
+  margin-top: 4px;
+  width: fit-content;
+  font-size: .6rem;
   font-weight: 700;
   color: #4ade80;
   text-transform: uppercase;
   letter-spacing: .1em;
   line-height: 1;
+  background: rgba(74, 222, 128, .12);
+  border: 1px solid rgba(74, 222, 128, .25);
+  padding: 3px 8px;
+  border-radius: 999px;
 }
 
 .wc-status[data-status="gesperrt"],
 .wc-status[data-status="inaktiv"] {
   color: #ffb3b3;
+  background: rgba(255, 107, 107, .12);
+  border-color: rgba(255, 107, 107, .25);
 }
 
 .wc-status[data-status="gesperrt"]::before,
@@ -774,8 +803,8 @@ button:hover,
 
 .wc-company {
   margin: 0;
-  font-size: clamp(.38rem, 1.4vw, .55rem);
-  color: rgba(255, 255, 255, .3);
+  font-size: .55rem;
+  color: rgba(255, 255, 255, .35);
   text-transform: uppercase;
   letter-spacing: .08em;
   line-height: 1;
@@ -783,8 +812,8 @@ button:hover,
 
 .wc-subcompany {
   margin: 0;
-  max-width: 18ch;
-  font-size: clamp(.38rem, 1.45vw, .57rem);
+  max-width: 16ch;
+  font-size: .6rem;
   color: rgba(255, 255, 255, .55);
   line-height: 1.1;
 }
