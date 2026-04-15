@@ -59,6 +59,7 @@ const WORKER_BADGE_LOGIN_KEY = "baupass-worker-badge-login";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
+const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
@@ -68,6 +69,8 @@ let lastCameraPhotoRotation = 0;
 let wakeLockHandle = null;
 let dynamicManifestUrl = "";
 let workerSessionExpiryTimeout = null;
+let workerSessionCountdownInterval = null;
+let qrHighContrastEnabled = localStorage.getItem(QR_HIGH_CONTRAST_KEY) === "1";
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -95,6 +98,8 @@ const elements = {
   workerHostName: document.querySelector("#workerHostName"),
   workerVisitEndAt: document.querySelector("#workerVisitEndAt"),
   workerQr: document.querySelector("#workerQr"),
+  workerSessionCountdown: document.querySelector("#workerSessionCountdown"),
+  qrContrastToggle: document.querySelector("#qrContrastToggle"),
   qrFallbackText: document.querySelector("#qrFallbackText"),
   refreshButton: document.querySelector("#refreshButton"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -123,6 +128,7 @@ const elements = {
   workerStatusBanner: document.querySelector("#workerStatusBanner"),
   workerStatusText: document.querySelector("#workerStatusText"),
   gateStatusFeedback: document.querySelector("#gateStatusFeedback"),
+  gateContrastToggle: document.querySelector("#gateContrastToggle"),
   connectionBanner: document.querySelector("#connectionBanner"),
   lastSyncInfo: document.querySelector("#lastSyncInfo")
 };
@@ -147,6 +153,7 @@ init().finally(dismissSplash);
 
 async function init() {
   bindEvents();
+  applyQrContrastState();
   
   // Enable Dark Mode support
   if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -270,6 +277,14 @@ function bindEvents() {
 
   if (elements.closeGateModeButton) {
     elements.closeGateModeButton.addEventListener("click", closeGateMode);
+  }
+
+  if (elements.qrContrastToggle) {
+    elements.qrContrastToggle.addEventListener("click", toggleQrContrastMode);
+  }
+
+  if (elements.gateContrastToggle) {
+    elements.gateContrastToggle.addEventListener("click", toggleQrContrastMode);
   }
 
   if (elements.changePhotoButton) {
@@ -684,6 +699,7 @@ function renderWorker(payload) {
 
 function showLogin() {
   clearWorkerSessionExpiryTimer();
+  clearWorkerSessionCountdown();
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
   document.body.classList.remove("worker-loaded");
@@ -753,6 +769,7 @@ async function openGateMode() {
   
   showBrightnessHintTemporarily();
   await requestWakeLock();
+  await requestGateFullscreen();
 }
 
 function closeGateMode() {
@@ -762,7 +779,25 @@ function closeGateMode() {
   if (elements.gateStatusFeedback) {
     elements.gateStatusFeedback.textContent = "";
   }
+  void exitGateFullscreen();
   releaseWakeLock();
+}
+
+function applyQrContrastState() {
+  document.body.classList.toggle("qr-high-contrast", qrHighContrastEnabled);
+  const label = qrHighContrastEnabled ? "High-Contrast QR: Ein" : "High-Contrast QR: Aus";
+  if (elements.qrContrastToggle) {
+    elements.qrContrastToggle.textContent = label;
+  }
+  if (elements.gateContrastToggle) {
+    elements.gateContrastToggle.textContent = label;
+  }
+}
+
+function toggleQrContrastMode() {
+  qrHighContrastEnabled = !qrHighContrastEnabled;
+  localStorage.setItem(QR_HIGH_CONTRAST_KEY, qrHighContrastEnabled ? "1" : "0");
+  applyQrContrastState();
 }
 
 function buildQrPayload(worker) {
@@ -906,6 +941,34 @@ function showBrightnessHintTemporarily() {
       elements.gateBrightnessHint.classList.add("hidden");
     }
   }, 6000);
+}
+
+async function requestGateFullscreen() {
+  const panel = elements.gateScannerOverlay;
+  if (!panel || document.fullscreenElement) {
+    return;
+  }
+  const requestFullscreen = panel.requestFullscreen || panel.webkitRequestFullscreen;
+  if (typeof requestFullscreen !== "function") {
+    return;
+  }
+  try {
+    await requestFullscreen.call(panel);
+  } catch {
+    // ignore fullscreen failures
+  }
+}
+
+async function exitGateFullscreen() {
+  const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+  if (typeof exitFullscreen !== "function" || !document.fullscreenElement) {
+    return;
+  }
+  try {
+    await exitFullscreen.call(document);
+  } catch {
+    // ignore fullscreen exit failures
+  }
 }
 
 function isIosDevice() {
@@ -1237,6 +1300,42 @@ function renderDayCardValidity(expiresAt) {
   elements.workerDayCardValidity.textContent = `Digitale Besucherkarte: gueltig bis ${formatDateTime(expiresAt)} Uhr.`;
 }
 
+function clearWorkerSessionCountdown() {
+  if (workerSessionCountdownInterval !== null) {
+    window.clearInterval(workerSessionCountdownInterval);
+    workerSessionCountdownInterval = null;
+  }
+}
+
+function renderWorkerSessionCountdown(expiresAt) {
+  clearWorkerSessionCountdown();
+  if (!elements.workerSessionCountdown) {
+    return;
+  }
+  if (!expiresAt) {
+    elements.workerSessionCountdown.textContent = "Ablauf: --:--:--";
+    return;
+  }
+
+  const updateCountdown = () => {
+    const target = new Date(expiresAt).getTime();
+    const remainingMs = target - Date.now();
+    if (!Number.isFinite(target) || remainingMs <= 0) {
+      elements.workerSessionCountdown.textContent = "Ablauf: 00:00:00";
+      clearWorkerSessionCountdown();
+      return;
+    }
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    elements.workerSessionCountdown.textContent = `Ablauf in ${hours}:${minutes}:${seconds}`;
+  };
+
+  updateCountdown();
+  workerSessionCountdownInterval = window.setInterval(updateCountdown, 1000);
+}
+
 function clearWorkerSessionExpiryTimer() {
   if (workerSessionExpiryTimeout !== null) {
     window.clearTimeout(workerSessionExpiryTimeout);
@@ -1255,6 +1354,7 @@ function expireDailyCardInClient() {
 
 function scheduleWorkerSessionExpiry(expiresAt) {
   clearWorkerSessionExpiryTimer();
+  renderWorkerSessionCountdown(expiresAt);
   if (!expiresAt) {
     return;
   }

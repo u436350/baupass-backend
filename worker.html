@@ -208,11 +208,15 @@
             <span class="scanner-chip">Gate</span>
           </div>
           <p class="qr-label">Einlasskontrolle scannen</p>
+          <p id="workerSessionCountdown" class="qr-countdown">Ablauf: --:--:--</p>
           <div class="qr-stage">
             <div class="qr-frame" aria-hidden="true"></div>
             <img id="workerQr" alt="QR Code" />
           </div>
-          <button id="quickGateModeButton" class="ghost small-btn qr-fullscreen-button" type="button">QR im Vollbild anzeigen</button>
+          <div class="qr-controls">
+            <button id="quickGateModeButton" class="ghost small-btn qr-fullscreen-button" type="button">QR im Vollbild anzeigen</button>
+            <button id="qrContrastToggle" class="ghost small-btn qr-contrast-button" type="button">High-Contrast QR: Aus</button>
+          </div>
           <p id="qrFallbackText" class="qr-fallback hidden"></p>
         </div>
       </div>
@@ -255,6 +259,7 @@
         <p id="gateBadgeId" class="gate-badge-id">-</p>
         <p id="gateStatusFeedback" style="margin: 8px 0 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); height: 20px;"></p>
         <div class="actions">
+          <button id="gateContrastToggle" class="ghost" type="button">High-Contrast QR: Aus</button>
           <button id="closeGateModeButton" class="ghost" type="button">Schliessen</button>
         </div>
       </div>

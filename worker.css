@@ -853,6 +853,14 @@ button:hover,
   letter-spacing: .1em;
 }
 
+.qr-countdown {
+  margin: 0;
+  font-size: .88rem;
+  font-weight: 700;
+  color: #1147a6;
+  letter-spacing: .03em;
+}
+
 .qr-stage {
   position: relative;
   display: grid;
@@ -885,10 +893,31 @@ button:hover,
 }
 
 .qr-fullscreen-button {
-  width: min(88vw, 330px);
+  width: min(43vw, 160px);
   min-height: 44px;
   border-radius: 14px;
   font-weight: 700;
+}
+
+.qr-controls {
+  width: min(88vw, 330px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.qr-contrast-button {
+  min-height: 44px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+body.qr-high-contrast #workerQr,
+body.qr-high-contrast #gateQr {
+  background: #fff;
+  border-color: rgba(0, 0, 0, .35);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .95), 0 0 0 6px rgba(0, 0, 0, .6), 0 12px 24px rgba(0, 0, 0, .35);
+  filter: contrast(1.24) saturate(0.88) brightness(1.03);
 }
 
 .qr-fallback {
@@ -998,8 +1027,13 @@ button:hover,
   }
 
   .qr-stage,
-  .qr-fullscreen-button {
+  .qr-controls {
     width: min(90vw, 320px);
+  }
+
+  .qr-fullscreen-button,
+  .qr-contrast-button {
+    width: 100%;
   }
 
   #workerQr {
