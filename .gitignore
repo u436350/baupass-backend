@@ -1,0 +1,12 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+
+# Test caches
+.pytest_cache/
+
+# Local virtual environments
+.venv/
+
+# Local runtime database
+backend/baupass.db
