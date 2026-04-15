@@ -163,3 +163,80 @@ def test_expired_visitor_is_auto_checked_out_in_summary(client_and_db):
 
     assert row is not None
     assert int(row[0]) >= 1
+
+
+def test_visitor_end_to_end_lifecycle(client_and_db):
+    client, db_path = client_and_db
+    admin_headers = _auth_headers(client)
+
+    create_response = client.post(
+        "/api/workers",
+        json=_visitor_payload(_local_datetime_string(6)),
+        headers=admin_headers,
+    )
+    assert create_response.status_code == 201
+    worker_id = create_response.get_json()["id"]
+
+    access_response = client.post(f"/api/workers/{worker_id}/app-access", headers=admin_headers)
+    assert access_response.status_code == 200
+    access_token = access_response.get_json()["accessToken"]
+
+    login_response = client.post("/api/worker-app/login", json={"accessToken": access_token})
+    assert login_response.status_code == 200
+    login_payload = login_response.get_json()
+    worker_session_token = login_payload["token"]
+    assert login_payload["cardType"] == "visitor"
+
+    worker_headers = {"Authorization": f"Bearer {worker_session_token}"}
+    me_response = client.get("/api/worker-app/me", headers=worker_headers)
+    assert me_response.status_code == 200
+    me_payload = me_response.get_json()
+    assert me_payload["worker"]["id"] == worker_id
+    assert me_payload["worker"]["workerType"] == "visitor"
+
+    check_in_response = client.post(
+        "/api/access-logs",
+        json={
+            "workerId": worker_id,
+            "direction": "check-in",
+            "gate": "Nordtor",
+            "note": "Lifecycle-Test",
+        },
+        headers=admin_headers,
+    )
+    assert check_in_response.status_code == 201
+
+    past_visit_end = (datetime.now(timezone.utc) - timedelta(minutes=2)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    with sqlite3.connect(db_path) as db:
+        db.execute("UPDATE workers SET visit_end_at = ? WHERE id = ?", (past_visit_end, worker_id))
+        db.commit()
+
+    summary_response = client.get("/api/access-logs/summary", headers=admin_headers)
+    assert summary_response.status_code == 200
+
+    with sqlite3.connect(db_path) as db:
+        checkout_row = db.execute(
+            """
+            SELECT COUNT(*)
+            FROM access_logs
+            WHERE worker_id = ?
+              AND direction = 'check-out'
+              AND note = 'Automatischer Austritt nach Besucher-Ende'
+            """,
+            (worker_id,),
+        ).fetchone()
+    assert checkout_row is not None
+    assert int(checkout_row[0]) >= 1
+
+    new_access_response = client.post(f"/api/workers/{worker_id}/app-access", headers=admin_headers)
+    assert new_access_response.status_code == 400
+    assert new_access_response.get_json()["error"] == "visitor_visit_expired"
+
+    with sqlite3.connect(db_path) as db:
+        expired_session = (datetime.now(timezone.utc) - timedelta(minutes=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        db.execute("UPDATE worker_app_sessions SET expires_at = ? WHERE token = ?", (expired_session, worker_session_token))
+        db.commit()
+
+    expired_session_response = client.get("/api/worker-app/me", headers=worker_headers)
+    assert expired_session_response.status_code == 401
+    assert expired_session_response.get_json()["error"] in {"worker_session_expired", "invalid_worker_session"}
