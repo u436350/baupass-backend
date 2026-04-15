@@ -74,6 +74,7 @@ let qrHighContrastEnabled = localStorage.getItem(QR_HIGH_CONTRAST_KEY) === "1";
 let sessionExpiringSoonNotified = false;
 let ambientLightSensorHandle = null;
 let ambientLowLightRecommended = false;
+let gateAutoOpenTriggered = false;
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -704,6 +705,7 @@ function showLogin() {
   clearWorkerSessionExpiryTimer();
   clearWorkerSessionCountdown();
   sessionExpiringSoonNotified = false;
+  gateAutoOpenTriggered = false;
   stopAmbientLightRecommendation();
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
@@ -1361,6 +1363,7 @@ function clearWorkerSessionCountdown() {
 function renderWorkerSessionCountdown(expiresAt) {
   clearWorkerSessionCountdown();
   sessionExpiringSoonNotified = false;
+  gateAutoOpenTriggered = false;
   if (!elements.workerSessionCountdown) {
     return;
   }
@@ -1394,6 +1397,13 @@ function renderWorkerSessionCountdown(expiresAt) {
           navigator.vibrate([120, 80, 120]);
         }
         showWorkerNotice("Hinweis: Deine Besucherkarte laeuft in weniger als 5 Minuten ab.");
+      }
+
+      const gateIsClosed = Boolean(elements.gateScannerOverlay?.classList.contains("hidden"));
+      if (totalSeconds <= 120 && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible") {
+        gateAutoOpenTriggered = true;
+        showWorkerNotice("Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.");
+        void openGateMode();
       }
     } else if (totalSeconds <= 1800) {
       elements.workerSessionCountdown.classList.add("warn");
