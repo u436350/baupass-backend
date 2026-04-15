@@ -187,11 +187,18 @@
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Stammdaten</p>
-                <h3>Mitarbeiter erfassen</h3>
+                <h3>Mitarbeiter oder Besucher erfassen</h3>
               </div>
             </div>
 
             <form id="workerForm" class="form-grid">
+              <label>
+                Typ
+                <select id="workerType">
+                  <option value="worker">Mitarbeiter</option>
+                  <option value="visitor">Besucher</option>
+                </select>
+              </label>
               <label>
                 Firma
                 <select id="companySelect" required></select>
@@ -235,6 +242,27 @@
                 Gültig bis
                 <input id="validUntil" type="date" required />
               </label>
+              <div id="visitorFields" class="full-width hidden">
+                <div class="form-grid compact-grid">
+                  <label>
+                    Besucherfirma
+                    <input id="visitorCompany" type="text" placeholder="z. B. Lieferant, Kunde, externe Firma" />
+                  </label>
+                  <label>
+                    Besuchszweck
+                    <input id="visitPurpose" type="text" placeholder="z. B. Besprechung, Lieferung, Abnahme" />
+                  </label>
+                  <label>
+                    Ansprechpartner vor Ort
+                    <input id="hostName" type="text" placeholder="z. B. Bauleiter Mustafa Yilmaz" />
+                  </label>
+                  <label>
+                    Besuchsende
+                    <input id="visitEndAt" type="datetime-local" />
+                  </label>
+                </div>
+                <p class="helper-text">Besucher sind für ein paar Stunden oder bis Tagesende gültig. Offene Zutritte werden spätestens um 00:00 automatisch abgemeldet, die Karte bleibt aber für Auswertungen erhalten.</p>
+              </div>
               <label>
                 Status
                 <select id="workerStatus">
@@ -247,7 +275,7 @@
                 Badge-PIN für App-Login
                 <input id="badgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4 bis 8 Ziffern" required />
               </label>
-              <p class="helper-text">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
+              <p id="badgePinHint" class="helper-text">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
               <input id="photoData" type="hidden" />
               <input id="photoFileInput" type="file" accept="image/*" capture="user" hidden />
 
@@ -465,7 +493,10 @@
                 <p class="eyebrow">Tagesbericht</p>
                 <h3>Pro Drehkreuz</h3>
               </div>
-              <button id="printDailyReportButton" type="button" class="ghost-button">Tagesreport drucken</button>
+              <div class="button-row">
+                <button id="printDailyReportButton" type="button" class="ghost-button">Tagesreport drucken</button>
+                <button id="printVisitorWeeklyReportButton" type="button" class="ghost-button">Besucher-Wochenliste drucken</button>
+              </div>
             </div>
             <div id="dayCloseBanner" class="day-close-banner hidden"></div>
             <form id="dayCloseAcknowledgeForm" class="form-grid compact-grid hidden">

@@ -102,10 +102,11 @@
         <div class="section-head section-head-inline">
           <div>
             <p class="section-kicker">Digitaler Pass</p>
-            <h2>Dein BauPass für heute</h2>
+            <h2 id="workerPassTitle">Dein BauPass für heute</h2>
           </div>
           <span class="pass-stage-chip">Live</span>
         </div>
+        <p id="workerDayCardValidity" class="day-card-validity">Digitale Besucherkarte: gueltig bis heute 00:00 Uhr.</p>
 
       <!-- ══════════ WALLET-CARD ══════════ -->
       <div class="wallet-card">
@@ -124,7 +125,7 @@
             </div>
             <div class="wc-brand-text">
               <span class="wc-brand-name">BAUPASS</span>
-              <span class="wc-brand-sub">Mitarbeiterausweis</span>
+              <span id="workerPassSubLabel" class="wc-brand-sub">Mitarbeiterausweis</span>
             </div>
           </div>
           <!-- NFC-Symbol -->
@@ -165,6 +166,12 @@
               <p id="workerSubcompany" class="wc-subcompany hidden">Subunternehmen</p>
             </div>
           </div>
+        </div>
+        <div id="workerVisitorMeta" class="worker-visitor-meta hidden">
+          <p><strong>Firma:</strong> <span id="workerVisitorCompany">-</span></p>
+          <p><strong>Zweck:</strong> <span id="workerVisitPurpose">-</span></p>
+          <p><strong>Ansprechpartner:</strong> <span id="workerHostName">-</span></p>
+          <p><strong>Besuchsende:</strong> <span id="workerVisitEndAt">-</span></p>
         </div>
       </div>
       <!-- ══════════════════════════════════ -->

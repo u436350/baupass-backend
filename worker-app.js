@@ -80,6 +80,8 @@ const elements = {
     workerSubcompany: document.querySelector("#workerSubcompany"),
   workerName: document.querySelector("#workerName"),
   workerRole: document.querySelector("#workerRole"),
+  workerPassTitle: document.querySelector("#workerPassTitle"),
+  workerPassSubLabel: document.querySelector("#workerPassSubLabel"),
   workerStatus: document.querySelector("#workerStatus"),
   workerPhoto: document.querySelector("#workerPhoto"),
   workerBadgeId: document.querySelector("#workerBadgeId"),
@@ -87,6 +89,11 @@ const elements = {
   workerSiteMapLink: document.querySelector("#workerSiteMapLink"),
   workerValidUntil: document.querySelector("#workerValidUntil"),
   workerDayCardValidity: document.querySelector("#workerDayCardValidity"),
+  workerVisitorMeta: document.querySelector("#workerVisitorMeta"),
+  workerVisitorCompany: document.querySelector("#workerVisitorCompany"),
+  workerVisitPurpose: document.querySelector("#workerVisitPurpose"),
+  workerHostName: document.querySelector("#workerHostName"),
+  workerVisitEndAt: document.querySelector("#workerVisitEndAt"),
   workerQr: document.querySelector("#workerQr"),
   qrFallbackText: document.querySelector("#qrFallbackText"),
   refreshButton: document.querySelector("#refreshButton"),
@@ -432,6 +439,11 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     if (["invalid_access_token", "access_token_revoked", "access_token_expired", "access_token_already_used"].includes(error.code)) {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
     }
+    if (error.code === "visitor_visit_expired") {
+      localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+      showWorkerNotice("Besucherkarte ist abgelaufen. Bitte neuen Link anfordern.");
+      return;
+    }
     if (silent) {
       showLogin();
       return;
@@ -536,7 +548,16 @@ function renderWorker(payload) {
   const company = payload.company || {};
     const subcompany = payload.subcompany || {};
   const normalizedStatus = String(worker.status || "").trim().toLowerCase();
+  const workerType = String(worker.workerType || "worker").trim().toLowerCase();
+  const isVisitor = workerType === "visitor";
   const sessionExpiresAt = String(payload.sessionExpiresAt || "").trim();
+
+  if (elements.workerPassTitle) {
+    elements.workerPassTitle.textContent = isVisitor ? "Deine digitale Besucherkarte" : "Dein BauPass für heute";
+  }
+  if (elements.workerPassSubLabel) {
+    elements.workerPassSubLabel.textContent = isVisitor ? "Besucherausweis" : "Mitarbeiterausweis";
+  }
 
   if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
     if (elements.workerSubcompany) {
@@ -550,7 +571,7 @@ function renderWorker(payload) {
       }
     }
   if (elements.workerName) elements.workerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim();
-  if (elements.workerRole) elements.workerRole.textContent = worker.role || "-";
+  if (elements.workerRole) elements.workerRole.textContent = isVisitor ? "Besucher" : (worker.role || "-");
   if (elements.workerStatus) {
     elements.workerStatus.textContent = worker.status || "-";
     elements.workerStatus.dataset.status = normalizedStatus;
@@ -561,6 +582,21 @@ function renderWorker(payload) {
   if (elements.workerValidUntil) elements.workerValidUntil.textContent = formatDate(worker.validUntil);
   renderDayCardValidity(sessionExpiresAt);
   scheduleWorkerSessionExpiry(sessionExpiresAt);
+  if (elements.workerVisitorMeta) {
+    elements.workerVisitorMeta.classList.toggle("hidden", !isVisitor);
+  }
+  if (elements.workerVisitorCompany) {
+    elements.workerVisitorCompany.textContent = worker.visitorCompany || "-";
+  }
+  if (elements.workerVisitPurpose) {
+    elements.workerVisitPurpose.textContent = worker.visitPurpose || "-";
+  }
+  if (elements.workerHostName) {
+    elements.workerHostName.textContent = worker.hostName || "-";
+  }
+  if (elements.workerVisitEndAt) {
+    elements.workerVisitEndAt.textContent = worker.visitEndAt ? formatDateTime(worker.visitEndAt) : "-";
+  }
 
   if (elements.workerPhoto) {
     if (worker.photoData && String(worker.photoData).startsWith("data:image")) {

@@ -97,6 +97,13 @@ const elements = {
   accessWorkerSelect: document.querySelector("#accessWorkerSelect"),
   turnstileQuickPanel: document.querySelector("#turnstileQuickPanel"),
   companySelect: document.querySelector("#companySelect"),
+  workerType: document.querySelector("#workerType"),
+  visitorFields: document.querySelector("#visitorFields"),
+  visitorCompany: document.querySelector("#visitorCompany"),
+  visitPurpose: document.querySelector("#visitPurpose"),
+  hostName: document.querySelector("#hostName"),
+  visitEndAt: document.querySelector("#visitEndAt"),
+  badgePinHint: document.querySelector("#badgePinHint"),
   invoiceCompanySelect: document.querySelector("#invoiceCompanySelect"),
   companyList: document.querySelector("#companyList"),
   dayCloseAcknowledgeForm: document.querySelector("#dayCloseAcknowledgeForm"),
@@ -348,6 +355,72 @@ function getSubcompanyLabel(worker) {
   return sub?.name || "";
 }
 
+function isVisitorWorker(worker) {
+  return String(worker?.workerType || worker?.worker_type || "worker").toLowerCase() === "visitor";
+}
+
+function toDateInputValue(date) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toDateTimeLocalValue(date) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hour = String(parsed.getHours()).padStart(2, "0");
+  const minute = String(parsed.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+function syncWorkerTypeUi() {
+  const workerType = elements.workerType?.value || "worker";
+  const isVisitor = workerType === "visitor";
+  if (elements.visitorFields) {
+    elements.visitorFields.classList.toggle("hidden", !isVisitor);
+  }
+  const insuranceField = document.querySelector("#insuranceNumber");
+  const roleField = document.querySelector("#role");
+  const badgePinField = document.querySelector("#badgePin");
+  if (insuranceField) {
+    insuranceField.required = !isVisitor;
+    insuranceField.placeholder = isVisitor ? "Optional für Besucher" : "12 345678 A 123";
+  }
+  if (roleField) {
+    roleField.required = !isVisitor;
+    roleField.placeholder = isVisitor ? "Besucher" : "Polier, Kranfuehrer, Monteur";
+    if (isVisitor && !roleField.value.trim()) {
+      roleField.value = "Besucher";
+    }
+  }
+  if (badgePinField) {
+    badgePinField.required = !isVisitor;
+    badgePinField.placeholder = isVisitor ? "Für Besucher nicht nötig" : "4 bis 8 Ziffern";
+  }
+  if (elements.badgePinHint) {
+    elements.badgePinHint.textContent = isVisitor
+      ? "Besucher nutzen den Einmal-Link/QR. Eine Badge-PIN ist für Besucher nicht erforderlich."
+      : "Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.";
+  }
+  if (isVisitor && elements.visitEndAt && !elements.visitEndAt.value) {
+    const defaultEnd = new Date(Date.now() + (8 * 60 * 60 * 1000));
+    elements.visitEndAt.value = toDateTimeLocalValue(defaultEnd);
+  }
+  if (isVisitor && document.querySelector("#validUntil") && elements.visitEndAt?.value) {
+    document.querySelector("#validUntil").value = elements.visitEndAt.value.slice(0, 10);
+  }
+}
+
 function populateSubcompanySelects() {
   const select = document.querySelector("#subcompanySelect");
   const companyId = document.querySelector("#companySelect")?.value || "";
@@ -408,6 +481,10 @@ function clearWorkerEditor() {
   }
   state.editingWorkerId = null;
   setPhotoEditorSource("", { resetOffset: true });
+  if (elements.workerType) {
+    elements.workerType.value = "worker";
+  }
+  syncWorkerTypeUi();
   syncWorkerEditorUi();
 }
 
@@ -708,6 +785,7 @@ function renderStats() {
 
   const totalWorkers = state.workers.filter((w) => !w.deletedAt).length;
   const activeWorkers = state.workers.filter((w) => !w.deletedAt && w.status === "aktiv").length;
+  const totalVisitors = state.workers.filter((w) => !w.deletedAt && isVisitorWorker(w)).length;
   const totalCompanies = state.companies.filter((c) => !c.deleted_at).length;
   const accessToday = state.accessLogs.filter((log) => {
     const ts = String(log.timestamp || "").slice(0, 10);
@@ -717,6 +795,7 @@ function renderStats() {
   const cards = [
     ["Mitarbeiter gesamt", totalWorkers],
     ["Aktive Mitarbeiter", activeWorkers],
+    ["Besucher gesamt", totalVisitors],
     ["Firmen", totalCompanies],
     ["Zutritte heute", accessToday]
   ];
@@ -841,6 +920,11 @@ function renderWorkerList() {
     .map((worker) => {
       const deleted = Boolean(worker.deletedAt);
       const sub = getSubcompanyLabel(worker);
+      const visitor = isVisitorWorker(worker);
+      const visitorMeta = visitor
+        ? `<p>Besucherfirma: <strong>${escapeHtml(worker.visitorCompany || "-")}</strong> | Zweck: <strong>${escapeHtml(worker.visitPurpose || "-")}</strong></p>
+           <p>Ansprechpartner: <strong>${escapeHtml(worker.hostName || "-")}</strong> | Besuchsende: <strong>${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</strong></p>`
+        : "";
       return `
         <article class="card-item ${deleted ? "is-deleted" : ""}">
           <header>
@@ -850,9 +934,10 @@ function renderWorkerList() {
             </div>
             <span class="status-pill">${escapeHtml(worker.status || "-")}</span>
           </header>
-          <p>${escapeHtml(worker.role || "-")} | ${escapeHtml(worker.site || "-")}</p>
-          <p>App-PIN: <strong>${worker.badgePinConfigured ? "gesetzt" : "fehlt"}</strong> | Karte: <strong>${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</strong></p>
+          <p>${escapeHtml(visitor ? "Besucher" : (worker.role || "-"))} | ${escapeHtml(worker.site || "-")}</p>
+          <p>App-PIN: <strong>${visitor ? "nicht nötig" : (worker.badgePinConfigured ? "gesetzt" : "fehlt")}</strong> | Karte: <strong>${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</strong></p>
           ${sub ? `<p>Subunternehmen: ${escapeHtml(sub)}</p>` : ""}
+          ${visitorMeta}
           <div class="button-row">
             <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Bearbeiten</button>
             <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Löschen</button>
@@ -879,13 +964,19 @@ function bindWorkerRowActions() {
       document.querySelector("#firstName").value = worker.firstName || "";
       document.querySelector("#lastName").value = worker.lastName || "";
       document.querySelector("#insuranceNumber").value = worker.insuranceNumber || "";
+      if (elements.workerType) elements.workerType.value = isVisitorWorker(worker) ? "visitor" : "worker";
       document.querySelector("#role").value = worker.role || "";
       document.querySelector("#site").value = worker.site || "";
       document.querySelector("#physicalCardId").value = worker.physicalCardId || "";
       document.querySelector("#validUntil").value = worker.validUntil || "";
+      if (elements.visitorCompany) elements.visitorCompany.value = worker.visitorCompany || "";
+      if (elements.visitPurpose) elements.visitPurpose.value = worker.visitPurpose || "";
+      if (elements.hostName) elements.hostName.value = worker.hostName || "";
+      if (elements.visitEndAt) elements.visitEndAt.value = worker.visitEndAt ? toDateTimeLocalValue(worker.visitEndAt) : "";
       document.querySelector("#workerStatus").value = worker.status || "aktiv";
       document.querySelector("#badgePin").value = "";
       setPhotoEditorSource(worker.photoData || "", { resetOffset: true });
+      syncWorkerTypeUi();
       syncWorkerEditorUi();
       setView("workers");
     };
@@ -1200,9 +1291,9 @@ function populateWorkerSelectOptions() {
   const current = select.value;
   const options = state.workers
     .filter((w) => !w.deletedAt)
-    .map((w) => `<option value="${escapeHtml(w.id)}">${escapeHtml(`${w.firstName} ${w.lastName}`)} (${escapeHtml(w.badgeId || "-")})</option>`)
+    .map((w) => `<option value="${escapeHtml(w.id)}">${escapeHtml(`${w.firstName} ${w.lastName}`)}${isVisitorWorker(w) ? " [Besucher]" : ""} (${escapeHtml(w.badgeId || "-")})</option>`)
     .join("");
-  select.innerHTML = `<option value="">Bitte Mitarbeiter waehlen</option>${options}`;
+  select.innerHTML = `<option value="">Bitte Person waehlen</option>${options}`;
   if (current && Array.from(select.options).some((o) => o.value === current)) {
     select.value = current;
   }
@@ -1258,15 +1349,15 @@ function showWorkerDetailOverlay(worker) {
       <button class="close-btn" title="Schließen">&times;</button>
       <img src="${worker.photoData || createAvatar(worker)}" alt="Mitarbeiterfoto" />
       <h2>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</h2>
+      <p><strong>Typ:</strong> ${escapeHtml(isVisitorWorker(worker) ? "Besucher" : "Mitarbeiter")}</p>
       <p><strong>Firma:</strong> ${escapeHtml(company?.name || "-")}</p>
       ${subcompanyLabel ? `<p><strong>Subunternehmen:</strong> ${escapeHtml(subcompanyLabel)}</p>` : ""}
       <p><strong>Badge-ID:</strong> ${escapeHtml(worker.badgeId)}</p>
-      <p><strong>Rentenversicherung:</strong> ${escapeHtml(worker.insuranceNumber)}</p>
-      <p><strong>Funktion:</strong> ${escapeHtml(worker.role)}</p>
+      ${isVisitorWorker(worker) ? `<p><strong>Besucherfirma:</strong> ${escapeHtml(worker.visitorCompany || "-")}</p><p><strong>Zweck:</strong> ${escapeHtml(worker.visitPurpose || "-")}</p><p><strong>Ansprechpartner:</strong> ${escapeHtml(worker.hostName || "-")}</p><p><strong>Besuchsende:</strong> ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : `<p><strong>Rentenversicherung:</strong> ${escapeHtml(worker.insuranceNumber)}</p><p><strong>Funktion:</strong> ${escapeHtml(worker.role)}</p>`}
       <p><strong>Baustelle:</strong> ${escapeHtml(worker.site)}</p>
       <p><strong>Gültig bis:</strong> ${formatDate(worker.validUntil)}</p>
       <p><strong>Status:</strong> ${escapeHtml(worker.status)}</p>
-      <p><strong>Badge-PIN:</strong> ${worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt"}</p>
+      <p><strong>Badge-PIN:</strong> ${isVisitorWorker(worker) ? "nicht nötig" : (worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt")}</p>
       <p><strong>Karten-ID:</strong> ${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</p>
       <div class="button-row">
         <button type="button" class="primary-button" id="workerCheckInBtn">Anmelden (Check-in)</button>
@@ -1429,6 +1520,7 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
   closeWorkerAppQrDialog();
 
   const workerName = worker ? `${worker.firstName} ${worker.lastName}` : "Mitarbeiter";
+  const isVisitorCard = worker ? isVisitorWorker(worker) : true;
   const linkExpiresAt = payload?.accessExpiresAt ? formatDateTime(payload.accessExpiresAt) : "-";
   const oneTimeHint = payload?.oneTime ? "Einmal-Link: Nach erstem Login ungueltig." : "";
   const dialog = document.createElement("div");
@@ -1439,12 +1531,12 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
     <div class="worker-app-qr-card">
       <h3>Besucherkarte QR</h3>
       <p>Fuer: <strong>${escapeHtml(workerName)}</strong></p>
-      <p>Code mit der Kamera scannen, um die Besucherkarte zu oeffnen/installieren.</p>
+      <p>Code mit der Kamera scannen, um die Besucherkarte digital in der App zu oeffnen.</p>
       <p class="helper-text">Gueltig bis: ${escapeHtml(linkExpiresAt)} Uhr</p>
       ${oneTimeHint ? `<p class="helper-text">${escapeHtml(oneTimeHint)}</p>` : ""}
       <img id="${qrId}" alt="Mitarbeiter App QR" />
       <div class="button-row">
-        <button type="button" class="primary-button" data-worker-app-print>QR drucken</button>
+        ${isVisitorCard ? "" : `<button type="button" class="primary-button" data-worker-app-print>QR drucken</button>`}
         <button type="button" class="ghost-button" data-worker-app-copy>Link kopieren</button>
         <button type="button" class="ghost-button" data-worker-app-close>Schliessen</button>
       </div>
@@ -1502,7 +1594,10 @@ function renderBadge() {
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const normalizedPlan = String(company?.plan || "").trim().toLowerCase();
   const isDayPass = normalizedPlan === "tageskarte";
-  const badgeTitle = isDayPass ? "Besucher-Baustellen-Ausweis" : "Digitaler Baustellen-Ausweis";
+  const visitor = isVisitorWorker(worker);
+  const badgeTitle = visitor
+    ? "Digitale Besucherkarte"
+    : (isDayPass ? "Besucher-Baustellen-Ausweis" : "Digitaler Baustellen-Ausweis");
   const badgeClass = isDayPass ? "badge-card badge-card-daypass" : "badge-card";
   const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
@@ -1524,8 +1619,9 @@ function renderBadge() {
         <div class="badge-copy">
           <img class="badge-photo${!worker.photoData ? ' badge-photo-placeholder' : ''}" src="${worker.photoData || createAvatar(worker)}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" style="${!worker.photoData ? 'cursor:pointer;outline:2px dashed #b07d00;' : ''}" />
           <p><strong>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</strong></p>
-          <p>${escapeHtml(worker.role)}</p>
+          <p>${escapeHtml(visitor ? "Besucher" : worker.role)}</p>
           ${subcompanyLabel ? `<p>Subunternehmen: ${escapeHtml(subcompanyLabel)}</p>` : ""}
+          ${visitor ? `<p>Besucherfirma: ${escapeHtml(worker.visitorCompany || "-")}</p><p>Zweck: ${escapeHtml(worker.visitPurpose || "-")}</p><p>Ansprechpartner: ${escapeHtml(worker.hostName || "-")}</p><p>Besuchsende: ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : ""}
           <p>Tarif: ${escapeHtml(planLabel)}</p>
           <p>Baustelle: ${escapeHtml(worker.site)}</p>
           <p>Gueltig bis: ${formatDate(worker.validUntil)}</p>
@@ -1766,6 +1862,9 @@ function renderAccessSummary() {
 
     const worker = state.workers.find((item) => item.id === entry.workerId);
     const visitorName = worker ? `${worker.firstName} ${worker.lastName}` : `Mitarbeiter ${entry.workerId}`;
+    const visitorMeta = worker && isVisitorWorker(worker)
+      ? `${worker.visitorCompany || "Besucherfirma"} | ${worker.visitPurpose || "Besuch"}`
+      : "";
 
     current.total += 1;
     if (entry.direction === "check-in") {
@@ -1777,8 +1876,9 @@ function renderAccessSummary() {
     if (!current.latest || entry.timestamp > current.latest) {
       current.latest = entry.timestamp;
     }
-    if (!current.visitors.includes(visitorName)) {
-      current.visitors.push(visitorName);
+    const visitorLabel = visitorMeta ? `${visitorName} (${visitorMeta})` : visitorName;
+    if (!current.visitors.includes(visitorLabel)) {
+      current.visitors.push(visitorLabel);
     }
 
     grouped.set(gateKey, current);
@@ -2065,6 +2165,7 @@ async function handleWorkerSubmit(event) {
   const payload = {
     companyId: document.querySelector("#companySelect").value,
     subcompanyId: document.querySelector("#subcompanySelect").value || null,
+    workerType: elements.workerType?.value || "worker",
     firstName,
     lastName,
     insuranceNumber: document.querySelector("#insuranceNumber").value.trim(),
@@ -2072,9 +2173,13 @@ async function handleWorkerSubmit(event) {
     site: document.querySelector("#site").value.trim(),
     physicalCardId: document.querySelector("#physicalCardId").value.trim(),
     validUntil: document.querySelector("#validUntil").value,
+    visitorCompany: elements.visitorCompany?.value.trim() || "",
+    visitPurpose: elements.visitPurpose?.value.trim() || "",
+    hostName: elements.hostName?.value.trim() || "",
+    visitEndAt: elements.visitEndAt?.value || "",
     status: document.querySelector("#workerStatus").value,
     photoData: photoDataValue,
-    badgeId: buildBadgeId(firstName, lastName),
+    badgeId: buildBadgeId(firstName, lastName, elements.workerType?.value || "worker"),
     badgePin: document.querySelector("#badgePin").value.trim()
   };
 
@@ -2105,6 +2210,22 @@ async function handleWorkerSubmit(event) {
     }
     if (error.message === "duplicate_physical_card_id") {
       window.alert("Diese physische Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet.");
+      return;
+    }
+    if (error.message === "visit_purpose_required") {
+      window.alert("Bitte einen Besuchszweck angeben.");
+      return;
+    }
+    if (error.message === "visitor_company_required") {
+      window.alert("Bitte die Besucherfirma angeben.");
+      return;
+    }
+    if (error.message === "host_name_required") {
+      window.alert("Bitte einen Ansprechpartner vor Ort angeben.");
+      return;
+    }
+    if (error.message === "visit_end_required") {
+      window.alert("Bitte ein Besuchsende mit Datum und Uhrzeit angeben.");
       return;
     }
     window.alert(`Mitarbeiter konnte nicht gespeichert werden: ${error.message}`);
@@ -2324,6 +2445,9 @@ function printDailyReport() {
   const role = getRoleLabel(getCurrentUser()?.role || "unbekannt");
   const summaryItems = Array.from(document.querySelectorAll("#accessSummaryGrid .summary-card")).map((card) => card.outerHTML).join("");
   const warningItems = Array.from(document.querySelectorAll("#accessOpenWarnings .warning-item")).map((card) => card.outerHTML).join("");
+  const visitorRows = getVisitorReportRows(fromLabel, toLabel)
+    .map((entry) => `<tr><td>${escapeHtml(entry.name)}</td><td>${escapeHtml(entry.visitorCompany || "-")}</td><td>${escapeHtml(entry.purpose || "-")}</td><td>${escapeHtml(entry.hostName || "-")}</td><td>${escapeHtml(entry.site || "-")}</td><td>${escapeHtml(entry.lastSeen || "-")}</td></tr>`)
+    .join("");
 
   const html = `
     <!DOCTYPE html>
@@ -2337,6 +2461,9 @@ function printDailyReport() {
         .muted { color: #555; margin-bottom: 18px; }
         .grid { display: grid; gap: 10px; }
         .summary-card, .warning-item { border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+        th { background: #f3f6f8; }
         .summary-visitor-block { margin-top: 8px; }
         .summary-visitor-title { display: block; font-weight: 700; color: #333; margin-bottom: 6px; }
         .summary-visitor-list { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -2350,6 +2477,8 @@ function printDailyReport() {
       <div class="grid">${summaryItems || "<p>Keine Daten.</p>"}</div>
       <h2>Offene Eintritte</h2>
       <div class="grid">${warningItems || "<p>Keine offenen Eintritte.</p>"}</div>
+      <h2>Besucher im Zeitraum</h2>
+      ${visitorRows ? `<table><thead><tr><th>Name</th><th>Firma</th><th>Zweck</th><th>Ansprechpartner</th><th>Baustelle</th><th>Letzte Aktivität</th></tr></thead><tbody>${visitorRows}</tbody></table>` : "<p>Keine Besucher im Zeitraum.</p>"}
     </body>
     </html>
   `;
@@ -2361,6 +2490,48 @@ function printDailyReport() {
   }
   reportWindow.document.open();
   reportWindow.document.write(html);
+  reportWindow.document.close();
+  reportWindow.focus();
+  reportWindow.print();
+}
+
+function getVisitorReportRows(fromDate, toDate) {
+  const fromTs = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const toTs = toDate ? new Date(`${toDate}T23:59:59`).getTime() : Date.now();
+  return state.workers
+    .filter((worker) => !worker.deletedAt && isVisitorWorker(worker))
+    .map((worker) => {
+      const lastLog = [...state.accessLogs]
+        .filter((log) => log.workerId === worker.id)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+      const lastSeenTs = lastLog ? new Date(lastLog.timestamp).getTime() : 0;
+      return {
+        id: worker.id,
+        name: `${worker.firstName} ${worker.lastName}`.trim(),
+        visitorCompany: worker.visitorCompany || "",
+        purpose: worker.visitPurpose || "",
+        hostName: worker.hostName || "",
+        site: worker.site || "",
+        lastSeenTs,
+        lastSeen: lastLog ? formatTimestamp(lastLog.timestamp) : (worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")
+      };
+    })
+    .filter((entry) => entry.lastSeenTs === 0 || (entry.lastSeenTs >= fromTs && entry.lastSeenTs <= toTs))
+    .sort((a, b) => b.lastSeenTs - a.lastSeenTs);
+}
+
+function printVisitorWeeklyReport() {
+  const end = new Date();
+  const start = new Date(Date.now() - (6 * 24 * 60 * 60 * 1000));
+  const rows = getVisitorReportRows(toDateInputValue(start), toDateInputValue(end));
+  const htmlRows = rows.map((entry) => `<tr><td>${escapeHtml(entry.name)}</td><td>${escapeHtml(entry.visitorCompany || "-")}</td><td>${escapeHtml(entry.purpose || "-")}</td><td>${escapeHtml(entry.hostName || "-")}</td><td>${escapeHtml(entry.site || "-")}</td><td>${escapeHtml(entry.lastSeen || "-")}</td></tr>`).join("");
+  const reportWindow = window.open("", "_blank", "width=1100,height=800");
+  if (!reportWindow) {
+    window.alert("Popup blockiert. Bitte Popups erlauben.");
+    return;
+  }
+  reportWindow.document.open();
+  reportWindow.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8" /><title>Besucher-Wochenliste</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f3f6f8}h1{margin:0 0 8px}.muted{color:#555}</style></head><body><h1>Besucher-Wochenliste</h1><p class="muted">Zeitraum: ${escapeHtml(toDateInputValue(start))} bis ${escapeHtml(toDateInputValue(end))}</p>${htmlRows ? `<table><thead><tr><th>Name</th><th>Firma</th><th>Zweck</th><th>Ansprechpartner</th><th>Baustelle</th><th>Letzte Aktivität</th></tr></thead><tbody>${htmlRows}</tbody></table>` : "<p>Keine Besucher in dieser Woche.</p>"}</body></html>`);
   reportWindow.document.close();
   reportWindow.focus();
   reportWindow.print();
@@ -4672,10 +4843,11 @@ async function handleTopbarImport() {
   input.click();
 }
 
-function buildBadgeId(firstName, lastName) {
+function buildBadgeId(firstName, lastName, workerType = "worker") {
   const stamp = Date.now().toString(36).slice(-5).toUpperCase();
   const initials = `${firstName[0] || "X"}${lastName[0] || "X"}`.toUpperCase();
-  return `BP-${initials}-${stamp}`;
+  const prefix = workerType === "visitor" ? "VS" : "BP";
+  return `${prefix}-${initials}-${stamp}`;
 }
 
 function createAvatar(worker) {
@@ -4787,6 +4959,29 @@ if (workerCancelEditButton) {
   });
 }
 
+if (elements.workerType) {
+  elements.workerType.addEventListener("change", () => syncWorkerTypeUi());
+}
+
+const validUntilInput = document.querySelector("#validUntil");
+if (validUntilInput) {
+  validUntilInput.addEventListener("change", () => {
+    if ((elements.workerType?.value || "worker") === "visitor" && elements.visitEndAt && validUntilInput.value && !elements.visitEndAt.value) {
+      elements.visitEndAt.value = `${validUntilInput.value}T23:00`;
+    }
+  });
+}
+
+if (elements.visitEndAt) {
+  elements.visitEndAt.addEventListener("change", () => {
+    if ((elements.workerType?.value || "worker") === "visitor" && validUntilInput && elements.visitEndAt.value) {
+      validUntilInput.value = elements.visitEndAt.value.slice(0, 10);
+    }
+  });
+}
+
+syncWorkerTypeUi();
+
 const accessForm = document.querySelector("#accessForm");
 if (accessForm) {
   accessForm.addEventListener("submit", handleAccessSubmit);
@@ -4830,6 +5025,11 @@ if (collectionsFilter) {
 const printDailyReportButton = document.querySelector("#printDailyReportButton");
 if (printDailyReportButton) {
   printDailyReportButton.addEventListener("click", printDailyReport);
+}
+
+const printVisitorWeeklyReportButton = document.querySelector("#printVisitorWeeklyReportButton");
+if (printVisitorWeeklyReportButton) {
+  printVisitorWeeklyReportButton.addEventListener("click", printVisitorWeeklyReport);
 }
 
 const refreshSystemStatusButton = document.querySelector("#refreshSystemStatusButton");

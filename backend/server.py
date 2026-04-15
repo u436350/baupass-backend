@@ -256,6 +256,22 @@ def worker_access_token_expiry_iso():
     return expires_utc.replace(tzinfo=None).isoformat() + "Z"
 
 
+def resolve_worker_session_expiry_iso(worker):
+    session_end = parse_iso_utc(worker_session_expiry_iso())
+    visit_end = resolve_worker_access_end_utc(worker)
+    if visit_end and visit_end < session_end:
+        return visit_end.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+    return session_end.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+
+
+def resolve_worker_access_token_expiry_iso(worker):
+    link_end = parse_iso_utc(worker_access_token_expiry_iso())
+    visit_end = resolve_worker_access_end_utc(worker)
+    if visit_end and visit_end < link_end:
+        return visit_end.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+    return link_end.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+
+
 def purge_expired_worker_app_sessions(db, now_value=None):
     timestamp = now_value or now_iso()
     result = db.execute("DELETE FROM worker_app_sessions WHERE expires_at < ?", (timestamp,))
@@ -265,6 +281,93 @@ def purge_expired_worker_app_sessions(db, now_value=None):
 def normalize_company_plan(plan_value):
     plan = str(plan_value or "").strip().lower()
     return plan if plan in PLAN_NET_PRICE_EUR else "tageskarte"
+
+
+def normalize_worker_type(worker_type):
+    normalized = str(worker_type or "worker").strip().lower()
+    return normalized if normalized in {"worker", "visitor"} else "worker"
+
+
+def parse_date_start(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def parse_datetime_local_to_utc_iso(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    timezone_name = os.getenv("BAUPASS_TIMEZONE", "Europe/Berlin")
+    try:
+        local_tz = ZoneInfo(timezone_name)
+    except Exception:
+        local_tz = timezone.utc
+    try:
+        local_dt = datetime.strptime(text, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        try:
+            parsed = parse_iso_utc(text)
+            if not parsed:
+                return ""
+            return parsed.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+        except Exception:
+            return ""
+    localized = local_dt.replace(tzinfo=local_tz)
+    as_utc = localized.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0)
+    return as_utc.isoformat() + "Z"
+
+
+def serialize_worker_record(row):
+    return {
+        "id": row["id"],
+        "companyId": row["company_id"],
+        "subcompanyId": row["subcompany_id"],
+        "firstName": row["first_name"],
+        "lastName": row["last_name"],
+        "insuranceNumber": row["insurance_number"],
+        "workerType": normalize_worker_type(row["worker_type"]),
+        "role": row["role"],
+        "site": row["site"],
+        "validUntil": row["valid_until"],
+        "visitorCompany": row["visitor_company"],
+        "visitPurpose": row["visit_purpose"],
+        "hostName": row["host_name"],
+        "visitEndAt": row["visit_end_at"],
+        "status": row["status"],
+        "photoData": row["photo_data"],
+        "badgeId": row["badge_id"],
+        "badgePinConfigured": bool(row["badge_pin_hash"]),
+        "physicalCardId": row["physical_card_id"],
+        "deletedAt": row["deleted_at"],
+    }
+
+
+def resolve_worker_access_end_utc(worker):
+    worker_type = normalize_worker_type(worker["worker_type"] if isinstance(worker, sqlite3.Row) else worker.get("worker_type") or worker.get("workerType"))
+    visit_end_at = worker["visit_end_at"] if isinstance(worker, sqlite3.Row) else worker.get("visit_end_at", worker.get("visitEndAt", ""))
+    valid_until = worker["valid_until"] if isinstance(worker, sqlite3.Row) else worker.get("valid_until", worker.get("validUntil", ""))
+    if worker_type != "visitor":
+        return None
+    visit_end_dt = parse_iso_utc(visit_end_at)
+    if visit_end_dt:
+        return visit_end_dt.astimezone(timezone.utc)
+    valid_until_dt = parse_date_start(valid_until)
+    if valid_until_dt:
+        return valid_until_dt.replace(hour=23, minute=59, second=59)
+    return None
+
+
+def worker_visit_has_expired(worker, reference_dt=None):
+    access_end = resolve_worker_access_end_utc(worker)
+    if not access_end:
+        return False
+    now_dt = reference_dt or datetime.now(timezone.utc)
+    return access_end <= now_dt
 
 
 def calculate_net_amount_by_plan(company_plan, payload_net_amount):
@@ -793,9 +896,14 @@ def init_db():
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             insurance_number TEXT NOT NULL,
+            worker_type TEXT NOT NULL DEFAULT 'worker',
             role TEXT NOT NULL,
             site TEXT NOT NULL,
             valid_until TEXT NOT NULL,
+            visitor_company TEXT NOT NULL DEFAULT '',
+            visit_purpose TEXT NOT NULL DEFAULT '',
+            host_name TEXT NOT NULL DEFAULT '',
+            visit_end_at TEXT NOT NULL DEFAULT '',
             status TEXT NOT NULL,
             photo_data TEXT NOT NULL,
             badge_id TEXT NOT NULL,
@@ -969,6 +1077,16 @@ def init_db():
         cur.execute("ALTER TABLE workers ADD COLUMN deleted_at TEXT")
     if "subcompany_id" not in worker_columns:
         cur.execute("ALTER TABLE workers ADD COLUMN subcompany_id TEXT")
+    if "worker_type" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN worker_type TEXT NOT NULL DEFAULT 'worker'")
+    if "visitor_company" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN visitor_company TEXT NOT NULL DEFAULT ''")
+    if "visit_purpose" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN visit_purpose TEXT NOT NULL DEFAULT ''")
+    if "host_name" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN host_name TEXT NOT NULL DEFAULT ''")
+    if "visit_end_at" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN visit_end_at TEXT NOT NULL DEFAULT ''")
     if "badge_pin_hash" not in worker_columns:
         cur.execute("ALTER TABLE workers ADD COLUMN badge_pin_hash TEXT NOT NULL DEFAULT ''")
     if "physical_card_id" not in worker_columns:
@@ -1584,6 +1702,7 @@ def start_background_jobs():
             try:
                 with app.app_context():
                     db = get_db()
+                    auto_close_expired_visitor_entries(db)
                     deleted = purge_expired_worker_app_sessions(db)
                     if deleted > 0:
                         db.commit()
@@ -1721,6 +1840,65 @@ def build_open_entries_from_rows(rows, now_dt):
 
     open_entries.sort(key=lambda entry: entry["timestamp"], reverse=True)
     return open_entries
+
+
+def auto_close_expired_visitor_entries(db, reference_dt=None):
+    now_dt = reference_dt or datetime.now(timezone.utc)
+    rows = db.execute(
+        """
+        SELECT workers.id AS worker_id, workers.first_name, workers.last_name, workers.badge_id,
+               workers.visit_end_at, access_logs.direction, access_logs.gate, access_logs.timestamp
+        FROM workers
+        JOIN (
+            SELECT worker_id, MAX(timestamp) AS latest_ts
+            FROM access_logs
+            GROUP BY worker_id
+        ) latest ON latest.worker_id = workers.id
+        JOIN access_logs ON access_logs.worker_id = latest.worker_id AND access_logs.timestamp = latest.latest_ts
+        WHERE workers.deleted_at IS NULL
+          AND workers.worker_type = 'visitor'
+          AND workers.visit_end_at != ''
+          AND access_logs.direction = 'check-in'
+        """
+    ).fetchall()
+
+    auto_closed = []
+    for row in rows:
+        visit_end_dt = parse_iso_utc(row["visit_end_at"])
+        if not visit_end_dt or visit_end_dt > now_dt:
+            continue
+        close_timestamp = visit_end_dt.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+        log_id = f"log-{secrets.token_hex(6)}"
+        db.execute(
+            "INSERT INTO access_logs (id, worker_id, direction, gate, note, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                log_id,
+                row["worker_id"],
+                "check-out",
+                row["gate"] or "System Besucherende",
+                "Automatischer Austritt nach Besucher-Ende",
+                close_timestamp,
+            ),
+        )
+        auto_closed.append(
+            {
+                "workerId": row["worker_id"],
+                "name": f"{row['first_name']} {row['last_name']}",
+                "badgeId": row["badge_id"],
+                "timestamp": close_timestamp,
+            }
+        )
+
+    if auto_closed:
+        db.commit()
+        log_audit(
+            "access.auto_visitor_close",
+            f"{len(auto_closed)} Besucher automatisch nach Ablauf ausgetragen",
+            target_type="access",
+            target_id=now_dt.date().isoformat(),
+        )
+
+    return auto_closed
 
 
 def auto_close_open_entries_after_midnight(db):
@@ -2771,28 +2949,7 @@ def list_workers():
     clause, params = visible_worker_clause(g.current_user)
     where = clause if include_deleted else f"{clause}{' AND' if clause else ' WHERE'} deleted_at IS NULL"
     rows = get_db().execute(f"SELECT * FROM workers{where} ORDER BY last_name, first_name", params).fetchall()
-    workers = []
-    for row in rows:
-        workers.append(
-            {
-                "id": row["id"],
-                "companyId": row["company_id"],
-                "subcompanyId": row["subcompany_id"],
-                "firstName": row["first_name"],
-                "lastName": row["last_name"],
-                "insuranceNumber": row["insurance_number"],
-                "role": row["role"],
-                "site": row["site"],
-                "validUntil": row["valid_until"],
-                "status": row["status"],
-                "photoData": row["photo_data"],
-                "badgeId": row["badge_id"],
-                "badgePinConfigured": bool(row["badge_pin_hash"]),
-                "physicalCardId": row["physical_card_id"],
-                "deletedAt": row["deleted_at"],
-            }
-        )
-    return jsonify(workers)
+    return jsonify([serialize_worker_record(row) for row in rows])
 
 
 @app.get("/api/workers/export.csv")
@@ -2827,10 +2984,15 @@ def export_workers_csv():
             "subcompany_name",
             "first_name",
             "last_name",
+            "worker_type",
             "insurance_number",
             "role",
             "site",
             "valid_until",
+            "visitor_company",
+            "visit_purpose",
+            "host_name",
+            "visit_end_at",
             "status",
             "badge_id",
             "physical_card_id",
@@ -2847,10 +3009,15 @@ def export_workers_csv():
                 row["subcompany_name"],
                 row["first_name"],
                 row["last_name"],
+                row["worker_type"],
                 row["insurance_number"],
                 row["role"],
                 row["site"],
                 row["valid_until"],
+                row["visitor_company"],
+                row["visit_purpose"],
+                row["host_name"],
+                row["visit_end_at"],
                 row["status"],
                 row["badge_id"],
                 row["physical_card_id"],
@@ -2972,10 +3139,29 @@ def create_worker():
     if not photo_data:
         return jsonify({"error": "photo_required"}), 400
 
-    try:
-        badge_pin = validate_badge_pin_or_raise(payload.get("badgePin"))
-    except ValueError as error:
-        return jsonify({"error": str(error), "message": "Badge-PIN muss aus 4 bis 8 Ziffern bestehen."}), 400
+    worker_type = normalize_worker_type(payload.get("workerType"))
+    visitor_company = (payload.get("visitorCompany") or "").strip()
+    visit_purpose = (payload.get("visitPurpose") or "").strip()
+    host_name = (payload.get("hostName") or "").strip()
+    visit_end_at = parse_datetime_local_to_utc_iso(payload.get("visitEndAt"))
+
+    if worker_type == "visitor":
+        if not visit_purpose:
+            return jsonify({"error": "visit_purpose_required"}), 400
+        if not visitor_company:
+            return jsonify({"error": "visitor_company_required"}), 400
+        if not host_name:
+            return jsonify({"error": "host_name_required"}), 400
+        if not visit_end_at:
+            return jsonify({"error": "visit_end_required"}), 400
+
+    badge_pin_hash = ""
+    if worker_type != "visitor":
+        try:
+            badge_pin = validate_badge_pin_or_raise(payload.get("badgePin"))
+        except ValueError as error:
+            return jsonify({"error": str(error), "message": "Badge-PIN muss aus 4 bis 8 Ziffern bestehen."}), 400
+        badge_pin_hash = generate_password_hash(badge_pin)
 
     physical_card_id = normalize_physical_card_id(payload.get("physicalCardId"))
     try:
@@ -2987,8 +3173,8 @@ def create_worker():
     db.execute(
         """
         INSERT INTO workers (
-            id, company_id, subcompany_id, first_name, last_name, insurance_number, role, site, valid_until, status, photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, company_id, subcompany_id, first_name, last_name, insurance_number, worker_type, role, site, valid_until, visitor_company, visit_purpose, host_name, visit_end_at, status, photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             worker_id,
@@ -2996,14 +3182,19 @@ def create_worker():
             subcompany_id,
             payload.get("firstName", ""),
             payload.get("lastName", ""),
-            payload.get("insuranceNumber", ""),
-            payload.get("role", ""),
+            payload.get("insuranceNumber", "") if worker_type != "visitor" else "",
+            worker_type,
+            payload.get("role", "") if worker_type != "visitor" else (payload.get("role") or "Besucher"),
             payload.get("site", ""),
             payload.get("validUntil", ""),
+            visitor_company,
+            visit_purpose,
+            host_name,
+            visit_end_at,
             payload.get("status", "aktiv"),
             photo_data,
-            payload.get("badgeId", f"BP-{secrets.token_hex(3).upper()}"),
-            generate_password_hash(badge_pin),
+            payload.get("badgeId", f"{'VS' if worker_type == 'visitor' else 'BP'}-{secrets.token_hex(3).upper()}"),
+            badge_pin_hash,
             physical_card_id,
             None,
         ),
@@ -3011,25 +3202,7 @@ def create_worker():
     db.commit()
     log_audit("worker.created", f"Mitarbeiter {payload.get('firstName', '')} {payload.get('lastName', '')} erstellt", target_type="worker", target_id=worker_id, company_id=company_id, actor=g.current_user)
     row = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
-    return jsonify(
-        {
-            "id": row["id"],
-            "companyId": row["company_id"],
-            "subcompanyId": row["subcompany_id"],
-            "firstName": row["first_name"],
-            "lastName": row["last_name"],
-            "insuranceNumber": row["insurance_number"],
-            "role": row["role"],
-            "site": row["site"],
-            "validUntil": row["valid_until"],
-            "status": row["status"],
-            "photoData": row["photo_data"],
-            "badgeId": row["badge_id"],
-            "badgePinConfigured": bool(row["badge_pin_hash"]),
-            "physicalCardId": row["physical_card_id"],
-            "deletedAt": row["deleted_at"],
-        }
-    ), 201
+    return jsonify(serialize_worker_record(row)), 201
 
 
 @app.put("/api/workers/<worker_id>")
@@ -3072,9 +3245,24 @@ def update_worker(worker_id):
     except ValueError as error:
         return jsonify({"error": str(error), "message": "Diese Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet."}), 409
 
+    worker_type = normalize_worker_type(payload.get("workerType", worker["worker_type"]))
+    visitor_company = (payload.get("visitorCompany", worker["visitor_company"]) or "").strip()
+    visit_purpose = (payload.get("visitPurpose", worker["visit_purpose"]) or "").strip()
+    host_name = (payload.get("hostName", worker["host_name"]) or "").strip()
+    visit_end_at = parse_datetime_local_to_utc_iso(payload.get("visitEndAt", worker["visit_end_at"])) if payload.get("visitEndAt", worker["visit_end_at"]) else ""
+    if worker_type == "visitor":
+        if not visit_purpose:
+            return jsonify({"error": "visit_purpose_required"}), 400
+        if not visitor_company:
+            return jsonify({"error": "visitor_company_required"}), 400
+        if not host_name:
+            return jsonify({"error": "host_name_required"}), 400
+        if not visit_end_at:
+            return jsonify({"error": "visit_end_required"}), 400
+
     next_badge_pin_hash = worker["badge_pin_hash"] or ""
     raw_badge_pin = payload.get("badgePin")
-    if raw_badge_pin is not None:
+    if worker_type != "visitor" and raw_badge_pin is not None:
         normalized_candidate_pin = normalize_badge_pin(raw_badge_pin)
         if normalized_candidate_pin:
             try:
@@ -3084,11 +3272,13 @@ def update_worker(worker_id):
             next_badge_pin_hash = generate_password_hash(validated_pin)
         elif not next_badge_pin_hash:
             return jsonify({"error": "badge_pin_required", "message": "Bitte eine Badge-PIN fuer diesen Mitarbeiter setzen."}), 400
+    if worker_type != "visitor" and not next_badge_pin_hash:
+        return jsonify({"error": "badge_pin_required", "message": "Bitte eine Badge-PIN fuer diesen Mitarbeiter setzen."}), 400
 
     db.execute(
         """
         UPDATE workers
-        SET company_id = ?, subcompany_id = ?, first_name = ?, last_name = ?, insurance_number = ?, role = ?, site = ?, valid_until = ?, status = ?, photo_data = ?, badge_pin_hash = ?, physical_card_id = ?
+        SET company_id = ?, subcompany_id = ?, first_name = ?, last_name = ?, insurance_number = ?, worker_type = ?, role = ?, site = ?, valid_until = ?, visitor_company = ?, visit_purpose = ?, host_name = ?, visit_end_at = ?, status = ?, photo_data = ?, badge_pin_hash = ?, physical_card_id = ?
         WHERE id = ?
         """,
         (
@@ -3096,13 +3286,18 @@ def update_worker(worker_id):
             subcompany_id,
             payload.get("firstName", worker["first_name"]),
             payload.get("lastName", worker["last_name"]),
-            payload.get("insuranceNumber", worker["insurance_number"]),
-            payload.get("role", worker["role"]),
+            payload.get("insuranceNumber", worker["insurance_number"]) if worker_type != "visitor" else "",
+            worker_type,
+            payload.get("role", worker["role"]) if worker_type != "visitor" else (payload.get("role") or visitor_company or "Besucher"),
             payload.get("site", worker["site"]),
             payload.get("validUntil", worker["valid_until"]),
+            visitor_company,
+            visit_purpose,
+            host_name,
+            visit_end_at,
             payload.get("status", worker["status"]),
             updated_photo_data,
-            next_badge_pin_hash,
+            next_badge_pin_hash if worker_type != "visitor" else "",
             next_physical_card_id,
             worker_id,
         ),
@@ -3159,6 +3354,9 @@ def build_worker_app_access_payload(db, worker_id, actor_user):
     if worker["deleted_at"]:
         return None, (jsonify({"error": "worker_deleted"}), 400)
 
+    if worker_visit_has_expired(worker):
+        return None, (jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 400)
+
     now = now_iso()
     db.execute(
         "UPDATE worker_app_tokens SET revoked_at = ? WHERE worker_id = ? AND revoked_at IS NULL AND expires_at >= ?",
@@ -3166,7 +3364,7 @@ def build_worker_app_access_payload(db, worker_id, actor_user):
     )
 
     access_token = secrets.token_urlsafe(32)
-    access_expires_at = worker_access_token_expiry_iso()
+    access_expires_at = resolve_worker_access_token_expiry_iso(worker)
     db.execute(
         "INSERT INTO worker_app_tokens (token, worker_id, expires_at, revoked_at, created_by_user_id) VALUES (?, ?, ?, NULL, ?)",
         (access_token, worker_id, access_expires_at, actor_user["id"]),
@@ -3190,9 +3388,14 @@ def serialize_worker_for_app(worker):
         "subcompanyId": worker["subcompany_id"],
         "firstName": worker["first_name"],
         "lastName": worker["last_name"],
+        "workerType": normalize_worker_type(worker["worker_type"]),
         "role": worker["role"],
         "site": worker["site"],
         "validUntil": worker["valid_until"],
+        "visitorCompany": worker["visitor_company"],
+        "visitPurpose": worker["visit_purpose"],
+        "hostName": worker["host_name"],
+        "visitEndAt": worker["visit_end_at"],
         "status": worker["status"],
         "photoData": worker["photo_data"],
         "badgeId": worker["badge_id"],
@@ -3260,7 +3463,7 @@ def create_access_log_entry(db, worker_id, direction, gate, note, timestamp_valu
 
 def create_worker_app_session(db, worker):
     session_token = secrets.token_urlsafe(28)
-    expires_at = worker_session_expiry_iso()
+    expires_at = resolve_worker_session_expiry_iso(worker)
     db.execute(
         "INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)",
         (session_token, worker["id"], expires_at),
@@ -3270,7 +3473,7 @@ def create_worker_app_session(db, worker):
         "token": session_token,
         "worker": serialize_worker_for_app(worker),
         "sessionExpiresAt": expires_at,
-        "cardType": "visitor",
+        "cardType": normalize_worker_type(worker["worker_type"]),
     }
 
 
@@ -3330,6 +3533,9 @@ def worker_app_login():
         if not worker or worker["deleted_at"]:
             return jsonify({"error": "worker_not_available"}), 401
 
+        if worker_visit_has_expired(worker):
+            return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 401
+
         company_error = get_company_access_error(db, worker["company_id"])
         if company_error:
             return jsonify(company_error), 403
@@ -3360,6 +3566,8 @@ def worker_app_login():
         return jsonify({"error": "duplicate_badge_id", "message": "Badge-ID ist mehrfach vergeben. Bitte Admin informieren."}), 409
 
     worker = badge_matches[0]
+    if worker_visit_has_expired(worker):
+        return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 401
     if not worker["badge_pin_hash"]:
         return jsonify({"error": "badge_pin_not_configured", "message": "Fuer diese Karte ist noch keine Badge-PIN hinterlegt."}), 403
     if not badge_pin:
@@ -3398,7 +3606,7 @@ def worker_app_me():
                 "operatorName": setting["operator_name"],
             },
             "sessionExpiresAt": getattr(g, "worker_session_expires_at", ""),
-            "cardType": "visitor",
+            "cardType": normalize_worker_type(worker["worker_type"]),
         }
     )
 
@@ -3634,6 +3842,7 @@ def export_access_csv():
 @app.get("/api/access-logs/summary")
 @require_auth
 def access_summary():
+    auto_close_expired_visitor_entries(get_db())
     auto_close_open_entries_after_midnight(get_db())
     direction = (request.args.get("direction") or "").strip()
     gate = (request.args.get("gate") or "").strip()
@@ -3837,6 +4046,7 @@ def reporting_summary():
 @app.get("/api/access-logs/day-close-check")
 @require_auth
 def access_day_close_check():
+    auto_close_expired_visitor_entries(get_db())
     auto_closed = auto_close_open_entries_after_midnight(get_db())
     date_value = (request.args.get("date") or "").strip()
     if not date_value:
@@ -3967,6 +4177,7 @@ def acknowledge_day_close():
 @app.post("/api/access-logs")
 @require_auth
 def create_access_log():
+    auto_close_expired_visitor_entries(get_db())
     auto_close_open_entries_after_midnight(get_db())
     payload = request.get_json(silent=True) or {}
     worker_id = payload.get("workerId")
@@ -3987,6 +4198,9 @@ def create_access_log():
     if company_error:
         return jsonify(company_error), 403
 
+    if worker_visit_has_expired(worker):
+        return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 400
+
     if worker["status"] != "aktiv":
         return jsonify({"error": "worker_not_active"}), 400
 
@@ -4006,6 +4220,7 @@ def create_access_log():
 
 @app.post("/api/gates/tap")
 def gate_tap():
+    auto_close_expired_visitor_entries(get_db())
     auto_close_open_entries_after_midnight(get_db())
     expected_key = (os.getenv("BAUPASS_GATE_API_KEY") or "").strip()
     if not expected_key:
@@ -4048,6 +4263,8 @@ def gate_tap():
     company_error = get_company_access_error(db, worker["company_id"])
     if company_error:
         return jsonify(company_error), 403
+    if worker_visit_has_expired(worker):
+        return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 403
     if worker["status"] != "aktiv":
         return jsonify({"error": "worker_not_active"}), 403
 
@@ -4473,26 +4690,7 @@ def export_payload():
                 "SELECT * FROM workers WHERE company_id = ? ORDER BY last_name, first_name",
                 (user.get("company_id"),),
             ).fetchall()
-        workers = [
-            {
-                "id": row["id"],
-                "companyId": row["company_id"],
-                "subcompanyId": row["subcompany_id"],
-                "firstName": row["first_name"],
-                "lastName": row["last_name"],
-                "insuranceNumber": row["insurance_number"],
-                "role": row["role"],
-                "site": row["site"],
-                "validUntil": row["valid_until"],
-                "status": row["status"],
-                "photoData": row["photo_data"],
-                "badgeId": row["badge_id"],
-                "badgePinConfigured": bool(row["badge_pin_hash"]),
-                "physicalCardId": row["physical_card_id"],
-                "deletedAt": row["deleted_at"],
-            }
-            for row in worker_rows
-        ]
+        workers = [serialize_worker_record(row) for row in worker_rows]
 
     if requested_company_id:
         companies = [item for item in companies if item.get("id") == requested_company_id]
@@ -4724,7 +4922,7 @@ def import_payload():
             summary["conflicts"]["workers"] += 1
             if import_only_changes:
                 current = db.execute("SELECT * FROM workers WHERE id = ?", (wid,)).fetchone()
-                if current and current["company_id"] == cid and (current["subcompany_id"] or "") == (item.get("subcompany_id", item.get("subcompanyId")) or "") and current["first_name"] == item.get("first_name", item.get("firstName", "")) and current["last_name"] == item.get("last_name", item.get("lastName", "")) and current["insurance_number"] == item.get("insurance_number", item.get("insuranceNumber", "")) and current["role"] == item.get("role", "") and current["site"] == item.get("site", "") and current["valid_until"] == item.get("valid_until", item.get("validUntil", "")) and current["status"] == item.get("status", "aktiv") and (current["badge_id"] or "") == (item.get("badge_id", item.get("badgeId", "")) or ""):
+                if current and current["company_id"] == cid and (current["subcompany_id"] or "") == (item.get("subcompany_id", item.get("subcompanyId")) or "") and current["first_name"] == item.get("first_name", item.get("firstName", "")) and current["last_name"] == item.get("last_name", item.get("lastName", "")) and current["insurance_number"] == item.get("insurance_number", item.get("insuranceNumber", "")) and normalize_worker_type(current["worker_type"]) == normalize_worker_type(item.get("worker_type", item.get("workerType"))) and current["role"] == item.get("role", "") and current["site"] == item.get("site", "") and current["valid_until"] == item.get("valid_until", item.get("validUntil", "")) and (current["visitor_company"] or "") == (item.get("visitor_company", item.get("visitorCompany", "")) or "") and (current["visit_purpose"] or "") == (item.get("visit_purpose", item.get("visitPurpose", "")) or "") and (current["host_name"] or "") == (item.get("host_name", item.get("hostName", "")) or "") and (current["visit_end_at"] or "") == (item.get("visit_end_at", item.get("visitEndAt", "")) or "") and current["status"] == item.get("status", "aktiv") and (current["badge_id"] or "") == (item.get("badge_id", item.get("badgeId", "")) or ""):
                     summary["unchanged"]["workers"] += 1
                     continue
         prepared_workers.append(
@@ -4735,9 +4933,14 @@ def import_payload():
                 item.get("first_name", item.get("firstName", "")),
                 item.get("last_name", item.get("lastName", "")),
                 item.get("insurance_number", item.get("insuranceNumber", "")),
+                normalize_worker_type(item.get("worker_type", item.get("workerType"))),
                 item.get("role", ""),
                 item.get("site", ""),
                 item.get("valid_until", item.get("validUntil", "")),
+                item.get("visitor_company", item.get("visitorCompany", "")),
+                item.get("visit_purpose", item.get("visitPurpose", "")),
+                item.get("host_name", item.get("hostName", "")),
+                item.get("visit_end_at", item.get("visitEndAt", "")),
                 item.get("status", "aktiv"),
                 item.get("photo_data", item.get("photoData", "")),
                 item.get("badge_id", item.get("badgeId", "")),
@@ -4854,9 +5057,9 @@ def import_payload():
     db.executemany(
         """
         INSERT OR REPLACE INTO workers (
-            id, company_id, subcompany_id, first_name, last_name, insurance_number, role, site, valid_until, status,
-            photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, company_id, subcompany_id, first_name, last_name, insurance_number, worker_type, role, site, valid_until,
+            visitor_company, visit_purpose, host_name, visit_end_at, status, photo_data, badge_id, badge_pin_hash, physical_card_id, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         prepared_workers,
     )
