@@ -60,6 +60,7 @@ const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
 const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
+const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
@@ -76,6 +77,7 @@ let ambientLightSensorHandle = null;
 let ambientLowLightRecommended = false;
 let gateAutoOpenTriggered = false;
 let lastUserInteractionAt = Date.now();
+let autoOpenScannerEnabled = localStorage.getItem(AUTO_OPEN_SCANNER_KEY) !== "0";
 
 const AUTO_OPEN_ACTIVITY_WINDOW_MS = 30 * 1000;
 
@@ -106,6 +108,7 @@ const elements = {
   workerVisitEndAt: document.querySelector("#workerVisitEndAt"),
   workerQr: document.querySelector("#workerQr"),
   workerSessionCountdown: document.querySelector("#workerSessionCountdown"),
+  autoOpenScannerToggle: document.querySelector("#autoOpenScannerToggle"),
   qrContrastToggle: document.querySelector("#qrContrastToggle"),
   qrFallbackText: document.querySelector("#qrFallbackText"),
   refreshButton: document.querySelector("#refreshButton"),
@@ -161,6 +164,7 @@ init().finally(dismissSplash);
 async function init() {
   bindEvents();
   applyQrContrastState();
+  applyAutoOpenScannerState();
   
   // Enable Dark Mode support
   if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -305,6 +309,14 @@ function bindEvents() {
 
   if (elements.gateContrastToggle) {
     elements.gateContrastToggle.addEventListener("click", toggleQrContrastMode);
+  }
+
+  if (elements.autoOpenScannerToggle) {
+    elements.autoOpenScannerToggle.addEventListener("change", () => {
+      autoOpenScannerEnabled = Boolean(elements.autoOpenScannerToggle?.checked);
+      localStorage.setItem(AUTO_OPEN_SCANNER_KEY, autoOpenScannerEnabled ? "1" : "0");
+      applyAutoOpenScannerState();
+    });
   }
 
   if (elements.changePhotoButton) {
@@ -823,6 +835,12 @@ function toggleQrContrastMode() {
   qrHighContrastEnabled = !qrHighContrastEnabled;
   localStorage.setItem(QR_HIGH_CONTRAST_KEY, qrHighContrastEnabled ? "1" : "0");
   applyQrContrastState();
+}
+
+function applyAutoOpenScannerState() {
+  if (elements.autoOpenScannerToggle) {
+    elements.autoOpenScannerToggle.checked = autoOpenScannerEnabled;
+  }
 }
 
 function showGateFeedback(message, color = "rgba(255, 255, 255, 0.78)") {
@@ -1417,7 +1435,7 @@ function renderWorkerSessionCountdown(expiresAt) {
 
       const gateIsClosed = Boolean(elements.gateScannerOverlay?.classList.contains("hidden"));
       const recentlyActive = (Date.now() - lastUserInteractionAt) <= AUTO_OPEN_ACTIVITY_WINDOW_MS;
-      if (totalSeconds <= 120 && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible" && recentlyActive) {
+      if (totalSeconds <= 120 && autoOpenScannerEnabled && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible" && recentlyActive) {
         gateAutoOpenTriggered = true;
         showWorkerNotice("Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.");
         void openGateMode();

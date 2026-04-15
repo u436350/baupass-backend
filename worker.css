@@ -924,6 +924,23 @@ button:hover,
   font-weight: 700;
 }
 
+.qr-setting-toggle {
+  width: min(88vw, 330px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--muted);
+  user-select: none;
+}
+
+.qr-setting-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #165ed8;
+}
+
 body.qr-high-contrast #workerQr,
 body.qr-high-contrast #gateQr {
   background: #fff;
@@ -1040,6 +1057,10 @@ body.qr-high-contrast #gateQr {
 
   .qr-stage,
   .qr-controls {
+    width: min(90vw, 320px);
+  }
+
+  .qr-setting-toggle {
     width: min(90vw, 320px);
   }
 
