@@ -861,6 +861,18 @@ button:hover,
   letter-spacing: .03em;
 }
 
+.qr-countdown.ok {
+  color: #166534;
+}
+
+.qr-countdown.warn {
+  color: #b45309;
+}
+
+.qr-countdown.critical {
+  color: #b91c1c;
+}
+
 .qr-stage {
   position: relative;
   display: grid;

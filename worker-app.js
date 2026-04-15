@@ -71,6 +71,9 @@ let dynamicManifestUrl = "";
 let workerSessionExpiryTimeout = null;
 let workerSessionCountdownInterval = null;
 let qrHighContrastEnabled = localStorage.getItem(QR_HIGH_CONTRAST_KEY) === "1";
+let sessionExpiringSoonNotified = false;
+let ambientLightSensorHandle = null;
+let ambientLowLightRecommended = false;
 
 const elements = {
   loginCard: document.querySelector("#loginCard"),
@@ -700,6 +703,8 @@ function renderWorker(payload) {
 function showLogin() {
   clearWorkerSessionExpiryTimer();
   clearWorkerSessionCountdown();
+  sessionExpiringSoonNotified = false;
+  stopAmbientLightRecommendation();
   if (elements.badgeCard) elements.badgeCard.classList.add("hidden");
   if (elements.loginCard) elements.loginCard.classList.remove("hidden");
   document.body.classList.remove("worker-loaded");
@@ -770,6 +775,7 @@ async function openGateMode() {
   showBrightnessHintTemporarily();
   await requestWakeLock();
   await requestGateFullscreen();
+  startAmbientLightRecommendation();
 }
 
 function closeGateMode() {
@@ -780,6 +786,7 @@ function closeGateMode() {
     elements.gateStatusFeedback.textContent = "";
   }
   void exitGateFullscreen();
+  stopAmbientLightRecommendation();
   releaseWakeLock();
 }
 
@@ -798,6 +805,50 @@ function toggleQrContrastMode() {
   qrHighContrastEnabled = !qrHighContrastEnabled;
   localStorage.setItem(QR_HIGH_CONTRAST_KEY, qrHighContrastEnabled ? "1" : "0");
   applyQrContrastState();
+}
+
+function showGateFeedback(message, color = "rgba(255, 255, 255, 0.78)") {
+  if (!elements.gateStatusFeedback) {
+    return;
+  }
+  elements.gateStatusFeedback.textContent = message;
+  elements.gateStatusFeedback.style.color = color;
+}
+
+function startAmbientLightRecommendation() {
+  ambientLowLightRecommended = false;
+  if (typeof window.AmbientLightSensor !== "function") {
+    return;
+  }
+  try {
+    ambientLightSensorHandle = new window.AmbientLightSensor({ frequency: 0.5 });
+    ambientLightSensorHandle.addEventListener("reading", () => {
+      const lux = Number(ambientLightSensorHandle.illuminance || 0);
+      if (lux > 0 && lux < 20 && !ambientLowLightRecommended) {
+        ambientLowLightRecommended = true;
+        showGateFeedback("Dunkle Umgebung erkannt. High-Contrast QR empfohlen.", "#ffd5a3");
+      }
+    });
+    ambientLightSensorHandle.addEventListener("error", () => {
+      stopAmbientLightRecommendation();
+    });
+    ambientLightSensorHandle.start();
+  } catch {
+    stopAmbientLightRecommendation();
+  }
+}
+
+function stopAmbientLightRecommendation() {
+  ambientLowLightRecommended = false;
+  if (!ambientLightSensorHandle) {
+    return;
+  }
+  try {
+    ambientLightSensorHandle.stop();
+  } catch {
+    // ignore sensor stop issues
+  }
+  ambientLightSensorHandle = null;
 }
 
 function buildQrPayload(worker) {
@@ -1309,6 +1360,7 @@ function clearWorkerSessionCountdown() {
 
 function renderWorkerSessionCountdown(expiresAt) {
   clearWorkerSessionCountdown();
+  sessionExpiringSoonNotified = false;
   if (!elements.workerSessionCountdown) {
     return;
   }
@@ -1322,6 +1374,8 @@ function renderWorkerSessionCountdown(expiresAt) {
     const remainingMs = target - Date.now();
     if (!Number.isFinite(target) || remainingMs <= 0) {
       elements.workerSessionCountdown.textContent = "Ablauf: 00:00:00";
+      elements.workerSessionCountdown.classList.remove("ok", "warn", "critical");
+      elements.workerSessionCountdown.classList.add("critical");
       clearWorkerSessionCountdown();
       return;
     }
@@ -1330,6 +1384,22 @@ function renderWorkerSessionCountdown(expiresAt) {
     const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
     const seconds = String(totalSeconds % 60).padStart(2, "0");
     elements.workerSessionCountdown.textContent = `Ablauf in ${hours}:${minutes}:${seconds}`;
+
+    elements.workerSessionCountdown.classList.remove("ok", "warn", "critical");
+    if (totalSeconds <= 300) {
+      elements.workerSessionCountdown.classList.add("critical");
+      if (!sessionExpiringSoonNotified) {
+        sessionExpiringSoonNotified = true;
+        if (navigator.vibrate) {
+          navigator.vibrate([120, 80, 120]);
+        }
+        showWorkerNotice("Hinweis: Deine Besucherkarte laeuft in weniger als 5 Minuten ab.");
+      }
+    } else if (totalSeconds <= 1800) {
+      elements.workerSessionCountdown.classList.add("warn");
+    } else {
+      elements.workerSessionCountdown.classList.add("ok");
+    }
   };
 
   updateCountdown();
