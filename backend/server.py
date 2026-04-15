@@ -4078,17 +4078,20 @@ def access_day_close_check():
         ack_scope_condition = "company_id = ?"
         ack_params.append(g.current_user.get("company_id"))
 
-    acknowledgement = db.execute(
-        f"""
-        SELECT day_close_acknowledgements.*, users.name AS acknowledged_by_name
-        FROM day_close_acknowledgements
-        JOIN users ON users.id = day_close_acknowledgements.acknowledged_by_user_id
-        WHERE day_close_acknowledgements.date = ? AND {ack_scope_condition}
-        ORDER BY day_close_acknowledgements.created_at DESC
-        LIMIT 1
-        """,
-        ack_params,
-    ).fetchone()
+    try:
+        acknowledgement = db.execute(
+            f"""
+            SELECT day_close_acknowledgements.*, users.name AS acknowledged_by_name
+            FROM day_close_acknowledgements
+            JOIN users ON users.id = day_close_acknowledgements.acknowledged_by_user_id
+            WHERE day_close_acknowledgements.date = ? AND {ack_scope_condition}
+            ORDER BY day_close_acknowledgements.created_at DESC
+            LIMIT 1
+            """,
+            ack_params,
+        ).fetchone()
+    except sqlite3.OperationalError:
+        acknowledgement = None
 
     acknowledgement_payload = None
     if acknowledgement:

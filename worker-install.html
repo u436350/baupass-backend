@@ -93,7 +93,6 @@
     const hint = document.querySelector("#hint");
 
     window.addEventListener("beforeinstallprompt", (event) => {
-      event.preventDefault();
       deferredInstallPrompt = event;
       hint.textContent = "Tippe auf 'App installieren', dann auf 'Ausweis in App oeffnen'.";
     });

@@ -407,7 +407,6 @@ function registerWorkerSw() {
 function wireInstallPrompt() {
   updatePlatformInstallHint();
   window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
     deferredInstallPrompt = event;
     if (elements.installButton) {
       elements.installButton.hidden = false;

@@ -316,7 +316,6 @@ function registerControlServiceWorker() {
 function wireDesktopInstallPrompt() {
   updateDesktopInstallHint();
   window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
     deferredDesktopInstallPrompt = event;
     if (elements.desktopInstallButton) {
       elements.desktopInstallButton.hidden = false;
@@ -592,6 +591,9 @@ function startBackendStatusMonitor() {
 
 async function apiRequest(url, options = {}) {
   const { method = "GET", body, auth = true } = options;
+  if (auth && !token) {
+    throw new Error("unauthorized");
+  }
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (auth && token) {
     headers.Authorization = `Bearer ${token}`;
@@ -630,7 +632,7 @@ function normalizeWorkerAppLink(rawLink) {
 }
 
 async function loadAllData() {
-  const bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`);
+  const bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, { auth: false });
   token = bootstrap.token || token;
   state.currentUser = bootstrap.user || null;
 
@@ -3783,7 +3785,7 @@ function handlePhotoFileSelected(event) {
 }
 
 async function capturePhoto() {
-  const context = elements.photoCanvas.getContext("2d");
+  const context = elements.photoCanvas.getContext("2d", { willReadFrequently: true });
   const video = elements.cameraPreview;
 
   if (!video.videoWidth || !video.videoHeight) {
@@ -3877,7 +3879,7 @@ async function processStillImageBackground(dataUrl) {
       image.src = dataUrl;
     });
 
-    const context = elements.photoCanvas.getContext("2d");
+    const context = elements.photoCanvas.getContext("2d", { willReadFrequently: true });
     if (!context) {
       return dataUrl;
     }
@@ -3951,7 +3953,7 @@ async function removeBackgroundML(canvas, context) {
     const maskCanvas = document.createElement("canvas");
     maskCanvas.width = width;
     maskCanvas.height = height;
-    const maskCtx = maskCanvas.getContext("2d");
+    const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
     if (!maskCtx) {
       boostWhiteBackground(context, canvas.width, canvas.height);
       return;
@@ -3963,7 +3965,7 @@ async function removeBackgroundML(canvas, context) {
     const smoothMaskCanvas = document.createElement("canvas");
     smoothMaskCanvas.width = width;
     smoothMaskCanvas.height = height;
-    const smoothMaskCtx = smoothMaskCanvas.getContext("2d");
+    const smoothMaskCtx = smoothMaskCanvas.getContext("2d", { willReadFrequently: true });
     if (!smoothMaskCtx) {
       boostWhiteBackground(context, canvas.width, canvas.height);
       return;
@@ -4325,7 +4327,7 @@ function applyPhotoEditorTransform() {
 }
 
 function renderPhotoEditorImage(image) {
-  const context = elements.photoCanvas.getContext("2d");
+  const context = elements.photoCanvas.getContext("2d", { willReadFrequently: true });
   if (!context) {
     return;
   }
