@@ -475,6 +475,7 @@ button:hover,
   flex-direction: column;
   justify-content: space-between;
   user-select: none;
+  transform: rotate(-1.4deg);
 }
 
 .worker-loaded .wallet-card {
@@ -588,74 +589,40 @@ button:hover,
   flex-shrink: 0;
 }
 
-/* ── QR Section (zentriert, Hauptelement) ───────── */
-.wc-qr-section {
+/* ── Middle Row ─────────────────────────────────── */
+.wc-middle {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  padding: 24px 20px 20px;
   position: relative;
   z-index: 1;
 }
 
-/* QR-Code Container mit Gold-Glanz */
-.wc-qr-holder {
+/* EMV-Chip */
+.wc-chip {
+  width: clamp(42px, 11%, 54px);
+  height: clamp(31px, 8%, 40px);
+  background: linear-gradient(135deg, #c8a84b, #e8c96b 40%, #a87832 70%, #d4a843);
+  border-radius: 5px;
   position: relative;
-  width: 180px;
-  height: 180px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
   flex-shrink: 0;
 }
 
-.wc-qr {
-  width: 100%;
-  height: 100%;
-  display: block;
-  border-radius: 10px;
-  object-fit: contain;
-  background: #fff;
-  padding: 6px;
-  box-sizing: border-box;
-  position: relative;
-  z-index: 2;
-}
-
-.wc-qr-frame {
+.wc-chip-inner {
   position: absolute;
-  inset: -10px;
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    #e8c96b 0%,
-    #d4a843 20%,
-    #f5e08a 45%,
-    #a87832 65%,
-    #e8c96b 85%,
-    #d4a843 100%
-  );
-  box-shadow:
-    0 10px 32px rgba(200, 168, 75, .7),
-    0 2px 10px rgba(0, 0, 0, .35),
-    inset 0 1px 0 rgba(255, 255, 255, .55),
-    inset 0 -1px 0 rgba(0, 0, 0, .25);
-  z-index: 1;
-  background-size: 200% 200%;
-  animation: goldGloss 4s ease-in-out infinite;
+  inset: 20% 18%;
+  border: 1px solid rgba(130, 90, 15, .65);
+  border-radius: 3px;
 }
 
-@keyframes goldGloss {
-  0%, 100% { background-position: 0% 0%; }
-  50%       { background-position: 100% 100%; }
-}
-
-/* ── Identität: Foto + Name ──────────────────────── */
-.wc-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, .07);
-  position: relative;
-  z-index: 1;
+.wc-chip::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(130, 90, 15, .45);
+  transform: translateX(-50%);
 }
 
 /* Mitarbeiterfoto */
