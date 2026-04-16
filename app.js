@@ -1,4 +1,4 @@
-// ALLE ELEMENTE OBEN DEFINIEREN!
+﻿// ALLE ELEMENTE OBEN DEFINIEREN!
 const DEFAULT_RENDER_API_BASE = "https://baupass-backend.onrender.com";
 const API_BASE_STORAGE_KEY = "baupass-api-base";
 
@@ -244,6 +244,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Testphase",
     optCompanyPaused: "Pausiert",
     optCompanyLocked: "Gesperrt wegen Zahlungsverzug",
+    labelCompanyAdminPassword: "Admin-Startpasswort",
+    companyAdminPasswordPlaceholder: "z.B. Sicher!2025",
     btnCreateCompany: "Baufirma anlegen",
     accountEyebrow: "Konto",
     accountH3: "Passwort \u00e4ndern",
@@ -459,6 +461,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Trial",
     optCompanyPaused: "Paused",
     optCompanyLocked: "Blocked due to overdue payment",
+    labelCompanyAdminPassword: "Admin start password",
+    companyAdminPasswordPlaceholder: "e.g. Secure!2025",
     btnCreateCompany: "Create company",
     accountEyebrow: "Account",
     accountH3: "Change Password",
@@ -674,6 +678,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Deneme",
     optCompanyPaused: "Askıya alındı",
     optCompanyLocked: "\u00d6deme gecikmi\u015f, engellendi",
+    labelCompanyAdminPassword: "Yönetici başlangıç şifresi",
+    companyAdminPasswordPlaceholder: "Örn. Güvenli!2025",
     btnCreateCompany: "Firma olu\u015ftur",
     accountEyebrow: "Hesap",
     accountH3: "\u015eifreyi De\u011fi\u015ftir",
@@ -862,6 +868,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Deneme",
     optCompanyPaused: "Askıya alındı",
     optCompanyLocked: "\u00d6deme gecikmi\u015f, engellendi",
+    labelCompanyAdminPassword: "Yönetici başlangıç şifresi",
+    companyAdminPasswordPlaceholder: "Örn. Güvenli!2025",
     btnCreateCompany: "Firma olu\u015ftur",
     accountEyebrow: "Hesap",
     accountH3: "\u015eifreyi De\u011fi\u015ftir",
@@ -1077,6 +1085,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "تجريبي",
     optCompanyPaused: "موقوف مؤقتاً",
     optCompanyLocked: "محظور بسبب تأخر الدفع",
+    labelCompanyAdminPassword: "كلمة مرور المشرف الأولية",
+    companyAdminPasswordPlaceholder: "مثال: آمن!2025",
     btnCreateCompany: "إنشاء شركة",
     accountEyebrow: "الحساب",
     accountH3: "تغيير كلمة المرور",
@@ -1292,6 +1302,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Test",
     optCompanyPaused: "Suspendu",
     optCompanyLocked: "Bloqué (paiement en retard)",
+    labelCompanyAdminPassword: "Mot de passe admin initial",
+    companyAdminPasswordPlaceholder: "ex. Sécurisé!2025",
     btnCreateCompany: "Créer entreprise",
     accountEyebrow: "Compte",
     accountH3: "Changer le mot de passe",
@@ -1507,6 +1519,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Prueba",
     optCompanyPaused: "Pausado",
     optCompanyLocked: "Bloqueado (pago pendiente)",
+    labelCompanyAdminPassword: "Contraseña inicial del admin",
+    companyAdminPasswordPlaceholder: "ej. Seguro!2025",
     btnCreateCompany: "Crear empresa",
     accountEyebrow: "Cuenta",
     accountH3: "Cambiar contraseña",
@@ -1722,6 +1736,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Test",
     optCompanyPaused: "In pausa",
     optCompanyLocked: "Bloccato (pagamento in ritardo)",
+    labelCompanyAdminPassword: "Password admin iniziale",
+    companyAdminPasswordPlaceholder: "es. Sicuro!2025",
     btnCreateCompany: "Crea azienda",
     accountEyebrow: "Account",
     accountH3: "Cambia password",
@@ -1937,6 +1953,8 @@ const UI_TRANSLATIONS = {
     optCompanyTest: "Testowa",
     optCompanyPaused: "Wstrzymana",
     optCompanyLocked: "Zablokowana (zaległa płatność)",
+    labelCompanyAdminPassword: "Startowe hasło admina",
+    companyAdminPasswordPlaceholder: "np. Bezpieczne!2025",
     btnCreateCompany: "Utwórz firmę",
     accountEyebrow: "Konto",
     accountH3: "Zmień hasło",
@@ -5317,7 +5335,8 @@ async function handleCompanySubmit(event) {
         billingEmail: document.querySelector("#companyBillingEmail").value.trim(),
         accessHost: document.querySelector("#companyAccessHost").value.trim().toLowerCase(),
         plan: document.querySelector("#companyPlan").value,
-        status: document.querySelector("#companyStatus").value
+        status: document.querySelector("#companyStatus").value,
+        adminPassword: document.querySelector("#companyAdminPassword").value.trim() || undefined
       }
     });
 

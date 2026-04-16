@@ -2805,6 +2805,9 @@ def create_company():
     billing_email = clean_text_input(payload.get("billingEmail", ""), max_len=160)
     access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
     company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
+    admin_password = (payload.get("adminPassword") or "").strip() or "1234"
+    if len(admin_password) < 4:
+        return jsonify({"error": "password_too_short", "message": "Passwort muss mindestens 4 Zeichen haben."}), 400
 
     get_db().execute(
         "INSERT INTO companies (id, name, contact, billing_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -2832,7 +2835,7 @@ def create_company():
         (
             f"usr-{secrets.token_hex(6)}",
             username,
-            generate_password_hash("1234"),
+            generate_password_hash(admin_password),
             f"{company_name} Admin",
             "company-admin",
             company_id,
@@ -2848,7 +2851,7 @@ def create_company():
                 "company": row_to_dict(row),
                 "adminCredentials": {
                     "username": username,
-                    "password": "1234",
+                    "password": admin_password,
                 },
             }
         ),
