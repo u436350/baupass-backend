@@ -61,6 +61,8 @@ const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
 const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
+const WORKER_SESSION_IP_KEY = "baupass-worker-session-ip";
+const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes aggressive timeout
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
@@ -71,6 +73,7 @@ let wakeLockHandle = null;
 let dynamicManifestUrl = "";
 let workerSessionExpiryTimeout = null;
 let workerSessionCountdownInterval = null;
+let inactivityCheckInterval = null;
 let qrHighContrastEnabled = localStorage.getItem(QR_HIGH_CONTRAST_KEY) === "1";
 let sessionExpiringSoonNotified = false;
 let ambientLightSensorHandle = null;
@@ -157,6 +160,11 @@ function dismissSplash() {
     el.addEventListener("transitionend", () => el.remove(), { once: true });
     setTimeout(() => { if (el.parentNode) el.remove(); }, 800);
   }, delay);
+}
+
+// ── Globale User-Interaktions-Tracking-Funktion ──
+function markUserInteraction() {
+  lastUserInteractionAt = Date.now();
 }
 
 init().finally(dismissSplash);
@@ -250,10 +258,6 @@ function applyDynamicManifestStartUrl(accessToken) {
 }
 
 function bindEvents() {
-  const markUserInteraction = () => {
-    lastUserInteractionAt = Date.now();
-  };
-
   window.addEventListener("online", updateConnectionState);
   window.addEventListener("offline", updateConnectionState);
   window.addEventListener("pointerdown", markUserInteraction, { passive: true });
@@ -486,6 +490,9 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
         showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
       }
     }
+
+    // ── Schutzlogik: Session-Inaktivitäts-Monitor starten ──
+    initializeSessionInactivityProtection();
   } catch (error) {
     if (["invalid_access_token", "access_token_revoked", "access_token_expired", "access_token_already_used"].includes(error.code)) {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
@@ -552,6 +559,9 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
         showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
       }
     }
+
+    // ── Schutzlogik: Session-Inaktivitäts-Monitor starten ──
+    initializeSessionInactivityProtection();
   } catch (error) {
     if (silent) {
       showLogin();
@@ -770,6 +780,32 @@ function hideWorkerNotice() {
   elements.workerNotice.classList.add("hidden");
 }
 
+// ═════════════════════════════════════════════════════════════════════
+// ── SESSION PROTECTION: Aggressive Inactivity Timeout ──
+// Schützt gegen Telefon-Weitergabe durch autom. Logout nach 5min ohne Interaktion
+// ═════════════════════════════════════════════════════════════════════
+
+function initializeSessionInactivityProtection() {
+  // Stoppe jeden existierenden Timer
+  if (inactivityCheckInterval) {
+    clearInterval(inactivityCheckInterval);
+  }
+
+  lastUserInteractionAt = Date.now();
+
+  // Prüfe alle 30 Sekunden auf Inaktivität
+  inactivityCheckInterval = setInterval(() => {
+    const timeSinceLastInteraction = Date.now() - lastUserInteractionAt;
+    if (timeSinceLastInteraction > WORKER_INACTIVITY_TIMEOUT_MS) {
+      console.warn("🔐 Session timeout: Zu lange inaktiv, Auto-Logout für Sicherheit");
+      showWorkerNotice("Zu lange inaktiv. Bitte melde dich neu an.");
+      workerLogout();
+    }
+  }, 30 * 1000);
+
+  console.log("✓ Session protection: 5min Inaktivitäts-Monitor gestartet");
+}
+
 async function workerLogout() {
   try {
     if (workerToken) {
@@ -787,6 +823,10 @@ async function workerLogout() {
   localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
   workerToken = "";
   clearWorkerSessionExpiryTimer();
+  if (inactivityCheckInterval) {
+    clearInterval(inactivityCheckInterval);
+    inactivityCheckInterval = null;
+  }
   closeGateMode();
   showLogin();
 }

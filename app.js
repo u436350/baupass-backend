@@ -601,7 +601,7 @@ function startBackendStatusMonitor() {
 }
 
 async function apiRequest(url, options = {}) {
-  const { method = "GET", body, auth = true } = options;
+  const { method = "GET", body, auth = true, retries = 1 } = options;
   if (auth && !token) {
     handleExpiredControlSession();
     throw new Error("session_expired");
@@ -628,6 +628,21 @@ async function apiRequest(url, options = {}) {
     if (auth && ["invalid_session", "unauthorized"].includes(String(payload?.error || ""))) {
       handleExpiredControlSession();
       throw new Error("session_expired");
+    }
+    // ── Retry bei 401 mit neuer Session ──
+    if (auth && response.status === 401 && retries > 0) {
+      console.warn("⚠️  401 erhalten, versuche neue Session zu laden...");
+      try {
+        await loadAllData();
+        if (token) {
+          console.log("✓ Session erneuert, wiederhole Request");
+          return apiRequest(url, { ...options, retries: retries - 1 });
+        }
+      } catch {
+        // Fallback zu Session-Ablauf
+        handleExpiredControlSession();
+        throw new Error("session_expired");
+      }
     }
     throw new Error(payload?.error || `http_${response.status}`);
   }
