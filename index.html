@@ -590,17 +590,22 @@
       <section class="view" data-view="admin">
         <div class="panel-grid two-columns">
           <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Admin-Zentrale</p>
+                <h3>System &amp; Konfiguration</h3>
+              </div>
+            </div>
             <div class="meta-box">
-              <p><strong>Admin-Zentrale</strong></p>
-              <p>Nur Super-Admin kann globale Einstellungen aendern. Firmen-Admins sehen ausschliesslich ihre erlaubten Daten.</p>
+              <p>Nur <strong>Super-Admin</strong> kann globale Einstellungen ändern. Firmen-Admins sehen ausschließlich ihre erlaubten Daten.</p>
             </div>
 
             <div class="divider"></div>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Notfallzugriff</p>
-                <h3>Baustellen-Status und Reparatur</h3>
+                <p class="eyebrow">Systemstatus</p>
+                <h3>Notfallzugriff &amp; Reparatur</h3>
               </div>
             </div>
             <div id="systemStatusPanel" class="card-item">
@@ -621,6 +626,15 @@
             </div>
 
             <form id="settingsForm" class="form-grid compact-grid">
+
+              <!-- ── Plattform ── -->
+              <div class="form-section">
+                <div class="form-section-icon">🏗️</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">Plattform</p>
+                  <h4>Identität &amp; Betreiber</h4>
+                </div>
+              </div>
               <label>
                 Plattformname
                 <input id="platformName" type="text" placeholder="BauPass Control" required />
@@ -629,10 +643,19 @@
                 Betreiber
                 <input id="operatorName" type="text" placeholder="Deine Firma" required />
               </label>
-              <label>
+              <label class="full-width">
                 Drehkreuz-API Endpoint
                 <input id="turnstileEndpoint" type="url" placeholder="https://api.dein-gateway.de/access" />
               </label>
+
+              <!-- ── Rechnungsdesign ── -->
+              <div class="form-section">
+                <div class="form-section-icon">🎨</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">Rechnungsdesign</p>
+                  <h4>Farben &amp; Branding</h4>
+                </div>
+              </div>
               <label>
                 Vermietungsmodell
                 <select id="rentalModel">
@@ -643,11 +666,11 @@
                 </select>
               </label>
               <label>
-                Rechnungsfarbe Hauptton
+                Hauptton
                 <input id="invoicePrimaryColor" type="color" value="#0f4c5c" />
               </label>
               <label>
-                Rechnungsfarbe Akzent
+                Akzent
                 <input id="invoiceAccentColor" type="color" value="#e36414" />
               </label>
               <label class="full-width">
@@ -655,9 +678,18 @@
                 <input id="invoiceLogoFile" type="file" accept="image/*" />
               </label>
               <button id="loadCustomBrandButton" type="button" class="ghost-button full-width">BauKometra Branding laden</button>
-              <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width">BauKometra Branding Alternative laden</button>
+              <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width">Alternative laden</button>
               <input id="invoiceLogoData" type="hidden" />
               <img id="invoiceLogoPreview" class="invoice-logo-preview hidden" alt="Logo Vorschau" />
+
+              <!-- ── SMTP ── -->
+              <div class="form-section">
+                <div class="form-section-icon">✉️</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">E-Mail</p>
+                  <h4>SMTP Versand</h4>
+                </div>
+              </div>
               <label>
                 SMTP Host
                 <input id="smtpHost" type="text" placeholder="smtp.dein-provider.de" />
@@ -689,6 +721,15 @@
                   <option value="0">Nein</option>
                 </select>
               </label>
+
+              <!-- ── Sicherheit ── -->
+              <div class="form-section">
+                <div class="form-section-icon">🔒</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">Sicherheit</p>
+                  <h4>Zugang &amp; Isolation</h4>
+                </div>
+              </div>
               <label class="full-width">
                 Admin IP-Whitelist (Komma getrennt, optional CIDR)
                 <input id="adminIpWhitelist" type="text" placeholder="203.0.113.10, 203.0.113.0/24" />
@@ -700,7 +741,16 @@
                   <option value="1">Ja</option>
                 </select>
               </label>
-              <label>
+
+              <!-- ── App-Features ── -->
+              <div class="form-section">
+                <div class="form-section-icon">📱</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">App-Features</p>
+                  <h4>Mitarbeiter-App</h4>
+                </div>
+              </div>
+              <label class="full-width">
                 Mobile-Ausweis-App (digitaler Ausweis + QR)
                 <select id="workerAppEnabled">
                   <option value="1">Aktiv &ndash; Ausweis, QR und Badge-Login sind freigegeben</option>
@@ -708,11 +758,18 @@
                 </select>
               </label>
               <p class="helper-text full-width">Steuert die komplette Mitarbeiter-App: Login, digitaler Ausweis und QR-Nutzung auf dem Handy.</p>
+
               <button type="submit" class="primary-button full-width">Admin-Einstellungen speichern</button>
             </form>
 
             <div class="divider"></div>
 
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Mandanten</p>
+                <h3>Neue Baufirma anlegen</h3>
+              </div>
+            </div>
             <form id="companyForm" class="form-grid compact-grid">
               <label>
                 Firmenname
@@ -753,6 +810,12 @@
 
             <div class="divider"></div>
 
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Konto</p>
+                <h3>Passwort ändern</h3>
+              </div>
+            </div>
             <form id="passwordForm" class="form-grid compact-grid">
               <label>
                 Aktuelles Passwort
@@ -762,11 +825,17 @@
                 Neues Passwort
                 <input id="newPassword" type="password" minlength="8" required />
               </label>
-              <button type="submit" class="ghost-button full-width">Passwort aendern</button>
+              <button type="submit" class="ghost-button full-width">Passwort ändern</button>
             </form>
 
             <div class="divider"></div>
 
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Zwei-Faktor</p>
+                <h3>2FA Verwaltung</h3>
+              </div>
+            </div>
             <div id="twofaPanel" class="card-item"></div>
           </article>
 
