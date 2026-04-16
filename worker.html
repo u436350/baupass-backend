@@ -79,9 +79,9 @@
           Link-Code oder Badge-ID
           <input id="workerAccessToken" type="text" placeholder="Token aus Link oder BP-..." required />
         </label>
-        <label>
+        <label id="pinFieldWrapper" class="hidden">
           Badge-PIN
-          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="Nur für Badge-ID Login" />
+          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4–8 stelliger PIN" />
         </label>
         <button class="primary" type="submit">Ausweis laden</button>
       </form>

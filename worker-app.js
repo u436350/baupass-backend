@@ -232,6 +232,8 @@ async function init() {
   if (storedBadgeId) {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = storedBadgeId;
+      const pinWrapper = document.querySelector("#pinFieldWrapper");
+      if (pinWrapper) pinWrapper.classList.remove("hidden");
     }
   }
 }
@@ -279,6 +281,19 @@ function bindEvents() {
       markUserInteraction();
     }
   });
+
+  if (elements.workerAccessToken) {
+    const pinWrapper = document.querySelector("#pinFieldWrapper");
+    elements.workerAccessToken.addEventListener("input", () => {
+      const val = (elements.workerAccessToken.value || "").trim();
+      if (pinWrapper) {
+        pinWrapper.classList.toggle("hidden", !looksLikeBadgeId(val));
+        if (!looksLikeBadgeId(val) && elements.workerBadgePin) {
+          elements.workerBadgePin.value = "";
+        }
+      }
+    });
+  }
 
   if (elements.workerLoginForm) {
     elements.workerLoginForm.addEventListener("submit", async (event) => {
