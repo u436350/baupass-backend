@@ -569,36 +569,41 @@ select {
 }
 
 .auth-lang-switch {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: calc(100% - 24px);
+  display: inline-flex;
+  gap: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(18, 21, 24, 0.15);
+  background: rgba(255, 255, 255, 0.75);
+  overflow: hidden;
+  margin-bottom: 16px;
+  align-self: flex-start;
 }
 
 .auth-lang-btn {
-  min-height: 30px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(18, 21, 24, 0.15);
-  background: rgba(255, 255, 255, 0.85);
-  color: #1b2128;
+  min-height: 34px;
+  padding: 4px 12px;
+  border: none;
+  border-right: 1px solid rgba(18, 21, 24, 0.12);
+  background: transparent;
+  color: #555e6a;
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.auth-lang-btn:last-child {
+  border-right: none;
 }
 
 .auth-lang-btn.active {
-  background: rgba(15, 76, 92, 0.12);
-  border-color: rgba(15, 76, 92, 0.45);
+  background: rgba(15, 76, 92, 0.13);
   color: #0f4c5c;
 }
 
-.auth-lang-btn:hover {
-  transform: translateY(-1px);
+.auth-lang-btn:hover:not(.active) {
+  background: rgba(18, 21, 24, 0.06);
 }
 
 .auth-system-grid {
