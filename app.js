@@ -967,7 +967,7 @@ function renderWorkerList() {
     .sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
 
   if (!workers.length) {
-    elements.workerList.innerHTML = `<div class="empty-state">${searchTerm ? "Keine Treffer für „" + escapeHtml(searchTerm) + ""." : "Noch keine Mitarbeiter angelegt."}</div>`;
+    elements.workerList.innerHTML = `<div class="empty-state">${searchTerm ? "Keine Treffer f\u00fcr \u00ab" + escapeHtml(searchTerm) + "\u00bb." : "Noch keine Mitarbeiter angelegt."}</div>`;
     return;
   }
 
