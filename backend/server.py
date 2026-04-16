@@ -3568,12 +3568,15 @@ def worker_app_login():
     worker = badge_matches[0]
     if worker_visit_has_expired(worker):
         return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 401
-    if not worker["badge_pin_hash"]:
-        return jsonify({"error": "badge_pin_not_configured", "message": "Fuer diese Karte ist noch keine Badge-PIN hinterlegt."}), 403
-    if not badge_pin:
-        return jsonify({"error": "missing_badge_pin", "message": "Bitte Badge-PIN eingeben."}), 400
-    if not check_password_hash(worker["badge_pin_hash"], badge_pin):
-        return jsonify({"error": "invalid_badge_pin", "message": "Badge-ID oder PIN ist ungueltig."}), 401
+
+    is_visitor = normalize_worker_type(worker["worker_type"]) == "visitor"
+    if not is_visitor:
+        if not worker["badge_pin_hash"]:
+            return jsonify({"error": "badge_pin_not_configured", "message": "Fuer diese Karte ist noch keine Badge-PIN hinterlegt."}), 403
+        if not badge_pin:
+            return jsonify({"error": "missing_badge_pin", "message": "Bitte Badge-PIN eingeben."}), 400
+        if not check_password_hash(worker["badge_pin_hash"], badge_pin):
+            return jsonify({"error": "invalid_badge_pin", "message": "Badge-ID oder PIN ist ungueltig."}), 401
 
     company_error = get_company_access_error(db, worker["company_id"])
     if company_error:

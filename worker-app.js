@@ -569,7 +569,8 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
     }
     return;
   }
-  if (!normalizedBadgePin) {
+  const visitorLogin = isVisitorBadgeId(normalizedBadgeId);
+  if (!visitorLogin && !normalizedBadgePin) {
     if (!silent) {
       showWorkerNotice("Bitte Badge-PIN eingeben.");
     }
