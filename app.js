@@ -82,6 +82,14 @@ const elements = {
   recentAccessList: document.querySelector("#recentAccessList"),
   dashboardPorterLivePanel: document.querySelector("#dashboardPorterLivePanel"),
   workerList: document.querySelector("#workerList"),
+  workerSearchInput: document.querySelector("#workerSearchInput"),
+  bulkSelectAll: document.querySelector("#bulkSelectAll"),
+  bulkActionBar: document.querySelector("#bulkActionBar"),
+  bulkSelectionCount: document.querySelector("#bulkSelectionCount"),
+  bulkDeleteButton: document.querySelector("#bulkDeleteButton"),
+  bulkSetActiveButton: document.querySelector("#bulkSetActiveButton"),
+  bulkSetInactiveButton: document.querySelector("#bulkSetInactiveButton"),
+  bulkCancelButton: document.querySelector("#bulkCancelButton"),
   badgePreview: document.querySelector("#badgePreview"),
   badgeMeta: document.querySelector("#badgeMeta"),
   accessLogList: document.querySelector("#accessLogList"),
@@ -949,10 +957,17 @@ function renderReportingPanels() {
 
 function renderWorkerList() {
   if (!elements.workerList) return;
-  const workers = [...state.workers].sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
+  const searchTerm = ((elements.workerSearchInput?.value) || "").trim().toLowerCase();
+  const workers = [...state.workers]
+    .filter((w) => {
+      if (!searchTerm) return true;
+      const hay = [w.firstName, w.lastName, w.badgeId, w.site, w.role, w.status, w.visitorCompany].join(" ").toLowerCase();
+      return hay.includes(searchTerm);
+    })
+    .sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
 
   if (!workers.length) {
-    elements.workerList.innerHTML = '<div class="empty-state">Noch keine Mitarbeiter angelegt.</div>';
+    elements.workerList.innerHTML = `<div class="empty-state">${searchTerm ? "Keine Treffer für „" + escapeHtml(searchTerm) + ""." : "Noch keine Mitarbeiter angelegt."}</div>`;
     return;
   }
 
@@ -969,6 +984,7 @@ function renderWorkerList() {
         <article class="card-item ${deleted ? "is-deleted" : ""}">
           <header>
             <div>
+              <input type="checkbox" class="bulk-checkbox" data-bulk-id="${escapeHtml(worker.id)}" />
               <strong>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</strong>
               <span>${escapeHtml(worker.badgeId || "-")}</span>
             </div>
@@ -983,6 +999,7 @@ function renderWorkerList() {
             <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Löschen</button>
             <button type="button" class="ghost-button" data-worker-restore="${escapeHtml(worker.id)}" ${deleted ? "" : "disabled"}>Wiederherstellen</button>
             <button type="button" class="ghost-button" data-worker-app-link="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>App-Link</button>
+            ${!visitor && !deleted ? `<button type="button" class="ghost-button" data-worker-reset-pin="${escapeHtml(worker.id)}">PIN zurücksetzen</button>` : ""}
           </div>
         </article>
       `;
@@ -993,6 +1010,20 @@ function renderWorkerList() {
 }
 
 function bindWorkerRowActions() {
+
+  // Delegate checkbox changes to update bulk bar
+  elements.workerList.addEventListener("change", (e) => {
+    if (e.target.classList.contains("bulk-checkbox")) {
+      updateBulkActionBar();
+      // Sync "select all" state
+      const all = elements.workerList.querySelectorAll(".bulk-checkbox");
+      const checked = elements.workerList.querySelectorAll(".bulk-checkbox:checked");
+      if (elements.bulkSelectAll) {
+        elements.bulkSelectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+        elements.bulkSelectAll.checked = checked.length === all.length && all.length > 0;
+      }
+    }
+  });
   elements.workerList.querySelectorAll("[data-worker-edit]").forEach((button) => {
     button.onclick = () => {
       const worker = state.workers.find((entry) => entry.id === button.dataset.workerEdit);
@@ -1056,6 +1087,26 @@ function bindWorkerRowActions() {
         showWorkerAppQrDialog(worker, absoluteLink, payload);
       } catch (error) {
         window.alert(`App-Link konnte nicht erzeugt werden: ${error.message}`);
+      }
+    };
+  });
+
+  elements.workerList.querySelectorAll("[data-worker-reset-pin]").forEach((button) => {
+    button.onclick = async () => {
+      const workerId = button.dataset.workerResetPin;
+      const worker = state.workers.find((w) => w.id === workerId);
+      const name = worker ? `${worker.firstName} ${worker.lastName}` : workerId;
+      const newPin = window.prompt(`Neue Badge-PIN für ${name} (4–8 Ziffern):`);
+      if (newPin === null) return; // abgebrochen
+      if (!/^\d{4,8}$/.test(newPin.trim())) {
+        window.alert("PIN muss aus 4 bis 8 Ziffern bestehen.");
+        return;
+      }
+      try {
+        await apiRequest(`${API_BASE}/api/workers/${workerId}/reset-pin`, { method: "POST", body: { newPin: newPin.trim() } });
+        window.alert(`PIN für ${name} wurde erfolgreich zurückgesetzt.`);
+      } catch (error) {
+        window.alert(`PIN konnte nicht zurückgesetzt werden: ${error.message}`);
       }
     };
   });
@@ -5270,6 +5321,84 @@ if (addSubcompanyButton) {
 
 registerControlServiceWorker();
 wireDesktopInstallPrompt();
+
+(function initWorkerListControls() {
+  // ── Search ──
+  if (elements.workerSearchInput) {
+    elements.workerSearchInput.addEventListener("input", () => renderWorkerList());
+  }
+
+  // ── Bulk select all ──
+  if (elements.bulkSelectAll) {
+    elements.bulkSelectAll.addEventListener("change", () => {
+      const checked = elements.bulkSelectAll.checked;
+      elements.workerList?.querySelectorAll(".bulk-checkbox").forEach((cb) => { cb.checked = checked; });
+      updateBulkActionBar();
+    });
+  }
+
+  // ── Bulk action buttons ──
+  if (elements.bulkCancelButton) {
+    elements.bulkCancelButton.addEventListener("click", () => {
+      elements.workerList?.querySelectorAll(".bulk-checkbox").forEach((cb) => { cb.checked = false; });
+      if (elements.bulkSelectAll) elements.bulkSelectAll.checked = false;
+      updateBulkActionBar();
+    });
+  }
+
+  if (elements.bulkDeleteButton) {
+    elements.bulkDeleteButton.addEventListener("click", async () => {
+      const ids = getSelectedWorkerIds();
+      if (!ids.length) return;
+      if (!window.confirm(`${ids.length} Mitarbeiter wirklich löschen?`)) return;
+      try {
+        await Promise.all(ids.map((id) => apiRequest(`${API_BASE}/api/workers/${id}`, { method: "DELETE" })));
+        await loadAllData();
+        if (elements.bulkSelectAll) elements.bulkSelectAll.checked = false;
+        refreshAll();
+      } catch (error) {
+        window.alert(`Fehler beim Löschen: ${error.message}`);
+      }
+    });
+  }
+
+  if (elements.bulkSetActiveButton) {
+    elements.bulkSetActiveButton.addEventListener("click", () => bulkSetStatus("aktiv"));
+  }
+  if (elements.bulkSetInactiveButton) {
+    elements.bulkSetInactiveButton.addEventListener("click", () => bulkSetStatus("inaktiv"));
+  }
+})();
+
+function getSelectedWorkerIds() {
+  return [...(elements.workerList?.querySelectorAll(".bulk-checkbox:checked") || [])].map((cb) => cb.dataset.bulkId);
+}
+
+function updateBulkActionBar() {
+  const count = getSelectedWorkerIds().length;
+  if (elements.bulkActionBar) elements.bulkActionBar.classList.toggle("hidden", count === 0);
+  if (elements.bulkSelectionCount) elements.bulkSelectionCount.textContent = `${count} ausgewählt`;
+}
+
+async function bulkSetStatus(status) {
+  const ids = getSelectedWorkerIds();
+  if (!ids.length) return;
+  try {
+    await Promise.all(ids.map((id) => {
+      const worker = state.workers.find((w) => w.id === id);
+      if (!worker) return Promise.resolve();
+      return apiRequest(`${API_BASE}/api/workers/${id}`, {
+        method: "PUT",
+        body: { ...worker, status, companyId: worker.companyId }
+      });
+    }));
+    await loadAllData();
+    if (elements.bulkSelectAll) elements.bulkSelectAll.checked = false;
+    refreshAll();
+  } catch (error) {
+    window.alert(`Fehler beim Status-Ändern: ${error.message}`);
+  }
+}
 
 (async () => {
   try {

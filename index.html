@@ -331,6 +331,19 @@
               </div>
               <button id="workerCsvButton" type="button" class="ghost-button">Mitarbeiterliste als PDF herunterladen</button>
             </div>
+            <div class="worker-list-toolbar">
+              <input id="workerSearchInput" type="search" placeholder="Suchen: Name, Badge-ID, Baustelle …" autocomplete="off" />
+              <label class="bulk-select-all-label">
+                <input id="bulkSelectAll" type="checkbox" /> Alle auswählen
+              </label>
+            </div>
+            <div id="bulkActionBar" class="bulk-action-bar hidden">
+              <span id="bulkSelectionCount">0 ausgewählt</span>
+              <button id="bulkDeleteButton" type="button" class="danger-button">Ausgewählte löschen</button>
+              <button id="bulkSetActiveButton" type="button" class="ghost-button">Status: aktiv</button>
+              <button id="bulkSetInactiveButton" type="button" class="ghost-button">Status: inaktiv</button>
+              <button id="bulkCancelButton" type="button" class="ghost-button">Abbrechen</button>
+            </div>
             <div id="workerList" class="card-list"></div>
             <div id="workerDetailOverlay" class="worker-detail-overlay hidden"></div>
           <style>

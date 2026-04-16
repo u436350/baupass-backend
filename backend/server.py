@@ -3343,6 +3343,41 @@ def restore_worker(worker_id):
     return jsonify({"ok": True})
 
 
+@app.post("/api/workers/<worker_id>/reset-pin")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def reset_worker_pin(worker_id):
+    payload = request.get_json(silent=True) or {}
+    db = get_db()
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+    if worker["deleted_at"]:
+        return jsonify({"error": "worker_deleted"}), 400
+    if worker["badge_id"].upper().startswith("VS"):
+        return jsonify({"error": "visitor_no_pin", "message": "Besucher haben keine Badge-PIN."}), 400
+
+    raw_pin = normalize_badge_pin(payload.get("newPin", ""))
+    if not raw_pin:
+        return jsonify({"error": "missing_pin", "message": "Bitte eine neue PIN angeben."}), 400
+    try:
+        validated_pin = validate_badge_pin_or_raise(raw_pin)
+    except ValueError as error:
+        return jsonify({"error": "invalid_pin", "message": str(error)}), 400
+
+    new_hash = generate_password_hash(validated_pin)
+    db.execute("UPDATE workers SET badge_pin_hash = ? WHERE id = ?", (new_hash, worker_id))
+    db.commit()
+    log_audit(
+        "worker.pin_reset",
+        f"Badge-PIN fuer {worker['first_name']} {worker['last_name']} (Badge {worker['badge_id']}) wurde zurueckgesetzt",
+        target_type="worker", target_id=worker_id, company_id=worker["company_id"], actor=g.current_user
+    )
+    return jsonify({"ok": True})
+
+
 def build_worker_app_access_payload(db, worker_id, actor_user):
     worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
     if not worker:
@@ -3548,7 +3583,14 @@ def worker_app_login():
         if int(consumed.rowcount or 0) == 0:
             return jsonify({"error": "access_token_already_used", "message": "Dieser Besucherkarten-Link wurde bereits genutzt."}), 401
 
-        return jsonify(create_worker_app_session(db, worker))
+        session_data = create_worker_app_session(db, worker)
+        log_audit(
+            "worker_app.login",
+            f"Besucher {worker['first_name']} {worker['last_name']} (Badge {worker['badge_id']}) hat sich per Einmal-Link angemeldet",
+            target_type="worker", target_id=worker["id"], company_id=worker["company_id"]
+        )
+        db.commit()
+        return jsonify(session_data)
 
     badge_matches = db.execute(
         """
@@ -3582,7 +3624,15 @@ def worker_app_login():
     if company_error:
         return jsonify(company_error), 403
 
-    return jsonify(create_worker_app_session(db, worker))
+    session_data = create_worker_app_session(db, worker)
+    login_type = "Besucher" if is_visitor else "Mitarbeiter"
+    log_audit(
+        "worker_app.login",
+        f"{login_type} {worker['first_name']} {worker['last_name']} (Badge {badge_id}) hat sich per Badge-ID angemeldet",
+        target_type="worker", target_id=worker["id"], company_id=worker["company_id"]
+    )
+    db.commit()
+    return jsonify(session_data)
 
 
 @app.get("/api/worker-app/me")
