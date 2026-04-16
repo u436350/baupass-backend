@@ -541,18 +541,9 @@ function setLang(lang) {
   });
 }
 
-function ensureLanguageSwitcher() {
-  if (document.querySelector(".lang-switcher")) {
-    return;
-  }
-
-  const host = document.querySelector(".top-actions") || document.querySelector(".top-panel");
-  if (!host) {
-    return;
-  }
-
+function buildLanguageSwitcher(extraClass = "") {
   const switcher = document.createElement("div");
-  switcher.className = "lang-switcher";
+  switcher.className = `lang-switcher ${extraClass}`.trim();
   switcher.setAttribute("role", "group");
   switcher.setAttribute("aria-label", "Language");
 
@@ -566,7 +557,29 @@ function ensureLanguageSwitcher() {
     switcher.appendChild(btn);
   });
 
+  return switcher;
+}
+
+function ensureLanguageSwitcher() {
+  if (document.querySelector(".lang-switcher")) {
+    return;
+  }
+
+  const host = document.querySelector(".top-actions") || document.querySelector(".top-panel");
+  if (!host) {
+    return;
+  }
+
+  const switcher = buildLanguageSwitcher();
   host.insertBefore(switcher, host.firstChild);
+}
+
+function ensureFloatingLanguageSwitcher() {
+  if (document.querySelector(".floating-lang-switcher")) {
+    return;
+  }
+  const floating = buildLanguageSwitcher("floating-lang-switcher");
+  document.body.appendChild(floating);
 }
 // ─────────────────────────────────────────────────────────────────────
 
@@ -686,6 +699,7 @@ init().finally(dismissSplash);
 
 async function init() {
   ensureLanguageSwitcher();
+  ensureFloatingLanguageSwitcher();
   applyTranslations();
   bindEvents();
   applyQrContrastState();

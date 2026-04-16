@@ -57,6 +57,7 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const SYSTEM_THEME_STORAGE_KEY = "baupass-system-theme";
+const SYSTEM_THEME_COLOR_STORAGE_KEY = "baupass-system-theme-color";
 const SYSTEM_THEME_WHITE = "white";
 const SYSTEM_THEME_BLACK = "black";
 
@@ -69,17 +70,44 @@ function getStoredSystemTheme() {
   return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
 }
 
+function normalizeHexColor(value, fallback = "#ffffff") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) return normalized;
+  if (/^[0-9a-f]{6}$/i.test(normalized)) return `#${normalized}`;
+  if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+    return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
+  }
+  return fallback;
+}
+
+function getStoredSystemThemeColor(themeMode) {
+  const fallback = themeMode === SYSTEM_THEME_BLACK ? "#000000" : "#ffffff";
+  return normalizeHexColor(window.localStorage.getItem(SYSTEM_THEME_COLOR_STORAGE_KEY), fallback);
+}
+
+function isDarkColor(hexColor) {
+  const color = normalizeHexColor(hexColor);
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance < 0.5;
+}
+
 function getThemeModeLabel(mode) {
   if (mode === SYSTEM_THEME_BLACK) return "Schwarz";
   return "Weiß";
 }
 
-function applySystemTheme(themeMode, { persist = true } = {}) {
+function applySystemTheme(themeMode, { persist = true, color } = {}) {
   const selectedMode = normalizeSystemTheme(themeMode);
+  const resolvedColor = normalizeHexColor(color, selectedMode === SYSTEM_THEME_BLACK ? "#000000" : "#ffffff");
   document.body.classList.remove("theme-white", "theme-black");
   document.body.classList.add(selectedMode === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
+  document.body.style.setProperty("--window-color", resolvedColor);
   if (persist) {
     window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
+    window.localStorage.setItem(SYSTEM_THEME_COLOR_STORAGE_KEY, resolvedColor);
   }
 
   const button = document.querySelector("#systemThemeToggleButton");
@@ -87,18 +115,41 @@ function applySystemTheme(themeMode, { persist = true } = {}) {
     button.textContent = `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
     button.setAttribute("aria-label", "Fensterfarbe wechseln");
     button.title = selectedMode === SYSTEM_THEME_BLACK
-      ? "Aktuell Schwarz. Klicken für Weiß."
-      : "Aktuell Weiß. Klicken für Schwarz.";
+      ? "Aktuell dunkel. Klicken für hell. Farbe im Feld änderbar."
+      : "Aktuell hell. Klicken für dunkel. Farbe im Feld änderbar.";
+  }
+
+  const colorInput = document.querySelector("#systemThemeColorInput");
+  if (colorInput) {
+    colorInput.value = resolvedColor;
+  }
+  const colorPicker = document.querySelector("#systemThemeColorPicker");
+  if (colorPicker) {
+    colorPicker.value = resolvedColor;
   }
 }
 
 function toggleSystemTheme() {
   const currentMode = getStoredSystemTheme();
-  applySystemTheme(currentMode === SYSTEM_THEME_BLACK ? SYSTEM_THEME_WHITE : SYSTEM_THEME_BLACK);
+  const nextMode = currentMode === SYSTEM_THEME_BLACK ? SYSTEM_THEME_WHITE : SYSTEM_THEME_BLACK;
+  const nextColor = nextMode === SYSTEM_THEME_BLACK ? "#000000" : "#ffffff";
+  applySystemTheme(nextMode, { color: nextColor });
 }
 
 function initSystemThemeControl() {
-  applySystemTheme(getStoredSystemTheme());
+  const storedMode = getStoredSystemTheme();
+  const storedColor = getStoredSystemThemeColor(storedMode);
+  applySystemTheme(storedMode, { persist: false, color: storedColor });
+}
+
+function handleSystemThemeColorChange(rawColor) {
+  const color = normalizeHexColor(rawColor, "");
+  if (!color) {
+    return false;
+  }
+  const mode = isDarkColor(color) ? SYSTEM_THEME_BLACK : SYSTEM_THEME_WHITE;
+  applySystemTheme(mode, { color });
+  return true;
 }
 
 let deferredDesktopInstallPrompt = null;
@@ -112,6 +163,8 @@ const elements = {
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
   systemThemeToggleButton: document.querySelector("#systemThemeToggleButton"),
+  systemThemeColorInput: document.querySelector("#systemThemeColorInput"),
+  systemThemeColorPicker: document.querySelector("#systemThemeColorPicker"),
   desktopInstallButton: document.querySelector("#desktopInstallButton"),
   desktopInstallHint: document.querySelector("#desktopInstallHint"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -5133,6 +5186,21 @@ if (elements.importButton) {
 
 if (elements.systemThemeToggleButton) {
   elements.systemThemeToggleButton.addEventListener("click", toggleSystemTheme);
+}
+
+if (elements.systemThemeColorPicker) {
+  elements.systemThemeColorPicker.addEventListener("input", () => {
+    handleSystemThemeColorChange(elements.systemThemeColorPicker.value);
+  });
+}
+
+if (elements.systemThemeColorInput) {
+  elements.systemThemeColorInput.addEventListener("change", () => {
+    const accepted = handleSystemThemeColorChange(elements.systemThemeColorInput.value);
+    if (!accepted) {
+      elements.systemThemeColorInput.value = getStoredSystemThemeColor(getStoredSystemTheme());
+    }
+  });
 }
 
 const workerCsvButton = document.querySelector("#workerCsvButton");

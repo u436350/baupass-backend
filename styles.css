@@ -1891,6 +1891,54 @@ select:focus {
   font-size: 0.92rem;
 }
 
+.theme-color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.theme-color-field label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+#systemThemeColorInput {
+  width: 104px;
+  min-height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--text);
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+#systemThemeColorPicker {
+  width: 34px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+#systemThemeColorPicker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+#systemThemeColorPicker::-webkit-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+
 #seedDataButton {
   color: #70410e;
   background: linear-gradient(135deg, rgba(250, 231, 205, 0.92), rgba(245, 219, 184, 0.9));
@@ -1928,6 +1976,16 @@ select:focus {
 }
 
 @media (max-width: 820px) {
+  .theme-color-field {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  #systemThemeColorInput {
+    flex: 1;
+    min-width: 0;
+  }
+
   .topbar-actions .ghost-button,
   .topbar-actions .primary-button {
     width: 100%;
@@ -2048,7 +2106,7 @@ body.theme-white {
   --text: #121518;
   --muted: #4f5862;
   --line: rgba(18, 21, 24, 0.12);
-  background: #ffffff;
+  background: var(--window-color, #ffffff);
 }
 
 body.theme-white::before,
@@ -2067,7 +2125,7 @@ body.theme-black {
   --accent-soft: rgba(228, 124, 58, 0.18);
   --accent-dark: #bf5e27;
   --shadow: 0 26px 64px rgba(0, 0, 0, 0.55);
-  background: #000000;
+  background: var(--window-color, #000000);
 }
 
 body.theme-black::before,

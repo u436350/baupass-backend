@@ -207,6 +207,22 @@ body {
   box-shadow: 0 6px 16px rgba(240, 132, 74, .28);
 }
 
+.floating-lang-switcher {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  z-index: 3200;
+  background: rgba(9, 12, 18, .72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  border-color: rgba(255, 255, 255, .28);
+}
+
+html[dir="rtl"] .floating-lang-switcher {
+  left: 10px;
+  right: auto;
+}
+
 /* RTL layout for Arabic */
 html[dir="rtl"] .top-panel {
   direction: rtl;
