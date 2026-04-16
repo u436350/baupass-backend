@@ -170,32 +170,41 @@ body {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  align-self: start;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .26);
+  border: 1px solid rgba(255, 255, 255, .2);
+  width: fit-content;
 }
 
 .lang-btn {
-  padding: 5px 10px;
+  padding: 6px 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .22);
-  background: rgba(255, 255, 255, .07);
-  color: rgba(255, 247, 241, .72);
-  font-size: .78rem;
+  border: 1px solid rgba(255, 255, 255, .35);
+  background: rgba(255, 255, 255, .12);
+  color: rgba(255, 247, 241, .92);
+  font-size: .8rem;
   font-weight: 700;
   letter-spacing: .04em;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
+  transition: background .15s, color .15s, border-color .15s, transform .15s;
   min-height: 36px;
   min-width: 36px;
 }
 
 .lang-btn:hover {
-  background: rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .2);
   color: #fffaf6;
+  transform: translateY(-1px);
 }
 
 .lang-btn.active {
-  background: rgba(240, 132, 74, .25);
-  border-color: rgba(240, 132, 74, .6);
-  color: #f0844a;
+  background: rgba(240, 132, 74, .3);
+  border-color: rgba(240, 132, 74, .85);
+  color: #ffd9c4;
+  box-shadow: 0 6px 16px rgba(240, 132, 74, .28);
 }
 
 /* RTL layout for Arabic */

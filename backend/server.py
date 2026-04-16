@@ -404,8 +404,8 @@ def apply_security_headers(response):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
     elif is_pwa_asset:
-        response.headers["Cache-Control"] = "public, max-age=3600"
-        response.headers.pop("Pragma", None)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
     else:
         response.headers["Cache-Control"] = "no-cache"
         response.headers["Pragma"] = "no-cache"

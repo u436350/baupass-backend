@@ -59,14 +59,9 @@ const API_BASE = resolveApiBase();
 const SYSTEM_THEME_STORAGE_KEY = "baupass-system-theme";
 const SYSTEM_THEME_WHITE = "white";
 const SYSTEM_THEME_BLACK = "black";
-const SYSTEM_THEME_AUTO = "auto";
-const systemThemeMediaQuery = typeof window.matchMedia === "function"
-  ? window.matchMedia("(prefers-color-scheme: dark)")
-  : null;
 
 function normalizeSystemTheme(value) {
   if (value === SYSTEM_THEME_BLACK) return SYSTEM_THEME_BLACK;
-  if (value === SYSTEM_THEME_AUTO) return SYSTEM_THEME_AUTO;
   return SYSTEM_THEME_WHITE;
 }
 
@@ -74,73 +69,36 @@ function getStoredSystemTheme() {
   return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
 }
 
-function getPreferredSystemTheme() {
-  return systemThemeMediaQuery?.matches ? SYSTEM_THEME_BLACK : SYSTEM_THEME_WHITE;
-}
-
 function getThemeModeLabel(mode) {
   if (mode === SYSTEM_THEME_BLACK) return "Schwarz";
-  if (mode === SYSTEM_THEME_AUTO) return "Auto";
   return "Weiß";
-}
-
-function getEffectiveThemeLabel(theme) {
-  return theme === SYSTEM_THEME_BLACK ? "Dunkel" : "Hell";
 }
 
 function applySystemTheme(themeMode, { persist = true } = {}) {
   const selectedMode = normalizeSystemTheme(themeMode);
-  const selectedTheme = selectedMode === SYSTEM_THEME_AUTO ? getPreferredSystemTheme() : selectedMode;
   document.body.classList.remove("theme-white", "theme-black");
-  document.body.classList.add(selectedTheme === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
+  document.body.classList.add(selectedMode === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
   if (persist) {
     window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
   }
 
   const button = document.querySelector("#systemThemeToggleButton");
   if (button) {
-    const effectiveLabel = getEffectiveThemeLabel(selectedTheme);
-    button.textContent = selectedMode === SYSTEM_THEME_AUTO
-      ? `Fensterfarbe: Auto (${effectiveLabel})`
-      : `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
-    button.dataset.themeMode = selectedMode;
-    button.dataset.themeEffective = selectedTheme;
+    button.textContent = `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
     button.setAttribute("aria-label", "Fensterfarbe wechseln");
-    button.title = selectedMode === SYSTEM_THEME_AUTO
-      ? `Aktuell Auto (${effectiveLabel}, nach Windows/System). Klicken für Weiß.`
-      : selectedMode === SYSTEM_THEME_BLACK
-        ? "Aktuell Schwarz. Klicken für Auto."
-        : "Aktuell Weiß. Klicken für Schwarz.";
+    button.title = selectedMode === SYSTEM_THEME_BLACK
+      ? "Aktuell Schwarz. Klicken für Weiß."
+      : "Aktuell Weiß. Klicken für Schwarz.";
   }
 }
 
 function toggleSystemTheme() {
   const currentMode = getStoredSystemTheme();
-  if (currentMode === SYSTEM_THEME_WHITE) {
-    applySystemTheme(SYSTEM_THEME_BLACK);
-    return;
-  }
-  if (currentMode === SYSTEM_THEME_BLACK) {
-    applySystemTheme(SYSTEM_THEME_AUTO);
-    return;
-  }
-  applySystemTheme(SYSTEM_THEME_WHITE);
+  applySystemTheme(currentMode === SYSTEM_THEME_BLACK ? SYSTEM_THEME_WHITE : SYSTEM_THEME_BLACK);
 }
 
 function initSystemThemeControl() {
   applySystemTheme(getStoredSystemTheme());
-  if (systemThemeMediaQuery) {
-    const onSystemThemeChanged = () => {
-      if (getStoredSystemTheme() === SYSTEM_THEME_AUTO) {
-        applySystemTheme(SYSTEM_THEME_AUTO, { persist: false });
-      }
-    };
-    if (typeof systemThemeMediaQuery.addEventListener === "function") {
-      systemThemeMediaQuery.addEventListener("change", onSystemThemeChanged);
-    } else if (typeof systemThemeMediaQuery.addListener === "function") {
-      systemThemeMediaQuery.addListener(onSystemThemeChanged);
-    }
-  }
 }
 
 let deferredDesktopInstallPrompt = null;

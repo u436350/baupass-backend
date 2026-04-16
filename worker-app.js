@@ -540,6 +540,34 @@ function setLang(lang) {
     btn.classList.toggle("active", btn.dataset.lang === lang);
   });
 }
+
+function ensureLanguageSwitcher() {
+  if (document.querySelector(".lang-switcher")) {
+    return;
+  }
+
+  const host = document.querySelector(".top-actions") || document.querySelector(".top-panel");
+  if (!host) {
+    return;
+  }
+
+  const switcher = document.createElement("div");
+  switcher.className = "lang-switcher";
+  switcher.setAttribute("role", "group");
+  switcher.setAttribute("aria-label", "Language");
+
+  ["de", "en", "tr", "ar"].forEach((lang) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "lang-btn";
+    btn.dataset.lang = lang;
+    btn.textContent = (LANG_META[lang]?.label || lang).toUpperCase();
+    btn.setAttribute("aria-label", LANG_META[lang]?.label || lang);
+    switcher.appendChild(btn);
+  });
+
+  host.insertBefore(switcher, host.firstChild);
+}
 // ─────────────────────────────────────────────────────────────────────
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
@@ -657,6 +685,7 @@ function markUserInteraction() {
 init().finally(dismissSplash);
 
 async function init() {
+  ensureLanguageSwitcher();
   applyTranslations();
   bindEvents();
   applyQrContrastState();

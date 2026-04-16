@@ -1909,29 +1909,6 @@ select:focus {
   border: 1px solid rgba(186, 112, 77, 0.32);
 }
 
-#systemThemeToggleButton[data-theme-mode="auto"] {
-  position: relative;
-  padding-right: 34px;
-}
-
-#systemThemeToggleButton[data-theme-mode="auto"]::after {
-  content: "";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  border: 1px solid rgba(0, 0, 0, 0.22);
-  background: #f8fafc;
-}
-
-#systemThemeToggleButton[data-theme-mode="auto"][data-theme-effective="black"]::after {
-  background: #0f172a;
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 #seedDataButton:hover,
 #exportButton:hover,
 #logoutButton:hover {
