@@ -63,6 +63,7 @@ const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
 const WORKER_SESSION_IP_KEY = "baupass-worker-session-ip";
 const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes aggressive timeout
+const WORKER_PASS_LOCK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes for pass lock
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
@@ -81,6 +82,10 @@ let ambientLowLightRecommended = false;
 let gateAutoOpenTriggered = false;
 let lastUserInteractionAt = Date.now();
 let autoOpenScannerEnabled = localStorage.getItem(AUTO_OPEN_SCANNER_KEY) !== "0";
+let pinLockEnabled = false; // Wird vom Backend gesetzt
+let isPassLocked = false; // Aktueller Status
+let lastPassInteractionAt = Date.now();
+let passLockTimer = null;
 
 const AUTO_OPEN_ACTIVITY_WINDOW_MS = 30 * 1000;
 
@@ -143,7 +148,12 @@ const elements = {
   gateStatusFeedback: document.querySelector("#gateStatusFeedback"),
   gateContrastToggle: document.querySelector("#gateContrastToggle"),
   connectionBanner: document.querySelector("#connectionBanner"),
-  lastSyncInfo: document.querySelector("#lastSyncInfo")
+  lastSyncInfo: document.querySelector("#lastSyncInfo"),
+  pinLockOverlay: document.querySelector("#pinLockOverlay"),
+  pinLockForm: document.querySelector("#pinLockForm"),
+  pinLockInput: document.querySelector("#pinLockInput"),
+  pinLockError: document.querySelector("#pinLockError"),
+  pinLockLogoutButton: document.querySelector("#pinLockLogoutButton")
 };
 
 const splashStartedAt = performance.now();
@@ -348,6 +358,26 @@ function bindEvents() {
   }
   if (elements.deletePhotoButton) {
     elements.deletePhotoButton.addEventListener("click", deleteCameraPhoto);
+  }
+
+  // ── PIN-Lock Event-Listener ──
+  if (elements.pinLockForm) {
+    elements.pinLockForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const pin = elements.pinLockInput?.value || "";
+      await handlePassLockUnlock(pin);
+    });
+  }
+
+  if (elements.pinLockLogoutButton) {
+    elements.pinLockLogoutButton.addEventListener("click", workerLogout);
+  }
+
+  // ── Tracking für Pass-Interaktionen ──
+  if (elements.badgeCard) {
+    elements.badgeCard.addEventListener("pointerdown", markPassInteraction, { passive: true });
+    elements.badgeCard.addEventListener("touchstart", markPassInteraction, { passive: true });
+    elements.badgeCard.addEventListener("scroll", markPassInteraction, { passive: true });
   }
 
   window.addEventListener("beforeunload", stopCameraStream);
@@ -613,6 +643,12 @@ function renderWorker(payload) {
   const isVisitor = workerType === "visitor";
   const sessionExpiresAt = String(payload.sessionExpiresAt || "").trim();
 
+  // ── Pass-Lock aktivieren wenn Admin-Setting es erlaubt ──
+  pinLockEnabled = payload.settings?.workerPassLockEnabled === 1 || payload.settings?.workerPassLockEnabled === "1";
+  if (pinLockEnabled) {
+    initializePassLockProtection();
+  }
+
   if (elements.workerPassTitle) {
     elements.workerPassTitle.textContent = isVisitor ? "Deine digitale Besucherkarte" : "Dein BauPass für heute";
   }
@@ -804,6 +840,126 @@ function initializeSessionInactivityProtection() {
   }, 30 * 1000);
 
   console.log("✓ Session protection: 5min Inaktivitäts-Monitor gestartet");
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// ── PASS LOCK: 2min Inaktivitäts-Sperre zum Schutz vor Diebstahl ──
+// ═════════════════════════════════════════════════════════════════════
+
+function initializePassLockProtection() {
+  if (!pinLockEnabled) {
+    console.log("⚠️  Pass-Lock deaktiviert (Admin-Setting)");
+    return;
+  }
+
+  // Stoppe existierenden Timer
+  if (passLockTimer) clearTimeout(passLockTimer);
+
+  lastPassInteractionAt = Date.now();
+  isPassLocked = false;
+  hidePassLockOverlay();
+
+  // Überwache Inaktivität auf Ausweis-Seite
+  const checkPassLock = () => {
+    if (!elements.badgeCard || elements.badgeCard.classList.contains("hidden")) {
+      // Nicht auf Ausweis-Seite, timer neustarten
+      if (passLockTimer) clearTimeout(passLockTimer);
+      passLockTimer = setTimeout(checkPassLock, 30 * 1000);
+      return;
+    }
+
+    const timeSinceLastInteraction = Date.now() - lastPassInteractionAt;
+    if (timeSinceLastInteraction > WORKER_PASS_LOCK_TIMEOUT_MS && !isPassLocked) {
+      console.log("🔒 Pass-Lock: 2min Inaktivität → Ausweis sperren");
+      isPassLocked = true;
+      showPassLockOverlay();
+    }
+
+    passLockTimer = setTimeout(checkPassLock, 30 * 1000);
+  };
+
+  passLockTimer = setTimeout(checkPassLock, 30 * 1000);
+  console.log("✓ Pass-Lock: 2min Inaktivitäts-Sperre gestartet");
+}
+
+function markPassInteraction() {
+  if (isPassLocked) return; // Keine Interaktion möglich wenn gesperrt
+  lastPassInteractionAt = Date.now();
+  if (isPassLocked) {
+    isPassLocked = false;
+    hidePassLockOverlay();
+    // Timer neustarten
+    if (passLockTimer) clearTimeout(passLockTimer);
+    initializePassLockProtection();
+  }
+}
+
+function showPassLockOverlay() {
+  if (elements.pinLockOverlay) {
+    elements.pinLockOverlay.classList.remove("hidden");
+    if (elements.pinLockInput) {
+      elements.pinLockInput.focus();
+    }
+  }
+}
+
+function hidePassLockOverlay() {
+  if (elements.pinLockOverlay) {
+    elements.pinLockOverlay.classList.add("hidden");
+  }
+  if (elements.pinLockError) {
+    elements.pinLockError.classList.add("hidden");
+  }
+  if (elements.pinLockInput) {
+    elements.pinLockInput.value = "";
+  }
+}
+
+async function handlePassLockUnlock(pin) {
+  if (!pin || !workerToken) {
+    showPassLockError("PIN erforderlich");
+    return;
+  }
+
+  try {
+    // Verifizierung gegen Backend (oder lokal wenn PIN im Token gespeichert)
+    const payload = await fetchJson(`${API_BASE}/verify-pin`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${workerToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: normalizeBadgePinInput(pin) })
+    });
+
+    if (payload.valid) {
+      isPassLocked = false;
+      hidePassLockOverlay();
+      lastPassInteractionAt = Date.now();
+      // Timer neustarten
+      if (passLockTimer) clearTimeout(passLockTimer);
+      initializePassLockProtection();
+      console.log("✓ Pass entsperrt");
+    } else {
+      showPassLockError("Falsche PIN. Versuche erneut.");
+    }
+  } catch (error) {
+    // Fallback: Lokal verifizieren basierend auf Login
+    if (elements.workerBadgePin && elements.workerBadgePin.value === normalizeBadgePinInput(pin)) {
+      isPassLocked = false;
+      hidePassLockOverlay();
+      lastPassInteractionAt = Date.now();
+      if (passLockTimer) clearTimeout(passLockTimer);
+      initializePassLockProtection();
+      console.log("✓ Pass entsperrt (lokal)");
+    } else {
+      showPassLockError("Falsche PIN. Versuche erneut.");
+    }
+  }
+}
+
+function showPassLockError(message) {
+  if (elements.pinLockError) {
+    elements.pinLockError.textContent = message;
+    elements.pinLockError.classList.remove("hidden");
+  }
 }
 
 async function workerLogout() {

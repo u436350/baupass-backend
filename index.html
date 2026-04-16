@@ -758,6 +758,14 @@
                 </select>
               </label>
               <p class="helper-text full-width">Steuert die komplette Mitarbeiter-App: Login, digitaler Ausweis und QR-Nutzung auf dem Handy.</p>
+              <label class="full-width">
+                Ausweis mit PIN-Sperre sichern (nach 2min Inaktivität)
+                <select id="workerPassLockEnabled">
+                  <option value="1">Aktiv &ndash; PIN-Lock schützt vor Telefon-Weitergabe</option>
+                  <option value="0">Deaktiviert &ndash; Ausweis jederzeit frei zugänglich</option>
+                </select>
+              </label>
+              <p class="helper-text full-width">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
 
               <button type="submit" class="primary-button full-width">Admin-Einstellungen speichern</button>
             </form>

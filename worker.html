@@ -212,6 +212,26 @@
     </section>
   </main>
 
+  <!-- ── PIN-Lock Modal: Sicherung des Ausweises ── -->
+  <div id="pinLockOverlay" class="pin-lock-overlay hidden" aria-live="polite" role="dialog" aria-modal="true">
+    <div class="pin-lock-card">
+      <div class="pin-lock-header">
+        <p class="eyebrow">🔒 Ausweis gesperrt</p>
+        <h3>PIN erforderlich</h3>
+      </div>
+      <p class="pin-lock-message">Dein Ausweis wurde zum Schutz vor Diebstahl nach 2 Minuten Inaktivität gesperrt. Gib deine Badge-PIN ein, um fortzufahren.</p>
+      <form id="pinLockForm" class="pin-lock-form">
+        <label>
+          Badge-PIN
+          <input id="pinLockInput" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="PIN" required autocomplete="off" />
+        </label>
+        <button type="submit" class="primary">Ausweis entsperren</button>
+        <button type="button" id="pinLockLogoutButton" class="ghost">Abmelden</button>
+      </form>
+      <p id="pinLockError" class="pin-lock-error hidden"></p>
+    </div>
+  </div>
+
   <script src="./worker-app.js"></script>
 </body>
 </html>
