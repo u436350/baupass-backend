@@ -1630,6 +1630,80 @@ def create_import_rollback_backup(db, role, target_company_id):
     return str(backup_path)
 
 
+def check_visitor_card_expiry_notifications(db):
+    """Send an e-mail to the company-admin when a visitor card expires within the next 24 hours.
+    Uses audit_logs to avoid sending duplicate mails on the same day."""
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    smtp_host = (settings["smtp_host"] or "").strip() if settings else ""
+    smtp_sender = (settings["smtp_sender_email"] or "").strip() if settings else ""
+    if not smtp_host or not smtp_sender:
+        return  # SMTP not configured, nothing to do
+
+    now = datetime.utcnow()
+    cutoff = (now + timedelta(hours=24)).isoformat()
+    today_str = now.date().isoformat()
+
+    expiring = db.execute(
+        """
+        SELECT workers.*, companies.name AS company_name
+        FROM workers
+        JOIN companies ON companies.id = workers.company_id
+        WHERE workers.visit_end_at != ''
+          AND workers.visit_end_at IS NOT NULL
+          AND workers.visit_end_at <= ?
+          AND workers.deleted_at IS NULL
+          AND workers.status != 'gesperrt'
+        """,
+        (cutoff,),
+    ).fetchall()
+
+    for worker in expiring:
+        dedup_key = f"visitor_expiry_notif.{worker['id']}.{today_str}"
+        already_sent = db.execute(
+            "SELECT id FROM audit_logs WHERE event_type = ? AND created_at >= ? LIMIT 1",
+            (dedup_key, f"{today_str}T00:00:00"),
+        ).fetchone()
+        if already_sent:
+            continue
+
+        # Use company billing email, or fall back to SMTP sender (operator)
+        company_row = db.execute(
+            "SELECT billing_email FROM companies WHERE id = ? LIMIT 1",
+            (worker["company_id"],),
+        ).fetchone()
+        recipient = (company_row["billing_email"] if company_row else "") or smtp_sender
+        if not recipient:
+            continue
+        expire_label = worker["visit_end_at"][:16].replace("T", " ")
+        msg = EmailMessage()
+        msg["Subject"] = f"Besucherkarte läuft ab: {worker['first_name']} {worker['last_name']}"
+        msg["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
+        msg["To"] = recipient
+        msg.set_content(
+            f"Guten Tag,\n\n"
+            f"die Besucherkarte von {worker['first_name']} {worker['last_name']} "
+            f"(Badge {worker['badge_id']}, Firma {worker['company_name']}) "
+            f"läuft am {expire_label} Uhr ab.\n\n"
+            f"Bitte verlängern oder löschen Sie die Karte im BauPass-Admin-Panel.\n\n"
+            f"Viele Grüße\n{settings['operator_name']}"
+        )
+        try:
+            with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=20) as smtp:
+                if int(settings["smtp_use_tls"] or 0) == 1:
+                    smtp.starttls()
+                if (settings["smtp_username"] or "").strip():
+                    smtp.login(settings["smtp_username"].strip(), settings["smtp_password"] or "")
+                smtp.send_message(msg)
+            db.execute(
+                "INSERT INTO audit_logs (id, event_type, actor_user_id, actor_role, company_id, target_type, target_id, message, created_at) VALUES (?,?,NULL,NULL,?,?,?,?,?)",
+                (f"aud-{secrets.token_hex(8)}", dedup_key, worker["company_id"], "worker", worker["id"],
+                 f"Ablauf-Mail fuer {worker['first_name']} {worker['last_name']} (Badge {worker['badge_id']}) gesendet an {recipient}", now_iso()),
+            )
+            db.commit()
+        except Exception:
+            pass  # mail failure is non-fatal
+
+
 def run_dunning_job_once():
     global DUNNING_LAST_RUN_AT, DUNNING_LAST_RESULT
     with app.app_context():
@@ -1637,6 +1711,7 @@ def run_dunning_job_once():
         result = run_invoice_dunning_cycle(db)
         suspended = check_and_apply_overdue_suspensions(db)
         result["suspendedCompanies"] = len(suspended)
+        check_visitor_card_expiry_notifications(db)
         if int(result.get("reminderFailures", 0)) > 0:
             create_system_alert(
                 db,

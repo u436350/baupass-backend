@@ -62,6 +62,7 @@ const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
 const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
 const WORKER_SESSION_IP_KEY = "baupass-worker-session-ip";
+const WORKER_CACHED_PAYLOAD_KEY = "baupass-worker-cached-payload";
 const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes aggressive timeout
 const WORKER_PASS_LOCK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes for pass lock
 
@@ -632,6 +633,7 @@ async function loadWorkerData() {
     const payload = await fetchJson(`${API_BASE}/me`, {
       headers: { Authorization: `Bearer ${workerToken}` }
     });
+    localStorage.setItem(WORKER_CACHED_PAYLOAD_KEY, JSON.stringify(payload));
     renderWorker(payload);
     if (elements.lastSyncInfo) {
       elements.lastSyncInfo.textContent = `Zuletzt synchronisiert: ${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
@@ -640,12 +642,34 @@ async function loadWorkerData() {
     await syncOfflinePhotoQueue();
     return true;
   } catch (error) {
+    // Session expired or revoked — must re-login
+    if (error?.code === "worker_session_expired" || error?.code === "invalid_worker_session") {
+      localStorage.removeItem(WORKER_TOKEN_KEY);
+      localStorage.removeItem(WORKER_CACHED_PAYLOAD_KEY);
+      workerToken = "";
+      clearWorkerSessionExpiryTimer();
+      showWorkerNotice("Digitale Besucherkarte abgelaufen. Bitte fuer heute neu anmelden.");
+      showLogin();
+      return false;
+    }
+    // Network error — show cached data if available
+    const cachedRaw = localStorage.getItem(WORKER_CACHED_PAYLOAD_KEY);
+    if (cachedRaw) {
+      try {
+        const cachedPayload = JSON.parse(cachedRaw);
+        renderWorker(cachedPayload);
+        if (elements.lastSyncInfo) {
+          elements.lastSyncInfo.textContent = "⚠️ Offline – zeige gespeicherte Daten";
+        }
+        return true;
+      } catch {
+        // corrupt cache — fall through to logout
+      }
+    }
     localStorage.removeItem(WORKER_TOKEN_KEY);
     workerToken = "";
     clearWorkerSessionExpiryTimer();
-    if (error?.code === "worker_session_expired" || error?.code === "invalid_worker_session") {
-      showWorkerNotice("Digitale Besucherkarte abgelaufen. Bitte fuer heute neu anmelden.");
-    }
+    showWorkerNotice(`Verbindungsfehler: ${error.message}`);
     showLogin();
     return false;
   }
@@ -994,6 +1018,7 @@ async function workerLogout() {
   localStorage.removeItem(WORKER_TOKEN_KEY);
   localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
   localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
+  localStorage.removeItem(WORKER_CACHED_PAYLOAD_KEY);
   workerToken = "";
   clearWorkerSessionExpiryTimer();
   if (inactivityCheckInterval) {
