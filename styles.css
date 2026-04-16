@@ -568,6 +568,17 @@ select {
   animation: auth-enter 420ms ease;
 }
 
+.auth-lang-field {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-lang-field > span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1b2128;
+}
+
 .auth-lang-switch {
   display: inline-flex;
   gap: 0;
@@ -575,13 +586,11 @@ select {
   border: 1px solid rgba(18, 21, 24, 0.15);
   background: rgba(255, 255, 255, 0.75);
   overflow: hidden;
-  margin-bottom: 16px;
-  align-self: flex-start;
 }
 
 .auth-lang-btn {
-  min-height: 34px;
-  padding: 4px 12px;
+  min-height: 36px;
+  padding: 6px 12px;
   border: none;
   border-right: 1px solid rgba(18, 21, 24, 0.12);
   background: transparent;
