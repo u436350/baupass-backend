@@ -611,16 +611,18 @@ function renderWorker(payload) {
   }
 
   if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
-    if (elements.workerSubcompany) {
-      const subcompanyName = String(subcompany.name || "").trim();
-      if (subcompanyName) {
-        elements.workerSubcompany.textContent = subcompanyName;
-        elements.workerSubcompany.classList.remove("hidden");
-      } else {
-        elements.workerSubcompany.textContent = "";
-        elements.workerSubcompany.classList.add("hidden");
-      }
+  if (elements.workerSubcompany) {
+    const subcompanyName = String(subcompany.name || "").trim();
+    if (subcompanyName) {
+      elements.workerSubcompany.textContent = `✓ Sub: ${subcompanyName}`;
+      elements.workerSubcompany.title = `Subunternehmer: ${subcompanyName}`;
+      elements.workerSubcompany.classList.remove("hidden");
+    } else {
+      elements.workerSubcompany.textContent = "";
+      elements.workerSubcompany.removeAttribute("title");
+      elements.workerSubcompany.classList.add("hidden");
     }
+  }
   if (elements.workerName) elements.workerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim();
   if (elements.workerRole) elements.workerRole.textContent = isVisitor ? "Besucher" : (worker.role || "-");
   if (elements.workerStatus) {

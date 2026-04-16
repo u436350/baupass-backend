@@ -733,6 +733,7 @@ function refreshAll() {
   populateWorkerSelectOptions();
   populateCompanySelectOptions();
   renderSystemIdentity();
+  renderAdminSettingsForm();
   renderDashboardPorterLivePanel();
   renderRecentAccess();
   renderAccessLog();
@@ -1356,6 +1357,45 @@ function renderSystemIdentity() {
   if (platform) platform.textContent = state.settings.platformName || "BauPass Control";
   if (operator) operator.textContent = state.settings.operatorName || "Deine Betriebsfirma";
   if (endpoint) endpoint.textContent = state.settings.turnstileEndpoint || "Noch nicht gesetzt";
+}
+
+function renderAdminSettingsForm() {
+  const platformName = document.querySelector("#platformName");
+  const operatorName = document.querySelector("#operatorName");
+  const turnstileEndpoint = document.querySelector("#turnstileEndpoint");
+  const rentalModel = document.querySelector("#rentalModel");
+  const invoicePrimaryColor = document.querySelector("#invoicePrimaryColor");
+  const invoiceAccentColor = document.querySelector("#invoiceAccentColor");
+  const smtpHost = document.querySelector("#smtpHost");
+  const smtpPort = document.querySelector("#smtpPort");
+  const smtpUsername = document.querySelector("#smtpUsername");
+  const smtpPassword = document.querySelector("#smtpPassword");
+  const smtpSenderEmail = document.querySelector("#smtpSenderEmail");
+  const smtpSenderName = document.querySelector("#smtpSenderName");
+  const smtpUseTls = document.querySelector("#smtpUseTls");
+  const adminIpWhitelist = document.querySelector("#adminIpWhitelist");
+  const enforceTenantDomain = document.querySelector("#enforceTenantDomain");
+  const workerAppEnabled = document.querySelector("#workerAppEnabled");
+
+  if (platformName) platformName.value = state.settings.platformName || "BauPass Control";
+  if (operatorName) operatorName.value = state.settings.operatorName || "Deine Betriebsfirma";
+  if (turnstileEndpoint) turnstileEndpoint.value = state.settings.turnstileEndpoint || "";
+  if (rentalModel) rentalModel.value = state.settings.rentalModel || "tageskarte";
+  if (invoicePrimaryColor) invoicePrimaryColor.value = state.settings.invoicePrimaryColor || "#0f4c5c";
+  if (invoiceAccentColor) invoiceAccentColor.value = state.settings.invoiceAccentColor || "#e36414";
+  if (smtpHost) smtpHost.value = state.settings.smtpHost || "";
+  if (smtpPort) smtpPort.value = String(state.settings.smtpPort || 587);
+  if (smtpUsername) smtpUsername.value = state.settings.smtpUsername || "";
+  if (smtpPassword) smtpPassword.value = "";
+  if (smtpSenderEmail) smtpSenderEmail.value = state.settings.smtpSenderEmail || "";
+  if (smtpSenderName) smtpSenderName.value = state.settings.smtpSenderName || "";
+  if (smtpUseTls) smtpUseTls.value = state.settings.smtpUseTls === false ? "0" : "1";
+  if (adminIpWhitelist) adminIpWhitelist.value = state.settings.adminIpWhitelist || "";
+  if (enforceTenantDomain) enforceTenantDomain.value = state.settings.enforceTenantDomain ? "1" : "0";
+  if (workerAppEnabled) workerAppEnabled.value = state.settings.workerAppEnabled === false ? "0" : "1";
+  if (elements.invoiceLogoData && !elements.invoiceLogoData.value) {
+    elements.invoiceLogoData.value = state.settings.invoiceLogoData || "";
+  }
 }
 
 function showWorkerDetailOverlay(worker) {

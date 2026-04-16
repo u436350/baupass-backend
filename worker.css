@@ -770,11 +770,20 @@ body.worker-loaded .app-shell {
 }
 
 .wc-subcompany {
-  margin: 0;
-  max-width: 18ch;
-  font-size: clamp(.38rem, 1.45vw, .57rem);
-  color: rgba(255, 255, 255, .55);
-  line-height: 1.1;
+  margin: 2px 0 0;
+  max-width: 16ch;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: clamp(.36rem, 1.35vw, .54rem);
+  font-weight: 700;
+  color: #fff1be;
+  background: rgba(212, 168, 67, .16);
+  border: 1px solid rgba(212, 168, 67, .3);
+  letter-spacing: .03em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ═══════════════════════════════════════════════
