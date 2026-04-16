@@ -37,10 +37,10 @@
       </div>
       <div class="splash-wordmark">
         <span class="splash-title">BauPass</span>
-        <span class="splash-sub">Mitarbeiter-App</span>
+        <span class="splash-sub" data-i18n="splashSub">Mitarbeiter-App</span>
       </div>
     </div>
-    <div class="splash-loader" role="status" aria-label="Laedt">
+    <div class="splash-loader" role="status" aria-label="Laedt" data-i18n="splashLoading" data-i18n-attr="aria-label">
       <span class="splash-dot"></span>
       <span class="splash-dot"></span>
       <span class="splash-dot"></span>
@@ -55,40 +55,46 @@
   <main class="app-shell">
     <header class="top top-panel">
       <div class="top-copy">
-        <p class="eyebrow">Mitarbeiter-App</p>
-        <h1>BauPass Mobile</h1>
-        <p class="top-lead">Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.</p>
+        <p class="eyebrow" data-i18n="appEyebrow">Mitarbeiter-App</p>
+        <h1 data-i18n="appTitle">BauPass Mobile</h1>
+        <p class="top-lead" data-i18n="appLead">Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.</p>
       </div>
       <div class="top-actions">
-        <button id="installButton" class="ghost install-cta" hidden>App installieren</button>
-        <p id="installPlatformHint" class="platform-hint">Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.</p>
-        <p id="connectionBanner" class="connection-banner online">Online</p>
+        <div class="lang-switcher" role="group" aria-label="Language">
+          <button class="lang-btn active" data-lang="de" aria-label="Deutsch">DE</button>
+          <button class="lang-btn" data-lang="en" aria-label="English">EN</button>
+          <button class="lang-btn" data-lang="tr" aria-label="Türkçe">TR</button>
+          <button class="lang-btn" data-lang="ar" aria-label="العربية">AR</button>
+        </div>
+        <button id="installButton" class="ghost install-cta" data-i18n="installBtn" hidden>App installieren</button>
+        <p id="installPlatformHint" class="platform-hint" data-i18n="installHint">Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.</p>
+        <p id="connectionBanner" class="connection-banner online" data-i18n="online">Online</p>
         <p id="lastSyncInfo" class="platform-hint">Zuletzt synchronisiert: -</p>
       </div>
     </header>
 
     <section id="loginCard" class="card login-card">
       <div class="section-head">
-        <p class="section-kicker">Direkter Einstieg</p>
-        <h2>Digitalen Ausweis aktivieren</h2>
+        <p class="section-kicker" data-i18n="loginKicker">Direkter Einstieg</p>
+        <h2 data-i18n="loginTitle">Digitalen Ausweis aktivieren</h2>
       </div>
-      <p class="section-copy">Du kannst den Ausweis per Mitarbeiter-Link oder direkt mit deiner Badge-ID von der Karte aktivieren.</p>
+      <p class="section-copy" data-i18n="loginCopy">Du kannst den Ausweis per Mitarbeiter-Link oder direkt mit deiner Badge-ID von der Karte aktivieren.</p>
       <div id="workerNotice" class="worker-notice hidden" role="alert" aria-live="polite"></div>
       <form id="workerLoginForm" class="grid">
         <label>
-          Link-Code oder Badge-ID
-          <input id="workerAccessToken" type="text" placeholder="Token aus Link oder BP-..." required />
+          <span data-i18n="loginTokenLabel">Link-Code oder Badge-ID</span>
+          <input id="workerAccessToken" type="text" data-i18n="loginTokenPlaceholder" data-i18n-attr="placeholder" placeholder="Token aus Link oder BP-..." required />
         </label>
         <label id="pinFieldWrapper" class="hidden">
-          Badge-PIN
-          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4–8 stelliger PIN" />
+          <span data-i18n="loginPinLabel">Badge-PIN</span>
+          <input id="workerBadgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" data-i18n="loginPinPlaceholder" data-i18n-attr="placeholder" placeholder="4–8 stelliger PIN" />
         </label>
-        <button class="primary" type="submit">Ausweis laden</button>
+        <button class="primary" type="submit" data-i18n="loginBtn">Ausweis laden</button>
       </form>
       <div class="login-tips" aria-hidden="true">
-        <span class="login-tip">Badge-ID plus PIN statt QR</span>
-        <span class="login-tip">Funktioniert als Homescreen-App</span>
-        <span class="login-tip">Direkter Weg zur Baustelle</span>
+        <span class="login-tip" data-i18n="tipBadge">Badge-ID plus PIN statt QR</span>
+        <span class="login-tip" data-i18n="tipHome">Funktioniert als Homescreen-App</span>
+        <span class="login-tip" data-i18n="tipRoute">Direkter Weg zur Baustelle</span>
       </div>
     </section>
 
@@ -138,11 +144,11 @@
           <div class="wc-footer">
             <div class="wc-fields">
               <div class="wc-field">
-                <span class="wc-field-label">Badge-ID</span>
+                <span class="wc-field-label" data-i18n="fieldBadgeId">Badge-ID</span>
                 <span id="workerBadgeId" class="wc-field-value">–</span>
               </div>
               <div class="wc-field">
-                <span class="wc-field-label">Gültig bis</span>
+                <span class="wc-field-label" data-i18n="fieldValidUntil">Gültig bis</span>
                 <span id="workerValidUntil" class="wc-field-value">–</span>
               </div>
             </div>
@@ -159,12 +165,12 @@
       <div class="worker-panel-grid">
         <div class="below-card route-card">
           <div class="section-head compact-head">
-            <p class="section-kicker">Baustelle</p>
-            <h3>Standort heute</h3>
+            <p class="section-kicker" data-i18n="fieldSite">Baustelle</p>
+            <h3 data-i18n="routeTodayTitle">Standort heute</h3>
           </div>
           <div class="info-row">
             <span class="info-icon">📍</span>
-            <span class="info-label">Baustelle</span>
+            <span class="info-label" data-i18n="fieldSite">Baustelle</span>
             <a id="workerSite" class="info-value site-inline-link" href="#" target="_blank" rel="noopener noreferrer">–</a>
           </div>
         </div>
@@ -178,15 +184,15 @@
         <div id="photoPreviewWrap" style="margin-top:16px; display:none; flex-direction:column; align-items:center;">
           <canvas id="cameraCanvas" style="max-width:90vw; max-height:30vh; border:2px solid #fff; border-radius:8px;"></canvas>
           <div style="margin-top:8px; display:flex; gap:10px;">
-            <button id="rotatePhotoButton" type="button">Drehen</button>
-            <button id="deletePhotoButton" type="button">Löschen</button>
+            <button id="rotatePhotoButton" type="button" data-i18n="cameraRotate">Drehen</button>
+            <button id="deletePhotoButton" type="button" data-i18n="cameraDelete">Löschen</button>
           </div>
         </div>
         <div style="margin-top:16px; display:flex; gap:12px;">
-          <button id="takePhotoButton" type="button">Foto aufnehmen</button>
-          <button id="confirmPhotoButton" type="button" style="display:none;">Übernehmen</button>
-          <button id="retakePhotoButton" type="button" style="display:none;">Neu aufnehmen</button>
-          <button id="closeCameraButton" type="button">Abbrechen</button>
+          <button id="takePhotoButton" type="button" data-i18n="cameraTakePhoto">Foto aufnehmen</button>
+          <button id="confirmPhotoButton" type="button" style="display:none;" data-i18n="cameraConfirm">Übernehmen</button>
+          <button id="retakePhotoButton" type="button" style="display:none;" data-i18n="cameraRetake">Neu aufnehmen</button>
+          <button id="closeCameraButton" type="button" data-i18n="cameraCancel">Abbrechen</button>
         </div>
       </div>
 
@@ -194,19 +200,19 @@
 
     <section id="gateScannerOverlay" class="gate-overlay hidden" aria-live="polite">
       <div class="gate-panel">
-        <p class="eyebrow">Wallet Pass</p>
-        <h2 id="gateWorkerName">Mitarbeiter</h2>
-        <p class="gate-sub">Drehkreuz-Modus aktiv - QR unter Scanner halten</p>
-        <p id="gateBrightnessHint" class="gate-brightness-hint hidden">⚠ Bitte Display-Helligkeit auf Maximum stellen für schnellen Scan.</p>
+        <p class="eyebrow" data-i18n="gateEyebrow">Wallet Pass</p>
+        <h2 id="gateWorkerName" data-i18n="workerDefaultName">Mitarbeiter</h2>
+        <p class="gate-sub" data-i18n="gateModeActive">Drehkreuz-Modus aktiv - QR unter Scanner halten</p>
+        <p id="gateBrightnessHint" class="gate-brightness-hint hidden" data-i18n="gateBrightnessHint">⚠ Bitte Display-Helligkeit auf Maximum stellen für schnellen Scan.</p>
         <div style="position: relative; display: inline-block; margin: 16px 0;">
           <div style="position: absolute; inset: -12px; border: 2px dashed rgba(240, 132, 74, 0.4); border-radius: 20px; animation: scannerGlow 2s ease-in-out infinite;"></div>
-          <img id="gateQr" alt="Einlass QR" />
+          <img id="gateQr" alt="Einlass QR" data-i18n="gateQrAlt" data-i18n-attr="alt" />
         </div>
         <p id="gateBadgeId" class="gate-badge-id">-</p>
         <p id="gateStatusFeedback" style="margin: 8px 0 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); height: 20px;"></p>
         <div class="actions">
-          <button id="gateContrastToggle" class="ghost" type="button">High-Contrast QR: Aus</button>
-          <button id="closeGateModeButton" class="ghost" type="button">Schliessen</button>
+          <button id="gateContrastToggle" class="ghost" type="button" data-i18n="qrContrastOff">High-Contrast QR: Aus</button>
+          <button id="closeGateModeButton" class="ghost" type="button" data-i18n="close">Schliessen</button>
         </div>
       </div>
     </section>
@@ -216,17 +222,17 @@
   <div id="pinLockOverlay" class="pin-lock-overlay hidden" aria-live="polite" role="dialog" aria-modal="true">
     <div class="pin-lock-card">
       <div class="pin-lock-header">
-        <p class="eyebrow">🔒 Ausweis gesperrt</p>
-        <h3>PIN erforderlich</h3>
+        <p class="eyebrow" data-i18n="pinLockEyebrow">🔒 Ausweis gesperrt</p>
+        <h3 data-i18n="pinLockTitle">PIN erforderlich</h3>
       </div>
-      <p class="pin-lock-message">Dein Ausweis wurde zum Schutz vor Diebstahl nach 2 Minuten Inaktivität gesperrt. Gib deine Badge-PIN ein, um fortzufahren.</p>
+      <p class="pin-lock-message" data-i18n="pinLockMessage">Dein Ausweis wurde zum Schutz vor Diebstahl nach 2 Minuten Inaktivität gesperrt. Gib deine Badge-PIN ein, um fortzufahren.</p>
       <form id="pinLockForm" class="pin-lock-form">
         <label>
-          Badge-PIN
-          <input id="pinLockInput" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="PIN" required autocomplete="off" />
+          <span data-i18n="loginPinLabel">Badge-PIN</span>
+          <input id="pinLockInput" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="PIN" data-i18n="loginPinPlaceholder" data-i18n-attr="placeholder" required autocomplete="off" />
         </label>
-        <button type="submit" class="primary">Ausweis entsperren</button>
-        <button type="button" id="pinLockLogoutButton" class="ghost">Abmelden</button>
+        <button type="submit" class="primary" data-i18n="pinLockBtn">Ausweis entsperren</button>
+        <button type="button" id="pinLockLogoutButton" class="ghost" data-i18n="pinLockLogout">Abmelden</button>
       </form>
       <p id="pinLockError" class="pin-lock-error hidden"></p>
     </div>

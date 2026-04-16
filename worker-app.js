@@ -63,8 +63,484 @@ const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
 const WORKER_SESSION_IP_KEY = "baupass-worker-session-ip";
 const WORKER_CACHED_PAYLOAD_KEY = "baupass-worker-cached-payload";
-const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes aggressive timeout
-const WORKER_PASS_LOCK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes for pass lock
+const WORKER_LANG_KEY = "baupass-worker-lang";
+const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+const WORKER_PASS_LOCK_TIMEOUT_MS = 2 * 60 * 1000;
+
+// ── i18n ──────────────────────────────────────────────────────────────
+const TRANSLATIONS = {
+  de: {
+    pageTitle: "BauPass Mitarbeiter-App",
+    appTitle: "BauPass Mobile",
+    appEyebrow: "Mitarbeiter-App",
+    appLead: "Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.",
+    installBtn: "App installieren",
+    installHint: "Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.",
+    online: "Online",
+    offline: "Offline",
+    loginKicker: "Direkter Einstieg",
+    loginTitle: "Digitalen Ausweis aktivieren",
+    loginCopy: "Du kannst den Ausweis per Mitarbeiter-Link oder direkt mit deiner Badge-ID von der Karte aktivieren.",
+    loginTokenLabel: "Link-Code oder Badge-ID",
+    loginTokenPlaceholder: "Token aus Link oder BP-...",
+    loginPinLabel: "Badge-PIN",
+    loginPinPlaceholder: "4–8 stelliger PIN",
+    loginBtn: "Ausweis laden",
+    tipBadge: "Badge-ID plus PIN statt QR",
+    tipHome: "Funktioniert als Homescreen-App",
+    tipRoute: "Direkter Weg zur Baustelle",
+    logoutBtn: "Abmelden",
+    refreshBtn: "Aktualisieren",
+    fieldBadgeId: "Badge-ID",
+    fieldValidUntil: "Gültig bis",
+    fieldSite: "Baustelle",
+    workerCardTitle: "Dein BauPass für heute",
+    visitorCardTitle: "Deine digitale Besucherkarte",
+    workerPassSubLabel: "Mitarbeiterausweis",
+    visitorPassSubLabel: "Besucherkarte",
+    offlineBanner: "⚠️ Offline – zeige gespeicherte Daten",
+    pinLockTitle: "PIN erforderlich",
+    pinLockMessage: "Dieser Ausweis wurde gesperrt. Bitte gib deine Badge-PIN ein um fortzufahren.",
+    pinLockBtn: "Ausweis entsperren",
+    pinLockLogout: "Abmelden",
+    pinLockEyebrow: "🔒 Ausweis gesperrt",
+    enterBadgeId: "Bitte Badge-ID eingeben.",
+    enterPin: "Bitte Badge-PIN eingeben.",
+    loginFailed: "Anmeldung fehlgeschlagen",
+    sessionExpired: "Digitale Besucherkarte abgelaufen. Bitte für heute neu anmelden.",
+    connError: "Verbindungsfehler",
+    lastSync: "Zuletzt synchronisiert",
+    splashSub: "Mitarbeiter-App",
+    splashLoading: "Laedt",
+    routeTodayTitle: "Standort heute",
+    cameraRotate: "Drehen",
+    cameraDelete: "Löschen",
+    cameraTakePhoto: "Foto aufnehmen",
+    cameraConfirm: "Übernehmen",
+    cameraRetake: "Neu aufnehmen",
+    cameraCancel: "Abbrechen",
+    gateEyebrow: "Wallet Pass",
+    gateModeActive: "Drehkreuz-Modus aktiv - QR unter Scanner halten",
+    gateBrightnessHint: "⚠ Bitte Display-Helligkeit auf Maximum stellen für schnellen Scan.",
+    gateQrAlt: "Einlass QR",
+    qrContrastOn: "High-Contrast QR: Ein",
+    qrContrastOff: "High-Contrast QR: Aus",
+    close: "Schliessen",
+    workerDefaultName: "Mitarbeiter",
+    companyFallback: "Baufirma",
+    visitorRole: "Besucher",
+    noQrAvailable: "Kein QR verfuegbar. Bitte Admin kontaktieren.",
+    badgeUnset: "Badge nicht gesetzt",
+    badgeValue: "Badge {value}",
+    subcompanyPrefix: "✓ Sub: {name}",
+    subcompanyTitle: "Subunternehmer: {name}",
+    statusRevoked: "❌ Zugang entzogen",
+    statusExpired: "⚠ Ausweis abgelaufen",
+    statusActive: "✓ Aktiv und berechtigt",
+    installAlreadyInstalled: "App ist bereits installiert.",
+    installIosHowto: "iPhone: In Safari auf Teilen tippen und dann 'Zum Home-Bildschirm' wählen.",
+    installAndroidChromeOnly: "Bitte in Google Chrome öffnen. Nur dort funktioniert die direkte Installation ohne Play Store.",
+    installAndroidHowto: "Android: Im Browser-Menü auf 'App installieren' oder 'Zum Startbildschirm' tippen.",
+    installManual: "Installation manuell: Browser-Menü öffnen und 'Zum Startbildschirm' bzw. 'App installieren' wählen.",
+    enterAccessCode: "Bitte Zugangscode eingeben.",
+    installTip: "Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.",
+    visitorExpiredNeedLink: "Besucherkarte ist abgelaufen. Bitte neuen Link anfordern.",
+    workerAppDisabled: "Mitarbeiter-App ist derzeit deaktiviert.",
+    accessFailed: "Zugang fehlgeschlagen",
+    inactiveReLogin: "Zu lange inaktiv. Bitte melde dich neu an.",
+    wrongPinRetry: "Falsche PIN. Versuche erneut.",
+    gateReadyScan: "📱 Bereit zum Scannen...",
+    lowLightDetected: "Dunkle Umgebung erkannt. High-Contrast QR empfohlen.",
+    qrLoadFailedAlt: "QR-Code konnte nicht geladen werden",
+    installHintStandalone: "App ist installiert. Am Drehkreuz einfach den QR-Code im Vollbild zeigen.",
+    installHintIos: "iPhone: Safari > Teilen > Zum Home-Bildschirm. Danach laeuft die App wie Wallet.",
+    installHintAndroidChrome: "Android (Chrome): Menü > App installieren. Danach wie eine normale Handy-App nutzbar.",
+    installHintAndroidOther: "Android: Bitte in Google Chrome öffnen, dann Menü > App installieren.",
+    cameraBlocked: "Safari blockiert hier die Browser-Kamera. Bitte Foto direkt aus Kamera oder Mediathek wählen.",
+    cameraStartFailed: "Kamera konnte nicht gestartet werden.",
+    cameraHttpsHint: "Safari erlaubt die Browser-Kamera meist nur über HTTPS. Bitte Foto direkt aus Kamera oder Mediathek wählen.",
+    cameraWaitReady: "Bitte warte kurz, bis die Kamera bereit ist.",
+    photoOfflineQueued: "Kein Internet: Foto wird spaeter synchronisiert.",
+    dayCardValidToday: "Digitale Besucherkarte: gueltig bis heute 00:00 Uhr.",
+    dayCardValidUntil: "Digitale Besucherkarte: gueltig bis {time} Uhr.",
+    expiresUnknown: "Ablauf: --:--:--",
+    expiresNow: "Ablauf: 00:00:00",
+    expiresIn: "Ablauf in {time}",
+    expiringSoonNotice: "Hinweis: Deine Besucherkarte laeuft in weniger als 5 Minuten ab.",
+    scannerAutoOpened: "Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.",
+    autoEndedAtMidnight: "Digitale Besucherkarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.",
+  },
+  en: {
+    pageTitle: "BauPass Worker App",
+    appTitle: "BauPass Mobile",
+    appEyebrow: "Worker App",
+    appLead: "Your ID, your route, and your site access in one place. Fast, clean, and right on your home screen.",
+    installBtn: "Install App",
+    installHint: "Optimized for iPhone and Android. Install the app for quick access at the turnstile.",
+    online: "Online",
+    offline: "Offline",
+    loginKicker: "Quick Start",
+    loginTitle: "Activate Your Digital ID",
+    loginCopy: "You can activate your ID with the worker link or directly with your Badge ID from your card.",
+    loginTokenLabel: "Link Code or Badge ID",
+    loginTokenPlaceholder: "Token from link or BP-...",
+    loginPinLabel: "Badge PIN",
+    loginPinPlaceholder: "4–8 digit PIN",
+    loginBtn: "Load ID",
+    tipBadge: "Badge ID + PIN instead of QR",
+    tipHome: "Works as a home screen app",
+    tipRoute: "Direct route to the site",
+    logoutBtn: "Logout",
+    refreshBtn: "Refresh",
+    fieldBadgeId: "Badge ID",
+    fieldValidUntil: "Valid Until",
+    fieldSite: "Site",
+    workerCardTitle: "Your BauPass for Today",
+    visitorCardTitle: "Your Digital Visitor Pass",
+    workerPassSubLabel: "Employee ID",
+    visitorPassSubLabel: "Visitor Pass",
+    offlineBanner: "⚠️ Offline – showing cached data",
+    pinLockTitle: "PIN Required",
+    pinLockMessage: "This ID has been locked. Please enter your Badge PIN to continue.",
+    pinLockBtn: "Unlock ID",
+    pinLockLogout: "Logout",
+    pinLockEyebrow: "🔒 ID Locked",
+    enterBadgeId: "Please enter your Badge ID.",
+    enterPin: "Please enter your Badge PIN.",
+    loginFailed: "Login failed",
+    sessionExpired: "Your visitor pass has expired. Please log in again.",
+    connError: "Connection error",
+    lastSync: "Last synced",
+    splashSub: "Worker App",
+    splashLoading: "Loading",
+    routeTodayTitle: "Today\'s Site",
+    cameraRotate: "Rotate",
+    cameraDelete: "Delete",
+    cameraTakePhoto: "Take Photo",
+    cameraConfirm: "Use Photo",
+    cameraRetake: "Retake",
+    cameraCancel: "Cancel",
+    gateEyebrow: "Wallet Pass",
+    gateModeActive: "Turnstile mode active - hold QR under scanner",
+    gateBrightnessHint: "⚠ Set display brightness to maximum for fast scanning.",
+    gateQrAlt: "Entry QR",
+    qrContrastOn: "High-Contrast QR: On",
+    qrContrastOff: "High-Contrast QR: Off",
+    close: "Close",
+    workerDefaultName: "Worker",
+    companyFallback: "Construction Company",
+    visitorRole: "Visitor",
+    noQrAvailable: "No QR available. Please contact admin.",
+    badgeUnset: "Badge not set",
+    badgeValue: "Badge {value}",
+    subcompanyPrefix: "✓ Sub: {name}",
+    subcompanyTitle: "Subcontractor: {name}",
+    statusRevoked: "❌ Access revoked",
+    statusExpired: "⚠ ID expired",
+    statusActive: "✓ Active and authorized",
+    installAlreadyInstalled: "App is already installed.",
+    installIosHowto: "iPhone: In Safari tap Share and choose 'Add to Home Screen'.",
+    installAndroidChromeOnly: "Please open in Google Chrome. Direct install works only there.",
+    installAndroidHowto: "Android: Open browser menu and tap 'Install app' or 'Add to Home screen'.",
+    installManual: "Manual install: Open browser menu and choose 'Add to Home screen' or 'Install app'.",
+    enterAccessCode: "Please enter access code.",
+    installTip: "Tip: Install the app now so your ID is directly available on your phone.",
+    visitorExpiredNeedLink: "Visitor pass expired. Please request a new link.",
+    workerAppDisabled: "Worker app is currently disabled.",
+    accessFailed: "Access failed",
+    inactiveReLogin: "Inactive for too long. Please log in again.",
+    wrongPinRetry: "Wrong PIN. Try again.",
+    gateReadyScan: "📱 Ready to scan...",
+    lowLightDetected: "Low light detected. High-contrast QR recommended.",
+    qrLoadFailedAlt: "QR code could not be loaded",
+    installHintStandalone: "App is installed. At the turnstile, show the QR code in fullscreen.",
+    installHintIos: "iPhone: Safari > Share > Add to Home Screen. Then the app works like Wallet.",
+    installHintAndroidChrome: "Android (Chrome): Menu > Install app. Then use it like a normal mobile app.",
+    installHintAndroidOther: "Android: Please open in Google Chrome, then Menu > Install app.",
+    cameraBlocked: "Safari blocks browser camera here. Please choose a photo from Camera or Library.",
+    cameraStartFailed: "Camera could not be started.",
+    cameraHttpsHint: "Safari usually allows browser camera only over HTTPS. Please choose a photo from Camera or Library.",
+    cameraWaitReady: "Please wait until the camera is ready.",
+    photoOfflineQueued: "No internet: photo will sync later.",
+    dayCardValidToday: "Digital visitor pass: valid until today 00:00.",
+    dayCardValidUntil: "Digital visitor pass: valid until {time}.",
+    expiresUnknown: "Expires: --:--:--",
+    expiresNow: "Expires: 00:00:00",
+    expiresIn: "Expires in {time}",
+    expiringSoonNotice: "Notice: Your visitor pass expires in less than 5 minutes.",
+    scannerAutoOpened: "Scanner opened automatically because less than 2 minutes remain.",
+    autoEndedAtMidnight: "Digital visitor pass ended automatically at 00:00. Please log in again.",
+  },
+  tr: {
+    pageTitle: "BauPass Çalışan Uygulaması",
+    appTitle: "BauPass Mobil",
+    appEyebrow: "Çalışan Uygulaması",
+    appLead: "Kimliğin, rotanın ve şantiye girişin tek bir yerde. Hızlı, temiz ve ana ekranında.",
+    installBtn: "Uygulamayı Kur",
+    installHint: "iPhone ve Android için optimize edildi. Turnikede hızlı erişim için uygulamayı kur.",
+    online: "Çevrimiçi",
+    offline: "Çevrimdışı",
+    loginKicker: "Hızlı Başlangıç",
+    loginTitle: "Dijital Kimliği Etkinleştir",
+    loginCopy: "Kimliğini çalışan bağlantısı veya kartındaki Rozet ID ile etkinleştirebilirsin.",
+    loginTokenLabel: "Link Kodu veya Rozet ID",
+    loginTokenPlaceholder: "Linkten token veya BP-...",
+    loginPinLabel: "Rozet PIN",
+    loginPinPlaceholder: "4–8 haneli PIN",
+    loginBtn: "Kimliği Yükle",
+    tipBadge: "Rozet ID + PIN QR yerine",
+    tipHome: "Ana ekran uygulaması olarak çalışır",
+    tipRoute: "Şantiyeye doğrudan yol",
+    logoutBtn: "Çıkış Yap",
+    refreshBtn: "Yenile",
+    fieldBadgeId: "Rozet ID",
+    fieldValidUntil: "Geçerlilik Tarihi",
+    fieldSite: "Şantiye",
+    workerCardTitle: "Bugünkü BauPass'ın",
+    visitorCardTitle: "Dijital Ziyaretçi Kartın",
+    workerPassSubLabel: "Çalışan Kimliği",
+    visitorPassSubLabel: "Ziyaretçi Kartı",
+    offlineBanner: "⚠️ Çevrimdışı – kayıtlı veriler gösteriliyor",
+    pinLockTitle: "PIN Gerekli",
+    pinLockMessage: "Bu kimlik kilitlendi. Devam etmek için Rozet PIN'ini gir.",
+    pinLockBtn: "Kimliği Aç",
+    pinLockLogout: "Çıkış Yap",
+    pinLockEyebrow: "🔒 Kimlik Kilitli",
+    enterBadgeId: "Lütfen Rozet ID'yi girin.",
+    enterPin: "Lütfen Rozet PIN'ini girin.",
+    loginFailed: "Giriş başarısız",
+    sessionExpired: "Ziyaretçi kartı süresi doldu. Lütfen tekrar giriş yapın.",
+    connError: "Bağlantı hatası",
+    lastSync: "Son güncelleme",
+    splashSub: "Çalışan Uygulaması",
+    splashLoading: "Yükleniyor",
+    routeTodayTitle: "Bugünkü Konum",
+    cameraRotate: "Döndür",
+    cameraDelete: "Sil",
+    cameraTakePhoto: "Fotoğraf Çek",
+    cameraConfirm: "Onayla",
+    cameraRetake: "Tekrar Çek",
+    cameraCancel: "İptal",
+    gateEyebrow: "Dijital Kart",
+    gateModeActive: "Turnike modu aktif. QR kodunu okuyucunun altında tut.",
+    gateBrightnessHint: "⚠ Hızlı tarama için ekran parlaklığını maksimuma çıkar.",
+    gateQrAlt: "Giriş QR",
+    qrContrastOn: "Yüksek Kontrast QR: Açık",
+    qrContrastOff: "Yüksek Kontrast QR: Kapalı",
+    close: "Kapat",
+    workerDefaultName: "Çalışan",
+    companyFallback: "İnşaat Firması",
+    visitorRole: "Ziyaretçi",
+    noQrAvailable: "QR mevcut değil. Lütfen yöneticiye başvurun.",
+    badgeUnset: "Rozet ayarlı değil",
+    badgeValue: "Rozet {value}",
+    subcompanyPrefix: "✓ Alt Yüklenici: {name}",
+    subcompanyTitle: "Alt yüklenici: {name}",
+    statusRevoked: "❌ Erişim kaldırıldı",
+    statusExpired: "⚠ Kimlik süresi doldu",
+    statusActive: "✓ Aktif ve yetkili",
+    installAlreadyInstalled: "Uygulama zaten kurulu.",
+    installIosHowto: "iPhone: Safari\'de Paylaş\'a dokun ve 'Ana Ekrana Ekle' seç.",
+    installAndroidChromeOnly: "Lütfen Google Chrome\'da açın. Doğrudan kurulum sadece orada çalışır.",
+    installAndroidHowto: "Android: Tarayıcı menüsünden 'Uygulamayı yükle' veya 'Ana ekrana ekle' seç.",
+    installManual: "Manuel kurulum: Tarayıcı menüsünü açıp 'Ana ekrana ekle' veya 'Uygulamayı yükle' seç.",
+    enterAccessCode: "Lütfen erişim kodunu girin.",
+    installTip: "İpucu: Kimliğin telefonda hazır olması için uygulamayı şimdi kur.",
+    visitorExpiredNeedLink: "Ziyaretçi kartının süresi doldu. Lütfen yeni bağlantı isteyin.",
+    workerAppDisabled: "Çalışan uygulaması şu anda devre dışı.",
+    accessFailed: "Erişim başarısız",
+    inactiveReLogin: "Çok uzun süre işlem yapılmadı. Lütfen yeniden giriş yapın.",
+    wrongPinRetry: "PIN yanlış. Tekrar deneyin.",
+    gateReadyScan: "📱 Taramaya hazır...",
+    lowLightDetected: "Karanlık ortam algılandı. Yüksek kontrast QR önerilir.",
+    qrLoadFailedAlt: "QR kodu yüklenemedi",
+    installHintStandalone: "Uygulama kurulu. Turnikede QR kodunu tam ekranda göster.",
+    installHintIos: "iPhone: Safari > Paylaş > Ana Ekrana Ekle. Sonra uygulama cüzdan gibi çalışır.",
+    installHintAndroidChrome: "Android (Chrome): Menü > Uygulamayı yükle. Sonra normal mobil uygulama gibi kullan.",
+    installHintAndroidOther: "Android: Lütfen Google Chrome\'da açın, sonra Menü > Uygulamayı yükle.",
+    cameraBlocked: "Safari burada tarayıcı kamerasını engelliyor. Lütfen Kamera veya Galeri\'den fotoğraf seçin.",
+    cameraStartFailed: "Kamera başlatılamadı.",
+    cameraHttpsHint: "Safari genelde tarayıcı kamerasına sadece HTTPS üzerinde izin verir. Lütfen Kamera veya Galeri\'den fotoğraf seçin.",
+    cameraWaitReady: "Lütfen kamera hazır olana kadar bekleyin.",
+    photoOfflineQueued: "İnternet yok: fotoğraf daha sonra senkronize edilecek.",
+    dayCardValidToday: "Dijital ziyaretçi kartı: bugün 00:00\'a kadar geçerli.",
+    dayCardValidUntil: "Dijital ziyaretçi kartı: {time} saatine kadar geçerli.",
+    expiresUnknown: "Bitiş: --:--:--",
+    expiresNow: "Bitiş: 00:00:00",
+    expiresIn: "Bitişe kalan {time}",
+    expiringSoonNotice: "Bilgi: Ziyaretçi kartınızın süresi 5 dakikadan az kaldı.",
+    scannerAutoOpened: "2 dakikadan az kaldığı için tarayıcı otomatik açıldı.",
+    autoEndedAtMidnight: "Dijital ziyaretçi kartı 00:00\'da otomatik sona erdi. Lütfen yeniden giriş yapın.",
+  },
+  ar: {
+    pageTitle: "تطبيق BauPass للعمال",
+    appTitle: "BauPass موبايل",
+    appEyebrow: "تطبيق العمال",
+    appLead: "هويتك وطريقك ودخولك إلى الموقع في مكان واحد. سريع وسهل على الشاشة الرئيسية.",
+    installBtn: "تثبيت التطبيق",
+    installHint: "محسّن لـ iPhone وAndroid. ثبّت التطبيق للوصول السريع عند البوابة الدوارة.",
+    online: "متصل",
+    offline: "غير متصل",
+    loginKicker: "بداية سريعة",
+    loginTitle: "تفعيل الهوية الرقمية",
+    loginCopy: "يمكنك تفعيل هويتك عبر رابط الموظف أو مباشرةً ببطاقة الهوية.",
+    loginTokenLabel: "رمز الرابط أو رقم البطاقة",
+    loginTokenPlaceholder: "رمز من الرابط أو BP-...",
+    loginPinLabel: "رمز PIN للبطاقة",
+    loginPinPlaceholder: "رمز PIN مكوّن من 4–8 أرقام",
+    loginBtn: "تحميل الهوية",
+    tipBadge: "رقم البطاقة + PIN بدلاً من QR",
+    tipHome: "يعمل كتطبيق على الشاشة الرئيسية",
+    tipRoute: "طريق مباشر إلى الموقع",
+    logoutBtn: "تسجيل الخروج",
+    refreshBtn: "تحديث",
+    fieldBadgeId: "رقم البطاقة",
+    fieldValidUntil: "صالح حتى",
+    fieldSite: "الموقع",
+    workerCardTitle: "بطاقتك اليوم",
+    visitorCardTitle: "بطاقة الزائر الرقمية",
+    workerPassSubLabel: "هوية العامل",
+    visitorPassSubLabel: "بطاقة الزائر",
+    offlineBanner: "⚠️ غير متصل – عرض البيانات المحفوظة",
+    pinLockTitle: "مطلوب رمز PIN",
+    pinLockMessage: "تم قفل هذه الهوية. أدخل رمز PIN للمتابعة.",
+    pinLockBtn: "فتح الهوية",
+    pinLockLogout: "تسجيل الخروج",
+    pinLockEyebrow: "🔒 الهوية مقفلة",
+    enterBadgeId: "الرجاء إدخال رقم البطاقة.",
+    enterPin: "الرجاء إدخال رمز PIN.",
+    loginFailed: "فشل تسجيل الدخول",
+    sessionExpired: "انتهت صلاحية بطاقة الزائر. يرجى تسجيل الدخول مجدداً.",
+    connError: "خطأ في الاتصال",
+    lastSync: "آخر تحديث",
+    splashSub: "تطبيق العمال",
+    splashLoading: "جارٍ التحميل",
+    routeTodayTitle: "موقع اليوم",
+    cameraRotate: "تدوير",
+    cameraDelete: "حذف",
+    cameraTakePhoto: "التقاط صورة",
+    cameraConfirm: "استخدام الصورة",
+    cameraRetake: "إعادة التقاط",
+    cameraCancel: "إلغاء",
+    gateEyebrow: "البطاقة الرقمية",
+    gateModeActive: "وضع البوابة مفعل. ضع رمز QR تحت الماسح.",
+    gateBrightnessHint: "⚠ ارفع سطوع الشاشة إلى الحد الأقصى لسرعة المسح.",
+    gateQrAlt: "QR للدخول",
+    qrContrastOn: "QR عالي التباين: تشغيل",
+    qrContrastOff: "QR عالي التباين: إيقاف",
+    close: "إغلاق",
+    workerDefaultName: "عامل",
+    companyFallback: "شركة البناء",
+    visitorRole: "زائر",
+    noQrAvailable: "لا يوجد رمز QR. يرجى التواصل مع المسؤول.",
+    badgeUnset: "رقم البطاقة غير مضبوط",
+    badgeValue: "البطاقة: {value}",
+    subcompanyPrefix: "✓ المقاول الفرعي: {name}",
+    subcompanyTitle: "المقاول الفرعي: {name}",
+    statusRevoked: "❌ تم سحب الوصول",
+    statusExpired: "⚠ انتهت صلاحية الهوية",
+    statusActive: "✓ نشط ومصرح",
+    installAlreadyInstalled: "التطبيق مثبت بالفعل.",
+    installIosHowto: "iPhone: في Safari اضغط مشاركة ثم اختر 'إضافة إلى الشاشة الرئيسية'.",
+    installAndroidChromeOnly: "يرجى الفتح في Google Chrome. التثبيت المباشر يعمل هناك فقط.",
+    installAndroidHowto: "Android: افتح قائمة المتصفح واضغط 'تثبيت التطبيق' أو 'إضافة إلى الشاشة الرئيسية'.",
+    installManual: "تثبيت يدوي: افتح قائمة المتصفح واختر 'إضافة إلى الشاشة الرئيسية' أو 'تثبيت التطبيق'.",
+    enterAccessCode: "يرجى إدخال رمز الوصول.",
+    installTip: "نصيحة: ثبّت التطبيق الآن ليكون معرّفك متاحاً مباشرة على الهاتف.",
+    visitorExpiredNeedLink: "انتهت صلاحية بطاقة الزائر. يرجى طلب رابط جديد.",
+    workerAppDisabled: "تطبيق العمال معطل حالياً.",
+    accessFailed: "فشل الوصول",
+    inactiveReLogin: "خمول لفترة طويلة. يرجى تسجيل الدخول مرة أخرى.",
+    wrongPinRetry: "رمز PIN غير صحيح. حاول مرة أخرى.",
+    gateReadyScan: "📱 جاهز للمسح...",
+    lowLightDetected: "تم اكتشاف إضاءة منخفضة. يوصى برمز QR عالي التباين.",
+    qrLoadFailedAlt: "تعذر تحميل رمز QR",
+    installHintStandalone: "التطبيق مثبت. عند البوابة اعرض رمز QR بملء الشاشة.",
+    installHintIos: "iPhone: Safari > مشاركة > إضافة إلى الشاشة الرئيسية. بعدها يعمل التطبيق مثل Wallet.",
+    installHintAndroidChrome: "Android (Chrome): القائمة > تثبيت التطبيق. ثم استخدمه كتطبيق جوال عادي.",
+    installHintAndroidOther: "Android: يرجى الفتح في Google Chrome ثم القائمة > تثبيت التطبيق.",
+    cameraBlocked: "Safari يمنع كاميرا المتصفح هنا. يرجى اختيار صورة من الكاميرا أو المعرض.",
+    cameraStartFailed: "تعذر تشغيل الكاميرا.",
+    cameraHttpsHint: "Safari يسمح عادةً بكاميرا المتصفح عبر HTTPS فقط. يرجى اختيار صورة من الكاميرا أو المعرض.",
+    cameraWaitReady: "يرجى الانتظار حتى تصبح الكاميرا جاهزة.",
+    photoOfflineQueued: "لا يوجد إنترنت: ستتم مزامنة الصورة لاحقاً.",
+    dayCardValidToday: "بطاقة الزائر الرقمية: صالحة حتى اليوم 00:00.",
+    dayCardValidUntil: "بطاقة الزائر الرقمية: صالحة حتى {time}.",
+    expiresUnknown: "الانتهاء: --:--:--",
+    expiresNow: "الانتهاء: 00:00:00",
+    expiresIn: "ينتهي خلال {time}",
+    expiringSoonNotice: "تنبيه: ستنتهي صلاحية بطاقة الزائر خلال أقل من 5 دقائق.",
+    scannerAutoOpened: "تم فتح الماسح تلقائياً لأن المتبقي أقل من دقيقتين.",
+    autoEndedAtMidnight: "انتهت بطاقة الزائر الرقمية تلقائياً عند 00:00. يرجى تسجيل الدخول مجدداً.",
+  },
+};
+
+const LANG_META = {
+  de: { label: "DE", flag: "🇩🇪", dir: "ltr" },
+  en: { label: "EN", flag: "🇬🇧", dir: "ltr" },
+  tr: { label: "TR", flag: "🇹🇷", dir: "ltr" },
+  ar: { label: "AR", flag: "🇸🇦", dir: "rtl" },
+};
+
+let currentLang = localStorage.getItem(WORKER_LANG_KEY) || "de";
+if (!TRANSLATIONS[currentLang]) {
+  currentLang = "de";
+}
+
+function t(key) {
+  return (TRANSLATIONS[currentLang] || TRANSLATIONS.de)[key] || TRANSLATIONS.de[key] || key;
+}
+
+function tf(key, vars = {}) {
+  let out = t(key);
+  Object.entries(vars).forEach(([name, value]) => {
+    out = out.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
+  });
+  return out;
+}
+
+function getCurrentLocale() {
+  if (currentLang === "ar") return "ar-SA";
+  if (currentLang === "tr") return "tr-TR";
+  if (currentLang === "en") return "en-GB";
+  return "de-DE";
+}
+
+function applyTranslations() {
+  const lang = currentLang;
+  const dir = LANG_META[lang]?.dir || "ltr";
+  document.documentElement.lang = lang;
+  document.documentElement.dir = dir;
+  document.title = t("pageTitle");
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.dataset.i18n;
+    const attr = el.dataset.i18nAttr;
+    if (attr) {
+      el.setAttribute(attr, t(key));
+    } else {
+      el.textContent = t(key);
+    }
+  });
+}
+
+function setLang(lang) {
+  if (!TRANSLATIONS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem(WORKER_LANG_KEY, lang);
+  applyTranslations();
+  updateConnectionState();
+  updatePlatformInstallHint();
+  applyQrContrastState();
+  if (workerToken) {
+    void loadWorkerData();
+  }
+  // Update lang switcher active state
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === lang);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────
 
 let workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
 let deferredInstallPrompt = null;
@@ -181,6 +657,7 @@ function markUserInteraction() {
 init().finally(dismissSplash);
 
 async function init() {
+  applyTranslations();
   bindEvents();
   applyQrContrastState();
   applyAutoOpenScannerState();
@@ -271,6 +748,15 @@ function applyDynamicManifestStartUrl(accessToken) {
 }
 
 function bindEvents() {
+  // Lang switcher
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setLang(btn.dataset.lang));
+  });
+  // Set initial active state
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === currentLang);
+  });
+
   window.addEventListener("online", updateConnectionState);
   window.addEventListener("offline", updateConnectionState);
   window.addEventListener("pointerdown", markUserInteraction, { passive: true });
@@ -481,31 +967,31 @@ async function triggerInstall() {
   }
 
   if (isStandaloneMode()) {
-    showWorkerNotice("App ist bereits installiert.");
+    showWorkerNotice(t("installAlreadyInstalled"));
     return;
   }
 
   if (isIosDevice()) {
-    showWorkerNotice("iPhone: In Safari auf Teilen tippen und dann 'Zum Home-Bildschirm' wählen.");
+    showWorkerNotice(t("installIosHowto"));
     return;
   }
 
   if (isAndroidDevice()) {
       if (!isAndroidChrome()) {
-        showWorkerNotice("Bitte in Google Chrome öffnen. Nur dort funktioniert die direkte Installation ohne Play Store.");
+        showWorkerNotice(t("installAndroidChromeOnly"));
         return;
       }
-    showWorkerNotice("Android: Im Browser-Menü auf 'App installieren' oder 'Zum Startbildschirm' tippen.");
+    showWorkerNotice(t("installAndroidHowto"));
     return;
   }
 
-  showWorkerNotice("Installation manuell: Browser-Menü öffnen und 'Zum Startbildschirm' bzw. 'App installieren' wählen.");
+  showWorkerNotice(t("installManual"));
 }
 
 async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent = false } = {}) {
   if (!accessToken) {
     if (!silent) {
-      showWorkerNotice("Bitte Zugangscode eingeben.");
+      showWorkerNotice(t("enterAccessCode"));
     }
     return;
   }
@@ -534,7 +1020,7 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     if (!isStandaloneMode() && elements.installButton) {
       elements.installButton.hidden = false;
       if (!silent) {
-        showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
+        showWorkerNotice(t("installTip"));
       }
     }
 
@@ -546,7 +1032,7 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     }
     if (error.code === "visitor_visit_expired") {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
-      showWorkerNotice("Besucherkarte ist abgelaufen. Bitte neuen Link anfordern.");
+      showWorkerNotice(t("visitorExpiredNeedLink"));
       return;
     }
     if (silent) {
@@ -554,10 +1040,10 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
       return;
     }
     if (error.code === "worker_app_disabled") {
-      showWorkerNotice("Mitarbeiter-App ist derzeit deaktiviert.");
+      showWorkerNotice(t("workerAppDisabled"));
       return;
     }
-    showWorkerNotice(`Zugang fehlgeschlagen: ${error.message}`);
+    showWorkerNotice(`${t("accessFailed")}: ${error.message}`);
   }
 }
 
@@ -566,14 +1052,14 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
   const normalizedBadgePin = normalizeBadgePinInput(badgePin);
   if (!normalizedBadgeId) {
     if (!silent) {
-      showWorkerNotice("Bitte Badge-ID eingeben.");
+      showWorkerNotice(t("enterBadgeId"));
     }
     return;
   }
   const visitorLogin = isVisitorBadgeId(normalizedBadgeId);
   if (!visitorLogin && !normalizedBadgePin) {
     if (!silent) {
-      showWorkerNotice("Bitte Badge-PIN eingeben.");
+      showWorkerNotice(t("enterPin"));
     }
     return;
   }
@@ -604,7 +1090,7 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
     if (!isStandaloneMode() && elements.installButton) {
       elements.installButton.hidden = false;
       if (!silent) {
-        showWorkerNotice("Tipp: App jetzt installieren, damit dein Ausweis direkt auf dem Handy verfuegbar ist.");
+        showWorkerNotice(t("installTip"));
       }
     }
 
@@ -616,10 +1102,10 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
       return;
     }
     if (error.code === "worker_app_disabled") {
-      showWorkerNotice("Mitarbeiter-App ist derzeit deaktiviert.");
+      showWorkerNotice(t("workerAppDisabled"));
       return;
     }
-    showWorkerNotice(`Anmeldung fehlgeschlagen: ${error.message}`);
+    showWorkerNotice(`${t("loginFailed")}: ${error.message}`);
   }
 }
 
@@ -636,7 +1122,7 @@ async function loadWorkerData() {
     localStorage.setItem(WORKER_CACHED_PAYLOAD_KEY, JSON.stringify(payload));
     renderWorker(payload);
     if (elements.lastSyncInfo) {
-      elements.lastSyncInfo.textContent = `Zuletzt synchronisiert: ${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
+      elements.lastSyncInfo.textContent = `${t("lastSync")}: ${new Intl.DateTimeFormat(getCurrentLocale(), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
     }
     updateConnectionState();
     await syncOfflinePhotoQueue();
@@ -648,7 +1134,7 @@ async function loadWorkerData() {
       localStorage.removeItem(WORKER_CACHED_PAYLOAD_KEY);
       workerToken = "";
       clearWorkerSessionExpiryTimer();
-      showWorkerNotice("Digitale Besucherkarte abgelaufen. Bitte fuer heute neu anmelden.");
+      showWorkerNotice(t("sessionExpired"));
       showLogin();
       return false;
     }
@@ -659,7 +1145,7 @@ async function loadWorkerData() {
         const cachedPayload = JSON.parse(cachedRaw);
         renderWorker(cachedPayload);
         if (elements.lastSyncInfo) {
-          elements.lastSyncInfo.textContent = "⚠️ Offline – zeige gespeicherte Daten";
+          elements.lastSyncInfo.textContent = t("offlineBanner");
         }
         return true;
       } catch {
@@ -669,7 +1155,7 @@ async function loadWorkerData() {
     localStorage.removeItem(WORKER_TOKEN_KEY);
     workerToken = "";
     clearWorkerSessionExpiryTimer();
-    showWorkerNotice(`Verbindungsfehler: ${error.message}`);
+    showWorkerNotice(`${t("connError")}: ${error.message}`);
     showLogin();
     return false;
   }
@@ -691,18 +1177,18 @@ function renderWorker(payload) {
   }
 
   if (elements.workerPassTitle) {
-    elements.workerPassTitle.textContent = isVisitor ? "Deine digitale Besucherkarte" : "Dein BauPass für heute";
+    elements.workerPassTitle.textContent = isVisitor ? t("visitorCardTitle") : t("workerCardTitle");
   }
   if (elements.workerPassSubLabel) {
-    elements.workerPassSubLabel.textContent = isVisitor ? "Besucherausweis" : "Mitarbeiterausweis";
+    elements.workerPassSubLabel.textContent = isVisitor ? t("visitorPassSubLabel") : t("workerPassSubLabel");
   }
 
-  if (elements.companyName) elements.companyName.textContent = company.name || "Baufirma";
+  if (elements.companyName) elements.companyName.textContent = company.name || t("companyFallback");
   if (elements.workerSubcompany) {
     const subcompanyName = String(subcompany.name || "").trim();
     if (subcompanyName) {
-      elements.workerSubcompany.textContent = `✓ Sub: ${subcompanyName}`;
-      elements.workerSubcompany.title = `Subunternehmer: ${subcompanyName}`;
+      elements.workerSubcompany.textContent = tf("subcompanyPrefix", { name: subcompanyName });
+      elements.workerSubcompany.title = tf("subcompanyTitle", { name: subcompanyName });
       elements.workerSubcompany.classList.remove("hidden");
     } else {
       elements.workerSubcompany.textContent = "";
@@ -711,7 +1197,7 @@ function renderWorker(payload) {
     }
   }
   if (elements.workerName) elements.workerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim();
-  if (elements.workerRole) elements.workerRole.textContent = isVisitor ? "Besucher" : (worker.role || "-");
+  if (elements.workerRole) elements.workerRole.textContent = isVisitor ? t("visitorRole") : (worker.role || "-");
   if (elements.workerStatus) {
     elements.workerStatus.textContent = worker.status || "-";
     elements.workerStatus.dataset.status = normalizedStatus;
@@ -766,7 +1252,7 @@ function renderWorker(payload) {
 
   if (elements.qrFallbackText) {
     if (!qrPayload) {
-      elements.qrFallbackText.textContent = "Kein QR verfuegbar. Bitte Admin kontaktieren.";
+      elements.qrFallbackText.textContent = t("noQrAvailable");
       elements.qrFallbackText.classList.remove("hidden");
     } else {
       elements.qrFallbackText.textContent = `Code: ${qrPayload}`;
@@ -785,11 +1271,11 @@ function renderWorker(payload) {
   }
 
   if (elements.gateBadgeId) {
-    elements.gateBadgeId.textContent = qrPayload ? `Badge ${qrPayload}` : "Badge nicht gesetzt";
+    elements.gateBadgeId.textContent = qrPayload ? tf("badgeValue", { value: qrPayload }) : t("badgeUnset");
   }
 
   if (elements.gateWorkerName) {
-    elements.gateWorkerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim() || "Mitarbeiter";
+    elements.gateWorkerName.textContent = `${worker.firstName || ""} ${worker.lastName || ""}`.trim() || t("workerDefaultName");
   }
 
   // Update Status Banner
@@ -802,13 +1288,13 @@ function renderWorker(payload) {
     
     if (banned) {
       elements.workerStatusBanner.className = "status-banner error";
-      elements.workerStatusText.textContent = "❌ Zugang entzogen";
+      elements.workerStatusText.textContent = t("statusRevoked");
     } else if (isExpired) {
       elements.workerStatusBanner.className = "status-banner warning";
-      elements.workerStatusText.textContent = "⚠ Ausweis abgelaufen";
+      elements.workerStatusText.textContent = t("statusExpired");
     } else {
       elements.workerStatusBanner.className = "status-banner active";
-      elements.workerStatusText.textContent = "✓ Aktiv und berechtigt";
+      elements.workerStatusText.textContent = t("statusActive");
     }
   }
 
@@ -833,10 +1319,10 @@ function updateConnectionState() {
     return;
   }
   if (navigator.onLine) {
-    elements.connectionBanner.textContent = "Online";
+    elements.connectionBanner.textContent = t("online");
     elements.connectionBanner.className = "connection-banner online";
   } else {
-    elements.connectionBanner.textContent = "Offline";
+    elements.connectionBanner.textContent = t("offline");
     elements.connectionBanner.className = "connection-banner offline";
   }
 }
@@ -875,7 +1361,7 @@ function initializeSessionInactivityProtection() {
     const timeSinceLastInteraction = Date.now() - lastUserInteractionAt;
     if (timeSinceLastInteraction > WORKER_INACTIVITY_TIMEOUT_MS) {
       console.warn("🔐 Session timeout: Zu lange inaktiv, Auto-Logout für Sicherheit");
-      showWorkerNotice("Zu lange inaktiv. Bitte melde dich neu an.");
+      showWorkerNotice(t("inactiveReLogin"));
       workerLogout();
     }
   }, 30 * 1000);
@@ -958,7 +1444,7 @@ function hidePassLockOverlay() {
 
 async function handlePassLockUnlock(pin) {
   if (!pin || !workerToken) {
-    showPassLockError("PIN erforderlich");
+    showPassLockError(t("pinLockTitle"));
     return;
   }
 
@@ -979,7 +1465,7 @@ async function handlePassLockUnlock(pin) {
       initializePassLockProtection();
       console.log("✓ Pass entsperrt");
     } else {
-      showPassLockError("Falsche PIN. Versuche erneut.");
+      showPassLockError(t("wrongPinRetry"));
     }
   } catch (error) {
     // Fallback: Lokal verifizieren basierend auf Login
@@ -991,7 +1477,7 @@ async function handlePassLockUnlock(pin) {
       initializePassLockProtection();
       console.log("✓ Pass entsperrt (lokal)");
     } else {
-      showPassLockError("Falsche PIN. Versuche erneut.");
+      showPassLockError(t("wrongPinRetry"));
     }
   }
 }
@@ -1037,7 +1523,7 @@ async function openGateMode() {
   
   // Show feedback
   if (elements.gateStatusFeedback) {
-    elements.gateStatusFeedback.textContent = "📱 Bereit zum Scannen...";
+    elements.gateStatusFeedback.textContent = t("gateReadyScan");
     elements.gateStatusFeedback.style.color = "rgba(255, 255, 255, 0.7)";
   }
   
@@ -1061,7 +1547,7 @@ function closeGateMode() {
 
 function applyQrContrastState() {
   document.body.classList.toggle("qr-high-contrast", qrHighContrastEnabled);
-  const label = qrHighContrastEnabled ? "High-Contrast QR: Ein" : "High-Contrast QR: Aus";
+  const label = qrHighContrastEnabled ? t("qrContrastOn") : t("qrContrastOff");
   if (elements.qrContrastToggle) {
     elements.qrContrastToggle.textContent = label;
   }
@@ -1101,7 +1587,7 @@ function startAmbientLightRecommendation() {
       const lux = Number(ambientLightSensorHandle.illuminance || 0);
       if (lux > 0 && lux < 20 && !ambientLowLightRecommended) {
         ambientLowLightRecommended = true;
-        showGateFeedback("Dunkle Umgebung erkannt. High-Contrast QR empfohlen.", "#ffd5a3");
+        showGateFeedback(t("lowLightDetected"), "#ffd5a3");
       }
     });
     ambientLightSensorHandle.addEventListener("error", () => {
@@ -1258,7 +1744,7 @@ async function setQrImage(imgElement, payload, size) {
     }
   } catch {
     if (!cached) {
-      imgElement.alt = "QR-Code konnte nicht geladen werden";
+      imgElement.alt = t("qrLoadFailedAlt");
     }
   }
 }
@@ -1326,25 +1812,25 @@ function updatePlatformInstallHint() {
   }
 
   if (isStandaloneMode()) {
-    elements.installPlatformHint.textContent = "App ist installiert. Am Drehkreuz einfach den QR-Code im Vollbild zeigen.";
+    elements.installPlatformHint.textContent = t("installHintStandalone");
     return;
   }
 
   if (isIosDevice()) {
-    elements.installPlatformHint.textContent = "iPhone: Safari > Teilen > Zum Home-Bildschirm. Danach laeuft die App wie Wallet.";
+    elements.installPlatformHint.textContent = t("installHintIos");
     return;
   }
 
   if (isAndroidDevice()) {
       if (isAndroidChrome()) {
-        elements.installPlatformHint.textContent = "Android (Chrome): Menü > App installieren. Danach wie eine normale Handy-App nutzbar.";
+        elements.installPlatformHint.textContent = t("installHintAndroidChrome");
       } else {
-        elements.installPlatformHint.textContent = "Android: Bitte in Google Chrome öffnen, dann Menü > App installieren.";
+        elements.installPlatformHint.textContent = t("installHintAndroidOther");
       }
     return;
   }
 
-  elements.installPlatformHint.textContent = "Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.";
+  elements.installPlatformHint.textContent = t("installHint");
 }
 
 async function requestWakeLock() {
@@ -1377,7 +1863,7 @@ function openCameraOverlay() {
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    showWorkerNotice("Safari blockiert hier die Browser-Kamera. Bitte Foto direkt aus Kamera oder Mediathek wählen.");
+    showWorkerNotice(t("cameraBlocked"));
     elements.photoInput?.click();
     return;
   }
@@ -1401,8 +1887,8 @@ function openCameraOverlay() {
     .catch(() => {
       showWorkerNotice(
         window.isSecureContext
-          ? "Kamera konnte nicht gestartet werden."
-          : "Safari erlaubt die Browser-Kamera meist nur über HTTPS. Bitte Foto direkt aus Kamera oder Mediathek wählen."
+          ? t("cameraStartFailed")
+          : t("cameraHttpsHint")
       );
       closeCameraOverlay();
       elements.photoInput?.click();
@@ -1433,7 +1919,7 @@ function takePhotoFromCamera() {
 
   const video = elements.cameraVideo;
   if (!video.videoWidth || !video.videoHeight) {
-    showWorkerNotice("Bitte warte kurz, bis die Kamera bereit ist.");
+    showWorkerNotice(t("cameraWaitReady"));
     return;
   }
 
@@ -1523,7 +2009,7 @@ function confirmCameraPhoto() {
 
   uploadPhotoToBackend(lastCameraPhotoDataUrl).catch(() => {
     savePhotoToOfflineQueue(lastCameraPhotoDataUrl);
-    showWorkerNotice("Kein Internet: Foto wird spaeter synchronisiert.");
+    showWorkerNotice(t("photoOfflineQueued"));
   });
 }
 
@@ -1551,7 +2037,7 @@ function handlePhotoSelected(event) {
 
     uploadPhotoToBackend(dataUrl).catch(() => {
       savePhotoToOfflineQueue(dataUrl);
-      showWorkerNotice("Kein Internet: Foto wird spaeter synchronisiert.");
+      showWorkerNotice(t("photoOfflineQueued"));
     });
   };
   reader.readAsDataURL(file);
@@ -1597,7 +2083,7 @@ function formatDate(value) {
   if (!value) {
     return "-";
   }
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(getCurrentLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric"
@@ -1612,7 +2098,7 @@ function formatDateTime(value) {
   if (Number.isNaN(parsed.getTime())) {
     return "-";
   }
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(getCurrentLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -1626,10 +2112,10 @@ function renderDayCardValidity(expiresAt) {
     return;
   }
   if (!expiresAt) {
-    elements.workerDayCardValidity.textContent = "Digitale Besucherkarte: gueltig bis heute 00:00 Uhr.";
+    elements.workerDayCardValidity.textContent = t("dayCardValidToday");
     return;
   }
-  elements.workerDayCardValidity.textContent = `Digitale Besucherkarte: gueltig bis ${formatDateTime(expiresAt)} Uhr.`;
+  elements.workerDayCardValidity.textContent = tf("dayCardValidUntil", { time: formatDateTime(expiresAt) });
 }
 
 function clearWorkerSessionCountdown() {
@@ -1647,7 +2133,7 @@ function renderWorkerSessionCountdown(expiresAt) {
     return;
   }
   if (!expiresAt) {
-    elements.workerSessionCountdown.textContent = "Ablauf: --:--:--";
+    elements.workerSessionCountdown.textContent = t("expiresUnknown");
     return;
   }
 
@@ -1655,7 +2141,7 @@ function renderWorkerSessionCountdown(expiresAt) {
     const target = new Date(expiresAt).getTime();
     const remainingMs = target - Date.now();
     if (!Number.isFinite(target) || remainingMs <= 0) {
-      elements.workerSessionCountdown.textContent = "Ablauf: 00:00:00";
+      elements.workerSessionCountdown.textContent = t("expiresNow");
       elements.workerSessionCountdown.classList.remove("ok", "warn", "critical");
       elements.workerSessionCountdown.classList.add("critical");
       clearWorkerSessionCountdown();
@@ -1665,7 +2151,7 @@ function renderWorkerSessionCountdown(expiresAt) {
     const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
     const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
     const seconds = String(totalSeconds % 60).padStart(2, "0");
-    elements.workerSessionCountdown.textContent = `Ablauf in ${hours}:${minutes}:${seconds}`;
+    elements.workerSessionCountdown.textContent = tf("expiresIn", { time: `${hours}:${minutes}:${seconds}` });
 
     elements.workerSessionCountdown.classList.remove("ok", "warn", "critical");
     if (totalSeconds <= 300) {
@@ -1675,14 +2161,14 @@ function renderWorkerSessionCountdown(expiresAt) {
         if (navigator.vibrate) {
           navigator.vibrate([120, 80, 120]);
         }
-        showWorkerNotice("Hinweis: Deine Besucherkarte laeuft in weniger als 5 Minuten ab.");
+        showWorkerNotice(t("expiringSoonNotice"));
       }
 
       const gateIsClosed = Boolean(elements.gateScannerOverlay?.classList.contains("hidden"));
       const recentlyActive = (Date.now() - lastUserInteractionAt) <= AUTO_OPEN_ACTIVITY_WINDOW_MS;
       if (totalSeconds <= 120 && autoOpenScannerEnabled && !gateAutoOpenTriggered && gateIsClosed && document.visibilityState === "visible" && recentlyActive) {
         gateAutoOpenTriggered = true;
-        showWorkerNotice("Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.");
+        showWorkerNotice(t("scannerAutoOpened"));
         void openGateMode();
       }
     } else if (totalSeconds <= 1800) {
@@ -1709,7 +2195,7 @@ function expireDailyCardInClient() {
   clearWorkerSessionExpiryTimer();
   closeGateMode();
   showLogin();
-  showWorkerNotice("Digitale Besucherkarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.");
+  showWorkerNotice(t("autoEndedAtMidnight"));
 }
 
 function scheduleWorkerSessionExpiry(expiresAt) {

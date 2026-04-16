@@ -56,6 +56,93 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
+const SYSTEM_THEME_STORAGE_KEY = "baupass-system-theme";
+const SYSTEM_THEME_WHITE = "white";
+const SYSTEM_THEME_BLACK = "black";
+const SYSTEM_THEME_AUTO = "auto";
+const systemThemeMediaQuery = typeof window.matchMedia === "function"
+  ? window.matchMedia("(prefers-color-scheme: dark)")
+  : null;
+
+function normalizeSystemTheme(value) {
+  if (value === SYSTEM_THEME_BLACK) return SYSTEM_THEME_BLACK;
+  if (value === SYSTEM_THEME_AUTO) return SYSTEM_THEME_AUTO;
+  return SYSTEM_THEME_WHITE;
+}
+
+function getStoredSystemTheme() {
+  return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
+}
+
+function getPreferredSystemTheme() {
+  return systemThemeMediaQuery?.matches ? SYSTEM_THEME_BLACK : SYSTEM_THEME_WHITE;
+}
+
+function getThemeModeLabel(mode) {
+  if (mode === SYSTEM_THEME_BLACK) return "Schwarz";
+  if (mode === SYSTEM_THEME_AUTO) return "Auto";
+  return "Weiß";
+}
+
+function getEffectiveThemeLabel(theme) {
+  return theme === SYSTEM_THEME_BLACK ? "Dunkel" : "Hell";
+}
+
+function applySystemTheme(themeMode, { persist = true } = {}) {
+  const selectedMode = normalizeSystemTheme(themeMode);
+  const selectedTheme = selectedMode === SYSTEM_THEME_AUTO ? getPreferredSystemTheme() : selectedMode;
+  document.body.classList.remove("theme-white", "theme-black");
+  document.body.classList.add(selectedTheme === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
+  if (persist) {
+    window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
+  }
+
+  const button = document.querySelector("#systemThemeToggleButton");
+  if (button) {
+    const effectiveLabel = getEffectiveThemeLabel(selectedTheme);
+    button.textContent = selectedMode === SYSTEM_THEME_AUTO
+      ? `Fensterfarbe: Auto (${effectiveLabel})`
+      : `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
+    button.dataset.themeMode = selectedMode;
+    button.dataset.themeEffective = selectedTheme;
+    button.setAttribute("aria-label", "Fensterfarbe wechseln");
+    button.title = selectedMode === SYSTEM_THEME_AUTO
+      ? `Aktuell Auto (${effectiveLabel}, nach Windows/System). Klicken für Weiß.`
+      : selectedMode === SYSTEM_THEME_BLACK
+        ? "Aktuell Schwarz. Klicken für Auto."
+        : "Aktuell Weiß. Klicken für Schwarz.";
+  }
+}
+
+function toggleSystemTheme() {
+  const currentMode = getStoredSystemTheme();
+  if (currentMode === SYSTEM_THEME_WHITE) {
+    applySystemTheme(SYSTEM_THEME_BLACK);
+    return;
+  }
+  if (currentMode === SYSTEM_THEME_BLACK) {
+    applySystemTheme(SYSTEM_THEME_AUTO);
+    return;
+  }
+  applySystemTheme(SYSTEM_THEME_WHITE);
+}
+
+function initSystemThemeControl() {
+  applySystemTheme(getStoredSystemTheme());
+  if (systemThemeMediaQuery) {
+    const onSystemThemeChanged = () => {
+      if (getStoredSystemTheme() === SYSTEM_THEME_AUTO) {
+        applySystemTheme(SYSTEM_THEME_AUTO, { persist: false });
+      }
+    };
+    if (typeof systemThemeMediaQuery.addEventListener === "function") {
+      systemThemeMediaQuery.addEventListener("change", onSystemThemeChanged);
+    } else if (typeof systemThemeMediaQuery.addListener === "function") {
+      systemThemeMediaQuery.addListener(onSystemThemeChanged);
+    }
+  }
+}
+
 let deferredDesktopInstallPrompt = null;
 const elements = {
   body: document.body,
@@ -66,6 +153,7 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
+  systemThemeToggleButton: document.querySelector("#systemThemeToggleButton"),
   desktopInstallButton: document.querySelector("#desktopInstallButton"),
   desktopInstallHint: document.querySelector("#desktopInstallHint"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -1061,7 +1149,7 @@ function bindWorkerRowActions() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht geloescht werden: ${error.message}`);
+        window.alert(`Mitarbeiter konnte nicht gelöscht werden: ${error.message}`);
       }
     };
   });
@@ -1256,7 +1344,7 @@ function bindCompanyRowActions() {
       const company = state.companies.find((entry) => entry.id === companyId);
       const companyName = company?.name || "diese Firma";
       const forceDelete = window.confirm(
-        `Firma ${companyName} und alle zugehörigen Datensätze löschen?\n\nOK = komplette Löschung (inkl. Mitarbeiter/Subunternehmen)\nAbbrechen = nicht löschen`
+        `Firma ${companyName} und alle zugehörigen Datensätze löschen?\n\nOK = komplette Löschung (inkl. Mitarbeiter, Subunternehmen und Logs)\nAbbrechen = nicht löschen`
       );
       if (!forceDelete) {
         return;
@@ -1316,7 +1404,7 @@ function bindCompanyRowActions() {
           message: repairMessage
         };
         renderCompanyList();
-        window.alert(`Statuswechsel fuer ${companyName} fehlgeschlagen: ${repairMessage}`);
+        window.alert(`Statuswechsel für ${companyName} fehlgeschlagen: ${repairMessage}`);
       } finally {
         delete state.companyLockBusy[companyId];
         renderCompanyList();
@@ -1336,7 +1424,7 @@ function bindCompanyRowActions() {
 
     const company = state.companies.find((entry) => entry.id === companyId);
     const companyName = company?.name || "diese Firma";
-    if (!window.confirm(`Firmen-Reparatur fuer ${companyName} starten? Dabei werden inkonsistente Eintraege automatisch korrigiert.`)) {
+    if (!window.confirm(`Firmen-Reparatur für ${companyName} starten? Dabei werden inkonsistente Einträge automatisch korrigiert.`)) {
       return;
     }
 
@@ -1357,9 +1445,9 @@ function bindCompanyRowActions() {
       await loadAllData();
       refreshAll();
       if (fixed.length) {
-        window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen:\n- ${fixed.join("\n- ")}`);
+        window.alert(`Firmen-Reparatur für ${companyName} abgeschlossen:\n- ${fixed.join("\n- ")}`);
       } else {
-        window.alert(`Firmen-Reparatur fuer ${companyName} abgeschlossen.`);
+        window.alert(`Firmen-Reparatur für ${companyName} abgeschlossen.`);
       }
     } catch (error) {
       const repairMessage = mapCompanyRepairError(error);
@@ -1368,7 +1456,7 @@ function bindCompanyRowActions() {
         message: repairMessage
       };
       renderCompanyList();
-      window.alert(`Firmen-Reparatur fuer ${companyName} fehlgeschlagen: ${repairMessage}`);
+      window.alert(`Firmen-Reparatur für ${companyName} fehlgeschlagen: ${repairMessage}`);
     } finally {
       delete state.companyRepairBusy[companyId];
       renderCompanyList();
@@ -1536,7 +1624,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         return;
       }
       if (worker.deletedAt) {
-        window.alert("Geloeschte Mitarbeiter koennen nicht bearbeitet werden.");
+        window.alert("Gelöschte Mitarbeiter können nicht bearbeitet werden.");
         return;
       }
 
@@ -1573,7 +1661,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht geloescht werden: ${error.message}`);
+        window.alert(`Mitarbeiter konnte nicht gelöscht werden: ${error.message}`);
       }
     });
   });
@@ -1613,7 +1701,7 @@ function closeWorkerAppQrDialog() {
 function printWorkerAppQr(workerName, qrSrc) {
   const w = window.open("", "_blank", "width=720,height=840");
   if (!w) {
-    window.alert("Druckfenster konnte nicht geoeffnet werden.");
+    window.alert("Druckfenster konnte nicht geöffnet werden.");
     return;
   }
 
@@ -1686,10 +1774,10 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
         await navigator.clipboard.writeText(absoluteLink);
         window.alert("App-Link kopiert.");
       } else {
-        window.prompt("App-Link fuer den Mitarbeiter:", absoluteLink);
+        window.prompt("App-Link für den Mitarbeiter:", absoluteLink);
       }
     } catch {
-      window.prompt("App-Link fuer den Mitarbeiter:", absoluteLink);
+      window.prompt("App-Link für den Mitarbeiter:", absoluteLink);
     }
   });
 
@@ -1727,7 +1815,7 @@ function renderBadge() {
   const visitor = isVisitorWorker(worker);
   const badgeTitle = visitor
     ? "Digitale Besucherkarte"
-    : (isDayPass ? "Besucher-Baustellen-Ausweis" : "Digitaler Baustellen-Ausweis");
+    : (isDayPass ? "Digitaler Baustellen-Tagesausweis" : "Digitaler Baustellen-Ausweis");
   const badgeClass = isDayPass ? "badge-card badge-card-daypass" : "badge-card";
   const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
@@ -2265,7 +2353,7 @@ function renderTurnstileQuickPanel() {
     button.addEventListener("click", () => {
       const workerId = elements.accessWorkerSelect.value;
       if (!workerId) {
-        window.alert("Bitte zuerst einen Mitarbeiter auswaehlen.");
+        window.alert("Bitte zuerst einen Mitarbeiter auswählen.");
         return;
       }
       bookAccess(workerId, button.dataset.quickDirection, "Drehkreuz Schnellmodus", "Terminalbuchung");
@@ -2335,7 +2423,7 @@ async function handleWorkerSubmit(event) {
       return;
     }
     if (error.message === "badge_pin_required") {
-      window.alert("Bitte eine Badge-PIN fuer den Mitarbeiter setzen.");
+      window.alert("Bitte eine Badge-PIN für den Mitarbeiter setzen.");
       return;
     }
     if (error.message === "duplicate_physical_card_id") {
@@ -2939,7 +3027,7 @@ function buildInvoiceDraft(options = {}) {
 
   if (!invoiceDate || !invoiceDueDate || !invoicePeriod || !invoiceDescription) {
     if (!silent) {
-      window.alert("Bitte Rechnungsdatum, Faelligkeitsdatum, Leistungszeitraum und Leistungsbeschreibung ausfuellen.");
+      window.alert("Bitte Rechnungsdatum, Fälligkeitsdatum, Leistungszeitraum und Leistungsbeschreibung ausfüllen.");
     }
     return null;
   }
@@ -3649,7 +3737,7 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "invalid_credentials") {
-      window.alert("Benutzername oder Passwort ist falsch. Bitte Daten pruefen und erneut versuchen.");
+      window.alert("Benutzername oder Passwort ist falsch. Bitte Daten prüfen und erneut versuchen.");
       return;
     }
     if (error.message === "admin_ip_not_allowed") {
@@ -4692,7 +4780,7 @@ async function loadDemoData() {
   }
 
   if (!companyId) {
-    window.alert("Keine aktive Firma fuer Demo-Daten gefunden.");
+    window.alert("Keine aktive Firma für Demo-Daten gefunden.");
     return;
   }
 
@@ -4707,7 +4795,7 @@ async function loadDemoData() {
   }
   const mode = String(modeRaw || "replace").trim().toLowerCase();
   if (!["replace", "append"].includes(mode)) {
-    window.alert("Ungueltiger Modus. Bitte replace oder append verwenden.");
+    window.alert("Ungültiger Modus. Bitte replace oder append verwenden.");
     return;
   }
 
@@ -4716,7 +4804,7 @@ async function loadDemoData() {
 
   const proceed = window.confirm(
     mode === "replace"
-      ? `Demo-Daten jetzt fuer ${companyName} im Modus REPLACE laden? Vorhandene Mitarbeiter/Subunternehmen/Logs werden ersetzt.`
+      ? `Demo-Daten jetzt für ${companyName} im Modus REPLACE laden? Vorhandene Mitarbeiter, Subunternehmen und Logs werden ersetzt.`
       : `Demo-Daten jetzt fuer ${companyName} im Modus APPEND zusaetzlich laden?`
   );
   if (!proceed) {
@@ -5085,6 +5173,10 @@ if (elements.importButton) {
   elements.importButton.addEventListener("click", handleTopbarImport);
 }
 
+if (elements.systemThemeToggleButton) {
+  elements.systemThemeToggleButton.addEventListener("click", toggleSystemTheme);
+}
+
 const workerCsvButton = document.querySelector("#workerCsvButton");
 if (workerCsvButton) {
   workerCsvButton.addEventListener("click", exportWorkersPdf);
@@ -5401,6 +5493,7 @@ async function bulkSetStatus(status) {
 }
 
 (async () => {
+  initSystemThemeControl();
   try {
     await loadAllData();
     if (getCurrentUser()?.role === "superadmin") {

@@ -165,6 +165,67 @@ body {
   gap: 12px;
 }
 
+/* ── Language Switcher ── */
+.lang-switcher {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lang-btn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .07);
+  color: rgba(255, 247, 241, .72);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  min-height: 36px;
+  min-width: 36px;
+}
+
+.lang-btn:hover {
+  background: rgba(255, 255, 255, .14);
+  color: #fffaf6;
+}
+
+.lang-btn.active {
+  background: rgba(240, 132, 74, .25);
+  border-color: rgba(240, 132, 74, .6);
+  color: #f0844a;
+}
+
+/* RTL layout for Arabic */
+html[dir="rtl"] .top-panel {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="rtl"] .lang-switcher {
+  justify-content: flex-end;
+}
+
+html[dir="rtl"] .login-tips {
+  direction: rtl;
+}
+
+html[dir="rtl"] .grid label {
+  text-align: right;
+}
+
+html[dir="rtl"] input {
+  text-align: right;
+  direction: rtl;
+}
+
+html[dir="rtl"] .wc-brand {
+  flex-direction: row-reverse;
+}
+/* ── End Language Switcher ── */
+
 .install-cta {
   min-height: 48px;
   border-radius: 999px;

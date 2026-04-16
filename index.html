@@ -28,7 +28,7 @@
         <img class="website-logo-sync website-logo website-logo-auth" src="./branding/baukometra-logo.svg" alt="Firmenlogo" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22210%22%20height%3D%2284%22%20viewBox%3D%220%200%20210%2084%22%3E%3Crect%20width%3D%22210%22%20height%3D%2284%22%20rx%3D%2212%22%20fill%3D%22%230f4c5c%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3EBK%3C/text%3E%3C/svg%3E';" />
         <p class="eyebrow">Melde-Seite</p>
         <h2>Sicher in BauPass Control anmelden</h2>
-        <p class="auth-copy">Super-Admin behaelt die Systemhoheit. Firmen-Admins sehen nur ihre Firma. Der Drehkreuz-Login bekommt einen schnellen Zutrittsmodus.</p>
+        <p class="auth-copy">Super-Admin behält die Systemhoheit. Firmen-Admins sehen nur ihre Firma. Der Drehkreuz-Login bekommt einen schnellen Zutrittsmodus.</p>
         <div class="auth-system-grid">
           <article class="auth-system-card">
             <span>Plattform</span>
@@ -72,7 +72,7 @@
 
       <div class="auth-hints">
         <div class="meta-box">
-          <p>Demo-Zugaenge</p>
+          <p>Demo-Zugänge</p>
           <p>Super-Admin: superadmin / 1234</p>
           <p>Firmen-Admin: firma / 1234</p>
           <p>Drehkreuz: drehkreuz / 1234</p>
@@ -104,8 +104,8 @@
       </nav>
       <div class="sidebar-card">
         <p class="sidebar-card-label">Vermietungsmodus</p>
-        <strong>Multi-Firma faehig</strong>
-        <span>Jede Baufirma verwaltet ihr Team getrennt. Super-Admin behalt Systemkontrolle.</span>
+        <strong>Multi-Firma fähig</strong>
+        <span>Jede Baufirma verwaltet ihr Team getrennt. Super-Admin behält Systemkontrolle.</span>
       </div>
     </aside>
 
@@ -116,6 +116,7 @@
           <h2>Baustellen-Ausweise und Zutritt</h2>
         </div>
         <div class="topbar-actions">
+          <button id="systemThemeToggleButton" class="ghost-button" type="button">Fensterfarbe: Auto</button>
           <button id="seedDataButton" class="ghost-button">Demo-Daten einspielen</button>
           <button id="exportButton" class="primary-button">System exportieren</button>
           <button id="importButton" class="ghost-button">System importieren</button>
@@ -134,7 +135,7 @@
           <div class="hero-badges">
             <span>Fotoaufnahme</span>
             <span>Zutrittslog</span>
-            <span>Mandantenfaehig</span>
+            <span>Mandantenfähig</span>
           </div>
         </div>
 
@@ -167,7 +168,7 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Letzte Aktivitaeten</p>
+                <p class="eyebrow">Letzte Aktivitäten</p>
                 <h3>Zutrittsprotokoll</h3>
               </div>
             </div>
@@ -228,7 +229,7 @@
               </label>
               <label>
                 Funktion
-                <input id="role" type="text" placeholder="Polier, Kranfuehrer, Monteur" required />
+                <input id="role" type="text" placeholder="Polier, Kranführer, Monteur" required />
               </label>
               <label>
                 Baustelle
@@ -293,7 +294,7 @@
                 <p id="photoDebugText" class="helper-text">Kamera noch nicht gestartet.</p>
                 <label class="camera-option">
                   <input id="whiteBgBoost" type="checkbox" checked disabled />
-                  Hintergrund komplett weiss (aktiv)
+                  Hintergrund komplett weiß (aktiv)
                 </label>
                 <canvas id="photoCanvas" width="480" height="360" hidden></canvas>
                 <div class="photo-preview-block" style="margin: 12px 0; text-align: center;">
@@ -864,7 +865,7 @@
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Mandanten</p>
-                <h3>Baufirmen und Plaene</h3>
+                <h3>Baufirmen und Pläne</h3>
               </div>
             </div>
             <div id="companyList" class="card-list"></div>
@@ -895,7 +896,7 @@
                 <input id="invoiceDate" type="date" required />
               </label>
               <label>
-                Faelligkeitsdatum
+                Fälligkeitsdatum
                 <input id="invoiceDueDate" type="date" required />
               </label>
               <label>
@@ -923,7 +924,7 @@
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Vorschau</p>
-                <h3>Rechnung vor Versand pruefen</h3>
+                <h3>Rechnung vor Versand prüfen</h3>
               </div>
               <button id="invoicePreviewButton" type="button" class="ghost-button">Vorschau aktualisieren</button>
             </div>
@@ -962,7 +963,7 @@
                 <input id="auditTo" type="date" />
               </label>
               <button type="submit" class="ghost-button">Filter anwenden</button>
-              <button id="auditResetButton" type="button" class="ghost-button">Filter zuruecksetzen</button>
+              <button id="auditResetButton" type="button" class="ghost-button">Filter zurücksetzen</button>
               <button id="auditCsvButton" type="button" class="primary-button full-width">Audit-CSV exportieren</button>
             </form>
             <div id="auditLogList" class="list"></div>
