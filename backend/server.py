@@ -3569,7 +3569,7 @@ def worker_app_login():
     if worker_visit_has_expired(worker):
         return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 401
 
-    is_visitor = normalize_worker_type(worker["worker_type"]) == "visitor"
+    is_visitor = badge_id.startswith("VS")
     if not is_visitor:
         if not worker["badge_pin_hash"]:
             return jsonify({"error": "badge_pin_not_configured", "message": "Fuer diese Karte ist noch keine Badge-PIN hinterlegt."}), 403
