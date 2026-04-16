@@ -233,7 +233,7 @@ async function init() {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = storedBadgeId;
       const pinWrapper = document.querySelector("#pinFieldWrapper");
-      if (pinWrapper) pinWrapper.classList.remove("hidden");
+      if (pinWrapper && !isVisitorBadgeId(storedBadgeId)) pinWrapper.classList.remove("hidden");
     }
   }
 }
@@ -286,9 +286,10 @@ function bindEvents() {
     const pinWrapper = document.querySelector("#pinFieldWrapper");
     elements.workerAccessToken.addEventListener("input", () => {
       const val = (elements.workerAccessToken.value || "").trim();
+      const needsPin = looksLikeBadgeId(val) && !isVisitorBadgeId(val);
       if (pinWrapper) {
-        pinWrapper.classList.toggle("hidden", !looksLikeBadgeId(val));
-        if (!looksLikeBadgeId(val) && elements.workerBadgePin) {
+        pinWrapper.classList.toggle("hidden", !needsPin);
+        if (!needsPin && elements.workerBadgePin) {
           elements.workerBadgePin.value = "";
         }
       }
@@ -300,7 +301,7 @@ function bindEvents() {
       event.preventDefault();
       const credential = (elements.workerAccessToken?.value || "").trim();
       if (looksLikeBadgeId(credential)) {
-        const badgePin = (elements.workerBadgePin?.value || "").trim();
+        const badgePin = isVisitorBadgeId(credential) ? "" : (elements.workerBadgePin?.value || "").trim();
         await loginWithBadgeId(credential, badgePin);
         return;
       }
@@ -1119,6 +1120,10 @@ function normalizeBadgePinInput(value) {
 function looksLikeBadgeId(value) {
   const normalized = normalizeBadgeIdInput(value);
   return normalized.length >= 6 && normalized.length <= 32 && /^[A-Z0-9-]+$/.test(normalized) && normalized.includes("-");
+}
+
+function isVisitorBadgeId(value) {
+  return normalizeBadgeIdInput(value).startsWith("VS-") || normalizeBadgeIdInput(value).startsWith("VS");
 }
 
 function updateSiteMapLink(site) {
