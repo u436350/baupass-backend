@@ -57,18 +57,48 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const SYSTEM_THEME_STORAGE_KEY = "baupass-system-theme";
+const SYSTEM_THEME_WHITE = "white";
+const SYSTEM_THEME_BLACK = "black";
 
-function applySystemThemeLocked() {
-  // Systemfarbe ist bewusst gesperrt: keine manuelle Auswahl im UI.
+function normalizeSystemTheme(value) {
+  if (value === SYSTEM_THEME_BLACK) return SYSTEM_THEME_BLACK;
+  return SYSTEM_THEME_WHITE;
+}
+
+function getStoredSystemTheme() {
+  return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
+}
+
+function getThemeModeLabel(mode) {
+  return mode === SYSTEM_THEME_BLACK ? "Dunkel" : "Weiß";
+}
+
+function applySystemTheme(mode, { persist = true } = {}) {
+  const selectedMode = normalizeSystemTheme(mode);
   document.body.classList.remove("theme-black", "theme-white");
-  document.body.classList.add("theme-white");
-  document.body.style.setProperty("--window-color", "#ffffff");
-  window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, "white");
+  document.body.classList.add(selectedMode === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
+  document.body.style.setProperty("--window-color", selectedMode === SYSTEM_THEME_BLACK ? "#000000" : "#ffffff");
+  if (persist) {
+    window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
+  }
   window.localStorage.removeItem("baupass-system-theme-color");
+
+  const button = document.querySelector("#systemThemeToggleButton");
+  if (button) {
+    button.textContent = `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
+    button.title = selectedMode === SYSTEM_THEME_BLACK
+      ? "Aktuell Dunkel. Klicken für Weiß."
+      : "Aktuell Weiß. Klicken für Dunkel.";
+  }
+}
+
+function toggleSystemTheme() {
+  const currentMode = getStoredSystemTheme();
+  applySystemTheme(currentMode === SYSTEM_THEME_BLACK ? SYSTEM_THEME_WHITE : SYSTEM_THEME_BLACK);
 }
 
 function initSystemThemeControl() {
-  applySystemThemeLocked();
+  applySystemTheme(getStoredSystemTheme(), { persist: false });
 }
 
 let deferredDesktopInstallPrompt = null;
@@ -81,6 +111,7 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
+  systemThemeToggleButton: document.querySelector("#systemThemeToggleButton"),
   desktopInstallButton: document.querySelector("#desktopInstallButton"),
   desktopInstallHint: document.querySelector("#desktopInstallHint"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -5140,6 +5171,10 @@ if (elements.exportButton) {
 
 if (elements.importButton) {
   elements.importButton.addEventListener("click", handleTopbarImport);
+}
+
+if (elements.systemThemeToggleButton) {
+  elements.systemThemeToggleButton.addEventListener("click", toggleSystemTheme);
 }
 
 const workerCsvButton = document.querySelector("#workerCsvButton");
