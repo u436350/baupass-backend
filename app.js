@@ -425,9 +425,14 @@ function populateSubcompanySelects() {
   const select = document.querySelector("#subcompanySelect");
   const companyId = document.querySelector("#companySelect")?.value || "";
   if (!select) return;
+  const normalizedCompanyId = String(companyId).trim();
 
   const options = state.subcompanies
-    .filter((entry) => !entry.deletedAt && (!companyId || entry.companyId === companyId))
+    .filter((entry) => {
+      const isDeleted = Boolean(entry?.deletedAt || entry?.deleted_at);
+      const entryCompanyId = String(entry?.companyId || entry?.company_id || "").trim();
+      return !isDeleted && (!normalizedCompanyId || entryCompanyId === normalizedCompanyId);
+    })
     .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.name)}</option>`)
     .join("");
 
@@ -4966,6 +4971,20 @@ function formatDate(value) {
 }
 
 function formatTimestamp(value) {
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("de-DE", {
     day: "2-digit",
     month: "2-digit",
