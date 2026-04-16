@@ -141,6 +141,7 @@ let cameraStream = null;
 let backendStatusTimer = null;
 let heartbeatTimer = null;
 let selfieSegmenter = null;
+let sessionExpiryNoticeShown = false;
 
 const PLAN_LABELS = {
   tageskarte: "Besucherkarte",
@@ -562,6 +563,16 @@ function clearSession() {
   state.currentUser = null;
 }
 
+function handleExpiredControlSession() {
+  clearSession();
+  refreshAll();
+  if (sessionExpiryNoticeShown) {
+    return;
+  }
+  sessionExpiryNoticeShown = true;
+  window.alert("Sitzung abgelaufen. Bitte neu anmelden.");
+}
+
 function startHeartbeat() {
   if (heartbeatTimer) {
     window.clearInterval(heartbeatTimer);
@@ -592,7 +603,8 @@ function startBackendStatusMonitor() {
 async function apiRequest(url, options = {}) {
   const { method = "GET", body, auth = true } = options;
   if (auth && !token) {
-    throw new Error("unauthorized");
+    handleExpiredControlSession();
+    throw new Error("session_expired");
   }
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (auth && token) {
@@ -613,6 +625,10 @@ async function apiRequest(url, options = {}) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (auth && ["invalid_session", "unauthorized"].includes(String(payload?.error || ""))) {
+      handleExpiredControlSession();
+      throw new Error("session_expired");
+    }
     throw new Error(payload?.error || `http_${response.status}`);
   }
   return payload;
@@ -635,6 +651,7 @@ async function loadAllData() {
   const bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, { auth: false });
   token = bootstrap.token || token;
   state.currentUser = bootstrap.user || null;
+  sessionExpiryNoticeShown = false;
 
   const reportUrl = `${API_BASE}/api/reporting/summary`;
   const requests = await Promise.allSettled([
@@ -5169,6 +5186,9 @@ if (addSubcompanyButton) {
       populateSubcompanySelects();
       refreshAll();
     } catch (error) {
+      if (error.message === "session_expired") {
+        return;
+      }
       window.alert(`Subunternehmen konnte nicht angelegt werden: ${error.message}`);
     }
   });
