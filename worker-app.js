@@ -522,6 +522,10 @@ function applyTranslations() {
     langSelect.value = lang;
   }
 
+  document.querySelectorAll(".worker-lang-btn[data-lang]").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
+  });
+
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.dataset.i18n;
     const attr = el.dataset.i18nAttr;
@@ -758,6 +762,10 @@ function bindEvents() {
     langSelect.value = currentLang;
     langSelect.addEventListener("change", () => setLang(langSelect.value));
   }
+
+  document.querySelectorAll(".worker-lang-btn[data-lang]").forEach((btn) => {
+    btn.addEventListener("click", () => setLang(btn.getAttribute("data-lang")));
+  });
 
   window.addEventListener("online", updateConnectionState);
   window.addEventListener("offline", updateConnectionState);

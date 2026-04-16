@@ -166,6 +166,37 @@ body {
 }
 
 /* ── Language Option (under Standort) ── */
+.worker-lang-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.worker-lang-btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(18, 21, 24, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  color: #1b2128;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.1s, border-color 0.1s;
+}
+
+.worker-lang-btn.active {
+  background: rgba(22, 94, 216, 0.12);
+  border-color: rgba(22, 94, 216, 0.45);
+  color: #1659d6;
+}
+
+.worker-lang-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Language Option (under Standort) ── */
 .lang-option-block {
   margin-top: 12px;
   padding: 10px 12px;
