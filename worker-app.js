@@ -74,6 +74,7 @@ const TRANSLATIONS = {
     appTitle: "BauPass Mobile",
     appEyebrow: "Mitarbeiter-App",
     appLead: "Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.",
+    languageLabel: "Sprache",
     installBtn: "App installieren",
     installHint: "Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.",
     online: "Online",
@@ -175,6 +176,7 @@ const TRANSLATIONS = {
     appTitle: "BauPass Mobile",
     appEyebrow: "Worker App",
     appLead: "Your ID, your route, and your site access in one place. Fast, clean, and right on your home screen.",
+    languageLabel: "Language",
     installBtn: "Install App",
     installHint: "Optimized for iPhone and Android. Install the app for quick access at the turnstile.",
     online: "Online",
@@ -276,6 +278,7 @@ const TRANSLATIONS = {
     appTitle: "BauPass Mobil",
     appEyebrow: "Çalışan Uygulaması",
     appLead: "Kimliğin, rotanın ve şantiye girişin tek bir yerde. Hızlı, temiz ve ana ekranında.",
+    languageLabel: "Dil",
     installBtn: "Uygulamayı Kur",
     installHint: "iPhone ve Android için optimize edildi. Turnikede hızlı erişim için uygulamayı kur.",
     online: "Çevrimiçi",
@@ -377,6 +380,7 @@ const TRANSLATIONS = {
     appTitle: "BauPass موبايل",
     appEyebrow: "تطبيق العمال",
     appLead: "هويتك وطريقك ودخولك إلى الموقع في مكان واحد. سريع وسهل على الشاشة الرئيسية.",
+    languageLabel: "اللغة",
     installBtn: "تثبيت التطبيق",
     installHint: "محسّن لـ iPhone وAndroid. ثبّت التطبيق للوصول السريع عند البوابة الدوارة.",
     online: "متصل",
@@ -513,6 +517,11 @@ function applyTranslations() {
   document.documentElement.dir = dir;
   document.title = t("pageTitle");
 
+  const langSelect = document.querySelector("#workerLanguageSelect");
+  if (langSelect && langSelect.value !== lang) {
+    langSelect.value = lang;
+  }
+
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.dataset.i18n;
     const attr = el.dataset.i18nAttr;
@@ -535,51 +544,6 @@ function setLang(lang) {
   if (workerToken) {
     void loadWorkerData();
   }
-  // Update lang switcher active state
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.lang === lang);
-  });
-}
-
-function buildLanguageSwitcher(extraClass = "") {
-  const switcher = document.createElement("div");
-  switcher.className = `lang-switcher ${extraClass}`.trim();
-  switcher.setAttribute("role", "group");
-  switcher.setAttribute("aria-label", "Language");
-
-  ["de", "en", "tr", "ar"].forEach((lang) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lang-btn";
-    btn.dataset.lang = lang;
-    btn.textContent = (LANG_META[lang]?.label || lang).toUpperCase();
-    btn.setAttribute("aria-label", LANG_META[lang]?.label || lang);
-    switcher.appendChild(btn);
-  });
-
-  return switcher;
-}
-
-function ensureLanguageSwitcher() {
-  if (document.querySelector(".lang-switcher")) {
-    return;
-  }
-
-  const host = document.querySelector(".top-actions") || document.querySelector(".top-panel");
-  if (!host) {
-    return;
-  }
-
-  const switcher = buildLanguageSwitcher();
-  host.insertBefore(switcher, host.firstChild);
-}
-
-function ensureFloatingLanguageSwitcher() {
-  if (document.querySelector(".floating-lang-switcher")) {
-    return;
-  }
-  const floating = buildLanguageSwitcher("floating-lang-switcher");
-  document.body.appendChild(floating);
 }
 // ─────────────────────────────────────────────────────────────────────
 
@@ -698,8 +662,6 @@ function markUserInteraction() {
 init().finally(dismissSplash);
 
 async function init() {
-  ensureLanguageSwitcher();
-  ensureFloatingLanguageSwitcher();
   applyTranslations();
   bindEvents();
   applyQrContrastState();
@@ -791,14 +753,11 @@ function applyDynamicManifestStartUrl(accessToken) {
 }
 
 function bindEvents() {
-  // Lang switcher
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => setLang(btn.dataset.lang));
-  });
-  // Set initial active state
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.lang === currentLang);
-  });
+  const langSelect = document.querySelector("#workerLanguageSelect");
+  if (langSelect) {
+    langSelect.value = currentLang;
+    langSelect.addEventListener("change", () => setLang(langSelect.value));
+  }
 
   window.addEventListener("online", updateConnectionState);
   window.addEventListener("offline", updateConnectionState);

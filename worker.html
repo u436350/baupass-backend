@@ -60,12 +60,6 @@
         <p class="top-lead" data-i18n="appLead">Dein Ausweis, dein Arbeitsweg und dein Einlass an einem Ort. Schnell, sauber und direkt auf dem Homescreen.</p>
       </div>
       <div class="top-actions">
-        <div class="lang-switcher" role="group" aria-label="Language">
-          <button class="lang-btn active" data-lang="de" aria-label="Deutsch">DE</button>
-          <button class="lang-btn" data-lang="en" aria-label="English">EN</button>
-          <button class="lang-btn" data-lang="tr" aria-label="Türkçe">TR</button>
-          <button class="lang-btn" data-lang="ar" aria-label="العربية">AR</button>
-        </div>
         <button id="installButton" class="ghost install-cta" data-i18n="installBtn" hidden>App installieren</button>
         <p id="installPlatformHint" class="platform-hint" data-i18n="installHint">Für iPhone und Android optimiert. Installiere die App für schnellen Zugriff am Drehkreuz.</p>
         <p id="connectionBanner" class="connection-banner online" data-i18n="online">Online</p>
@@ -172,6 +166,15 @@
             <span class="info-icon">📍</span>
             <span class="info-label" data-i18n="fieldSite">Baustelle</span>
             <a id="workerSite" class="info-value site-inline-link" href="#" target="_blank" rel="noopener noreferrer">–</a>
+          </div>
+          <div class="lang-option-block">
+            <label class="lang-option-label" for="workerLanguageSelect" data-i18n="languageLabel">Sprache</label>
+            <select id="workerLanguageSelect" class="lang-option-select" aria-label="Sprache auswählen">
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="tr">🇹🇷 Türkçe</option>
+              <option value="ar">🇸🇦 العربية</option>
+            </select>
           </div>
         </div>
       </div>

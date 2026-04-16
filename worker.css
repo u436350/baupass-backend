@@ -165,62 +165,40 @@ body {
   gap: 12px;
 }
 
-/* ── Language Switcher ── */
-.lang-switcher {
-  display: flex;
+/* ── Language Option (under Standort) ── */
+.lang-option-block {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(22, 94, 216, .2);
+  background: rgba(22, 94, 216, .08);
+  display: grid;
   gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-self: start;
-  padding: 6px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .26);
-  border: 1px solid rgba(255, 255, 255, .2);
-  width: fit-content;
 }
 
-.lang-btn {
-  padding: 6px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .35);
-  background: rgba(255, 255, 255, .12);
-  color: rgba(255, 247, 241, .92);
-  font-size: .8rem;
+.lang-option-label {
+  font-size: .78rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.lang-option-select {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(18, 19, 24, .16);
+  background: #fff;
+  color: #101418;
+  font-size: .95rem;
   font-weight: 700;
-  letter-spacing: .04em;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s, transform .15s;
-  min-height: 36px;
-  min-width: 36px;
+  padding: 8px 10px;
 }
 
-.lang-btn:hover {
-  background: rgba(255, 255, 255, .2);
-  color: #fffaf6;
-  transform: translateY(-1px);
-}
-
-.lang-btn.active {
-  background: rgba(240, 132, 74, .3);
-  border-color: rgba(240, 132, 74, .85);
-  color: #ffd9c4;
-  box-shadow: 0 6px 16px rgba(240, 132, 74, .28);
-}
-
-.floating-lang-switcher {
-  position: fixed;
-  top: max(10px, env(safe-area-inset-top));
-  right: 10px;
-  z-index: 3200;
-  background: rgba(9, 12, 18, .72);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
-  border-color: rgba(255, 255, 255, .28);
-}
-
-html[dir="rtl"] .floating-lang-switcher {
-  left: 10px;
-  right: auto;
+.lang-option-select:focus-visible {
+  outline: 2px solid rgba(22, 94, 216, .45);
+  outline-offset: 1px;
 }
 
 /* RTL layout for Arabic */
@@ -229,8 +207,10 @@ html[dir="rtl"] .top-panel {
   text-align: right;
 }
 
-html[dir="rtl"] .lang-switcher {
-  justify-content: flex-end;
+html[dir="rtl"] .lang-option-block,
+html[dir="rtl"] .lang-option-label,
+html[dir="rtl"] .lang-option-select {
+  text-align: right;
 }
 
 html[dir="rtl"] .login-tips {
