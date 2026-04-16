@@ -93,22 +93,7 @@
     </section>
 
     <section id="badgeCard" class="card worker-pass hidden">
-      <div id="workerStatusBanner" class="status-banner active" style="display:none;">
-        <span class="status-banner-icon">✓</span>
-        <span id="workerStatusText">Aktiv und berechtigt</span>
-      </div>
-
       <div class="pass-stage">
-        <div class="section-head section-head-inline">
-          <div>
-            <p class="section-kicker">Digitaler Pass</p>
-            <h2 id="workerPassTitle">Dein BauPass für heute</h2>
-          </div>
-          <span class="pass-stage-chip">Live</span>
-        </div>
-        <p id="workerDayCardValidity" class="day-card-validity">Digitale Besucherkarte: gueltig bis heute 00:00 Uhr.</p>
-
-      <!-- ══════════ WALLET-CARD ══════════ -->
       <div class="wallet-card">
         <div class="wc-shimmer"></div>
         <div class="wc-grid"></div>
@@ -137,10 +122,11 @@
           </svg>
         </div>
 
-        <!-- Mitte: Chip + Foto -->
+        <!-- Mitte: QR-Chip + Foto -->
         <div class="wc-middle">
-          <div class="wc-chip">
-            <div class="wc-chip-inner"></div>
+          <div class="wc-qr-holder">
+            <div class="wc-qr-frame" aria-hidden="true"></div>
+            <img id="workerQr" alt="QR Code" />
           </div>
           <img id="workerPhoto" class="wc-photo" alt="Mitarbeiterfoto" />
         </div>
@@ -167,63 +153,24 @@
             </div>
           </div>
         </div>
-        <div id="workerVisitorMeta" class="worker-visitor-meta hidden">
-          <p><strong>Firma:</strong> <span id="workerVisitorCompany">-</span></p>
-          <p><strong>Zweck:</strong> <span id="workerVisitPurpose">-</span></p>
-          <p><strong>Ansprechpartner:</strong> <span id="workerHostName">-</span></p>
-          <p><strong>Besuchsende:</strong> <span id="workerVisitEndAt">-</span></p>
-        </div>
       </div>
-      <!-- ══════════════════════════════════ -->
       </div>
 
       <div class="worker-panel-grid">
-        <!-- Baustelle & Foto-Aktion -->
         <div class="below-card route-card">
           <div class="section-head compact-head">
-            <p class="section-kicker">Heute unterwegs</p>
-            <h3>Baustelle und Route</h3>
+            <p class="section-kicker">Baustelle</p>
+            <h3>Standort heute</h3>
           </div>
           <div class="info-row">
             <span class="info-icon">📍</span>
             <span class="info-label">Baustelle</span>
             <span id="workerSite" class="info-value">–</span>
           </div>
-          <div class="info-actions">
-            <a id="workerSiteMapLink" class="site-map-link hidden" href="#" target="_blank" rel="noopener noreferrer">Route in Maps öffnen</a>
-          </div>
-          <div class="photo-action-wrap">
-            <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
-            <button id="changePhotoButton" class="ghost small-btn photo-action-button" type="button">📷 Foto aufnehmen / hochladen</button>
-          </div>
-        </div>
-
-        <!-- QR-Code -->
-        <div class="qr-wrap scanner-card">
-          <div class="section-head compact-head scanner-head">
-            <div>
-              <p class="section-kicker">Einlass</p>
-              <h3>Scanner bereit</h3>
-            </div>
-            <span class="scanner-chip">Gate</span>
-          </div>
-          <p class="qr-label">Einlasskontrolle scannen</p>
-          <p id="workerSessionCountdown" class="qr-countdown">Ablauf: --:--:--</p>
-          <div class="qr-stage">
-            <div class="qr-frame" aria-hidden="true"></div>
-            <img id="workerQr" alt="QR Code" />
-          </div>
-          <div class="qr-controls">
-            <button id="quickGateModeButton" class="ghost small-btn qr-fullscreen-button" type="button">QR im Vollbild anzeigen</button>
-            <button id="qrContrastToggle" class="ghost small-btn qr-contrast-button" type="button">High-Contrast QR: Aus</button>
-          </div>
-          <label class="qr-setting-toggle" for="autoOpenScannerToggle">
-            <input id="autoOpenScannerToggle" type="checkbox" />
-            <span>Auto-Open Scanner bei &lt;2 Minuten</span>
-          </label>
-          <p id="qrFallbackText" class="qr-fallback hidden"></p>
         </div>
       </div>
+
+      <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" />
 
       <!-- Kamera-Overlay (unverändert) -->
       <div id="cameraOverlay" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); align-items:center; justify-content:center; flex-direction:column;">
@@ -243,11 +190,6 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button id="gateModeButton" class="primary" type="button">Drehkreuzmodus</button>
-        <button id="refreshButton" class="ghost" type="button">Aktualisieren</button>
-        <button id="logoutButton" class="ghost" type="button">Abmelden</button>
-      </div>
     </section>
 
     <section id="gateScannerOverlay" class="gate-overlay hidden" aria-live="polite">

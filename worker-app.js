@@ -663,7 +663,7 @@ function renderWorker(payload) {
 
   const qrPayload = buildQrPayload(worker);
   const isCompactViewport = window.matchMedia("(max-width: 520px)").matches;
-  const workerQrSize = isCompactViewport ? 420 : 340;
+  const workerQrSize = isCompactViewport ? 520 : 460;
   const gateQrSize = isCompactViewport ? 520 : 420;
   if (elements.workerQr) {
     if (!qrPayload) {
