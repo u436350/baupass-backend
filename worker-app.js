@@ -909,22 +909,24 @@ function looksLikeBadgeId(value) {
 }
 
 function updateSiteMapLink(site) {
-  if (!elements.workerSiteMapLink) {
+  if (!elements.workerSite) {
     return;
   }
 
   const normalizedSite = String(site || "").trim();
   if (!normalizedSite) {
-    elements.workerSiteMapLink.classList.add("hidden");
-    elements.workerSiteMapLink.removeAttribute("href");
+    elements.workerSite.textContent = "-";
+    elements.workerSite.setAttribute("href", "#");
+    elements.workerSite.setAttribute("aria-disabled", "true");
     return;
   }
 
   const mapsUrl = new URL("https://www.google.com/maps/search/");
   mapsUrl.searchParams.set("api", "1");
   mapsUrl.searchParams.set("query", normalizedSite);
-  elements.workerSiteMapLink.href = mapsUrl.toString();
-  elements.workerSiteMapLink.classList.remove("hidden");
+  elements.workerSite.textContent = normalizedSite;
+  elements.workerSite.href = mapsUrl.toString();
+  elements.workerSite.removeAttribute("aria-disabled");
 }
 
 function resolveApiRoot(workerApiBase) {

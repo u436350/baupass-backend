@@ -819,6 +819,23 @@ body.worker-loaded .app-shell {
   text-align: right;
 }
 
+.site-inline-link {
+  text-decoration: none;
+  color: #1147a6;
+}
+
+.site-inline-link:hover,
+.site-inline-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-inline-link[aria-disabled="true"] {
+  color: var(--text);
+  pointer-events: none;
+  text-decoration: none;
+}
+
 .site-map-link {
   display: inline-flex;
   align-items: center;
