@@ -182,6 +182,39 @@ def parse_iso_date(value):
         return None
 
 
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
+_PHOTO_DATA_URL_RE = re.compile(r"^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\r\n]+$", re.IGNORECASE)
+
+
+def clean_text_input(value, max_len=255):
+    raw = str(value or "").strip()
+    raw = _CONTROL_CHARS_RE.sub("", raw)
+    if len(raw) > max_len:
+        raw = raw[:max_len]
+    return raw
+
+
+def clean_id_input(value, max_len=64):
+    candidate = clean_text_input(value, max_len=max_len)
+    if candidate and not _SAFE_ID_RE.fullmatch(candidate):
+        raise ValueError("invalid_identifier")
+    return candidate
+
+
+def sanitize_photo_data(value, required=False):
+    raw = str(value or "").strip()
+    if not raw:
+        if required:
+            raise ValueError("photo_required")
+        return ""
+    if len(raw) > 5_000_000:
+        raise ValueError("photo_too_large")
+    if not _PHOTO_DATA_URL_RE.fullmatch(raw):
+        raise ValueError("invalid_photo_data")
+    return raw.replace("\n", "").replace("\r", "")
+
+
 def get_rate_limit_key(scope):
     return f"{scope}|{get_client_ip()}"
 
@@ -384,6 +417,18 @@ def apply_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob: https:; "
+        "connect-src 'self' https:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
     path = (request.path or "").lower()
     is_pwa_asset = (
         path in {
@@ -1321,9 +1366,10 @@ def require_worker_session(handler):
 @require_worker_session
 def update_worker_photo():
     payload = request.get_json(silent=True) or {}
-    photo_data = payload.get("photoData", "").strip()
-    if not photo_data:
-        return jsonify({"error": "missing_photo_data"}), 400
+    try:
+        photo_data = sanitize_photo_data(payload.get("photoData", ""), required=True)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     db = get_db()
     db.execute("UPDATE workers SET photo_data = ? WHERE id = ?", (photo_data, g.worker["id"]))
     db.commit()
@@ -2703,9 +2749,12 @@ def list_subcompanies():
 def create_subcompany():
     payload = request.get_json(silent=True) or {}
     user = g.current_user
-    company_id = (payload.get("companyId") or user.get("company_id") or "").strip()
-    name = (payload.get("name") or "").strip()
-    contact = (payload.get("contact") or "").strip()
+    try:
+        company_id = clean_id_input(payload.get("companyId") or user.get("company_id") or "")
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    name = clean_text_input(payload.get("name") or "", max_len=120)
+    contact = clean_text_input(payload.get("contact") or "", max_len=180)
 
     if not company_id:
         return jsonify({"error": "missing_company"}), 400
@@ -2751,21 +2800,26 @@ def create_subcompany():
 def create_company():
     payload = request.get_json(silent=True) or {}
     company_id = f"cmp-{secrets.token_hex(6)}"
+    company_name = clean_text_input(payload.get("name", "Neue Firma"), max_len=120) or "Neue Firma"
+    company_contact = clean_text_input(payload.get("contact", ""), max_len=180)
+    billing_email = clean_text_input(payload.get("billingEmail", ""), max_len=160)
+    access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
+    company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
 
     get_db().execute(
         "INSERT INTO companies (id, name, contact, billing_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
         (
             company_id,
-            payload.get("name", "Neue Firma"),
-            payload.get("contact", ""),
-            payload.get("billingEmail", ""),
-            (payload.get("accessHost") or payload.get("access_host") or "").strip().lower(),
+            company_name,
+            company_contact,
+            billing_email,
+            access_host,
             normalize_company_plan(payload.get("plan", "tageskarte")),
-            payload.get("status", "aktiv"),
+            company_status,
         ),
     )
 
-    username_base = "".join(c for c in payload.get("name", "firma").lower() if c.isalnum())[:12] or "firma"
+    username_base = "".join(c for c in company_name.lower() if c.isalnum())[:12] or "firma"
     username = username_base
     suffix = 1
     db = get_db()
@@ -2779,13 +2833,13 @@ def create_company():
             f"usr-{secrets.token_hex(6)}",
             username,
             generate_password_hash("1234"),
-            f"{payload.get('name', 'Firma')} Admin",
+            f"{company_name} Admin",
             "company-admin",
             company_id,
         ),
     )
     db.commit()
-    log_audit("company.created", f"Firma {payload.get('name', 'Firma')} wurde angelegt", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
+    log_audit("company.created", f"Firma {company_name} wurde angelegt", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
 
     row = db.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
     return (
@@ -3195,7 +3249,10 @@ def export_workers_pdf():
 def create_worker():
     payload = request.get_json(silent=True) or {}
     user = g.current_user
-    company_id = payload.get("companyId") or user.get("company_id")
+    try:
+        company_id = clean_id_input(payload.get("companyId") or user.get("company_id"))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     db = get_db()
 
     if user["role"] != "superadmin" and company_id != user.get("company_id"):
@@ -3210,14 +3267,15 @@ def create_worker():
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
 
-    photo_data = (payload.get("photoData") or "").strip()
-    if not photo_data:
-        return jsonify({"error": "photo_required"}), 400
+    try:
+        photo_data = sanitize_photo_data(payload.get("photoData"), required=True)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
     worker_type = normalize_worker_type(payload.get("workerType"))
-    visitor_company = (payload.get("visitorCompany") or "").strip()
-    visit_purpose = (payload.get("visitPurpose") or "").strip()
-    host_name = (payload.get("hostName") or "").strip()
+    visitor_company = clean_text_input(payload.get("visitorCompany") or "", max_len=120)
+    visit_purpose = clean_text_input(payload.get("visitPurpose") or "", max_len=200)
+    host_name = clean_text_input(payload.get("hostName") or "", max_len=120)
     visit_end_at = parse_datetime_local_to_utc_iso(payload.get("visitEndAt"))
 
     if worker_type == "visitor":
@@ -3244,6 +3302,15 @@ def create_worker():
     except ValueError as error:
         return jsonify({"error": str(error), "message": "Diese Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet."}), 409
 
+    first_name = clean_text_input(payload.get("firstName", ""), max_len=80)
+    last_name = clean_text_input(payload.get("lastName", ""), max_len=80)
+    insurance_number = clean_text_input(payload.get("insuranceNumber", ""), max_len=64)
+    role_value = clean_text_input(payload.get("role", ""), max_len=120)
+    site_value = clean_text_input(payload.get("site", ""), max_len=120)
+    valid_until_value = clean_text_input(payload.get("validUntil", ""), max_len=32)
+    status_value = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
+    badge_id_value = clean_text_input(payload.get("badgeId", f"{'VS' if worker_type == 'visitor' else 'BP'}-{secrets.token_hex(3).upper()}"), max_len=64)
+
     worker_id = f"wrk-{secrets.token_hex(6)}"
     db.execute(
         """
@@ -3255,27 +3322,27 @@ def create_worker():
             worker_id,
             company_id,
             subcompany_id,
-            payload.get("firstName", ""),
-            payload.get("lastName", ""),
-            payload.get("insuranceNumber", "") if worker_type != "visitor" else "",
+            first_name,
+            last_name,
+            insurance_number if worker_type != "visitor" else "",
             worker_type,
-            payload.get("role", "") if worker_type != "visitor" else (payload.get("role") or "Besucher"),
-            payload.get("site", ""),
-            payload.get("validUntil", ""),
+            role_value if worker_type != "visitor" else (role_value or "Besucher"),
+            site_value,
+            valid_until_value,
             visitor_company,
             visit_purpose,
             host_name,
             visit_end_at,
-            payload.get("status", "aktiv"),
+            status_value,
             photo_data,
-            payload.get("badgeId", f"{'VS' if worker_type == 'visitor' else 'BP'}-{secrets.token_hex(3).upper()}"),
+            badge_id_value,
             badge_pin_hash,
             physical_card_id,
             None,
         ),
     )
     db.commit()
-    log_audit("worker.created", f"Mitarbeiter {payload.get('firstName', '')} {payload.get('lastName', '')} erstellt", target_type="worker", target_id=worker_id, company_id=company_id, actor=g.current_user)
+    log_audit("worker.created", f"Mitarbeiter {first_name} {last_name} erstellt", target_type="worker", target_id=worker_id, company_id=company_id, actor=g.current_user)
     row = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
     return jsonify(serialize_worker_record(row)), 201
 
@@ -3296,7 +3363,10 @@ def update_worker(worker_id):
     if worker["deleted_at"]:
         return jsonify({"error": "worker_deleted"}), 400
 
-    next_company_id = payload.get("companyId", worker["company_id"])
+    try:
+        next_company_id = clean_id_input(payload.get("companyId", worker["company_id"]))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
     if g.current_user["role"] != "superadmin" and next_company_id != g.current_user.get("company_id"):
         return jsonify({"error": "forbidden_company"}), 403
 
@@ -3309,10 +3379,10 @@ def update_worker(worker_id):
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
 
-    updated_photo_data = payload.get("photoData", worker["photo_data"])
-    updated_photo_data = (updated_photo_data or "").strip()
-    if not updated_photo_data:
-        return jsonify({"error": "photo_required"}), 400
+    try:
+        updated_photo_data = sanitize_photo_data(payload.get("photoData", worker["photo_data"]), required=True)
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
     next_physical_card_id = normalize_physical_card_id(payload.get("physicalCardId", worker["physical_card_id"]))
     try:
@@ -3321,9 +3391,9 @@ def update_worker(worker_id):
         return jsonify({"error": str(error), "message": "Diese Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet."}), 409
 
     worker_type = normalize_worker_type(payload.get("workerType", worker["worker_type"]))
-    visitor_company = (payload.get("visitorCompany", worker["visitor_company"]) or "").strip()
-    visit_purpose = (payload.get("visitPurpose", worker["visit_purpose"]) or "").strip()
-    host_name = (payload.get("hostName", worker["host_name"]) or "").strip()
+    visitor_company = clean_text_input(payload.get("visitorCompany", worker["visitor_company"]) or "", max_len=120)
+    visit_purpose = clean_text_input(payload.get("visitPurpose", worker["visit_purpose"]) or "", max_len=200)
+    host_name = clean_text_input(payload.get("hostName", worker["host_name"]) or "", max_len=120)
     visit_end_at = parse_datetime_local_to_utc_iso(payload.get("visitEndAt", worker["visit_end_at"])) if payload.get("visitEndAt", worker["visit_end_at"]) else ""
     if worker_type == "visitor":
         if not visit_purpose:
@@ -3350,6 +3420,14 @@ def update_worker(worker_id):
     if worker_type != "visitor" and not next_badge_pin_hash:
         return jsonify({"error": "badge_pin_required", "message": "Bitte eine Badge-PIN fuer diesen Mitarbeiter setzen."}), 400
 
+    next_first_name = clean_text_input(payload.get("firstName", worker["first_name"]), max_len=80)
+    next_last_name = clean_text_input(payload.get("lastName", worker["last_name"]), max_len=80)
+    next_insurance_number = clean_text_input(payload.get("insuranceNumber", worker["insurance_number"]), max_len=64)
+    next_role = clean_text_input(payload.get("role", worker["role"]), max_len=120)
+    next_site = clean_text_input(payload.get("site", worker["site"]), max_len=120)
+    next_valid_until = clean_text_input(payload.get("validUntil", worker["valid_until"]), max_len=32)
+    next_status = clean_text_input(payload.get("status", worker["status"]), max_len=32) or worker["status"]
+
     db.execute(
         """
         UPDATE workers
@@ -3359,18 +3437,18 @@ def update_worker(worker_id):
         (
             next_company_id,
             subcompany_id,
-            payload.get("firstName", worker["first_name"]),
-            payload.get("lastName", worker["last_name"]),
-            payload.get("insuranceNumber", worker["insurance_number"]) if worker_type != "visitor" else "",
+            next_first_name,
+            next_last_name,
+            next_insurance_number if worker_type != "visitor" else "",
             worker_type,
-            payload.get("role", worker["role"]) if worker_type != "visitor" else (payload.get("role") or visitor_company or "Besucher"),
-            payload.get("site", worker["site"]),
-            payload.get("validUntil", worker["valid_until"]),
+            next_role if worker_type != "visitor" else (next_role or visitor_company or "Besucher"),
+            next_site,
+            next_valid_until,
             visitor_company,
             visit_purpose,
             host_name,
             visit_end_at,
-            payload.get("status", worker["status"]),
+            next_status,
             updated_photo_data,
             next_badge_pin_hash if worker_type != "visitor" else "",
             next_physical_card_id,
@@ -3758,15 +3836,21 @@ def update_company(company_id):
     if not company:
         return jsonify({"error": "company_not_found"}), 404
 
+    company_name = clean_text_input(payload.get("name", company["name"]), max_len=120)
+    company_contact = clean_text_input(payload.get("contact", company["contact"]), max_len=180)
+    company_billing_email = clean_text_input(payload.get("billingEmail", company["billing_email"]), max_len=160)
+    company_access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or company["access_host"]), max_len=180)
+    company_status = clean_text_input(payload.get("status", company["status"]), max_len=32) or company["status"]
+
     db.execute(
         "UPDATE companies SET name = ?, contact = ?, billing_email = ?, access_host = ?, plan = ?, status = ? WHERE id = ?",
         (
-            payload.get("name", company["name"]),
-            payload.get("contact", company["contact"]),
-            payload.get("billingEmail", company["billing_email"]),
-            (payload.get("accessHost") or payload.get("access_host") or company["access_host"]),
+            company_name,
+            company_contact,
+            company_billing_email,
+            company_access_host,
             payload.get("plan", company["plan"]),
-            payload.get("status", company["status"]),
+            company_status,
             company_id,
         ),
     )

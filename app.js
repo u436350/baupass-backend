@@ -1573,10 +1573,11 @@ function showWorkerDetailOverlay(worker) {
   if (!overlay) return;
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const subcompanyLabel = getSubcompanyLabel(worker);
+  const safePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
   overlay.innerHTML = `
     <div class="worker-detail-card">
       <button class="close-btn" title="Schließen">&times;</button>
-      <img src="${worker.photoData || createAvatar(worker)}" alt="Mitarbeiterfoto" />
+      <img src="${safePhoto}" alt="Mitarbeiterfoto" />
       <h2>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</h2>
       <p><strong>Typ:</strong> ${escapeHtml(isVisitorWorker(worker) ? "Besucher" : "Mitarbeiter")}</p>
       <p><strong>Firma:</strong> ${escapeHtml(company?.name || "-")}</p>
@@ -1831,6 +1832,7 @@ function renderBadge() {
   const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
   const qrId = `qr-${worker.id}`;
+  const safeBadgePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
 
   elements.badgePreview.className = "badge-shell";
   elements.badgePreview.innerHTML = `
@@ -1846,7 +1848,7 @@ function renderBadge() {
 
       <div class="badge-body">
         <div class="badge-copy">
-          <img class="badge-photo${!worker.photoData ? ' badge-photo-placeholder' : ''}" src="${worker.photoData || createAvatar(worker)}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" style="${!worker.photoData ? 'cursor:pointer;outline:2px dashed #b07d00;' : ''}" />
+          <img class="badge-photo${!worker.photoData ? ' badge-photo-placeholder' : ''}" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" style="${!worker.photoData ? 'cursor:pointer;outline:2px dashed #b07d00;' : ''}" />
           <p><strong>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</strong></p>
           <p>${escapeHtml(visitor ? "Besucher" : worker.role)}</p>
           ${subcompanyLabel ? `<p>Subunternehmen: ${escapeHtml(subcompanyLabel)}</p>` : ""}
@@ -1997,7 +1999,9 @@ function renderDashboardPorterLivePanel() {
   const company = worker ? state.companies.find((entry) => entry.id === worker.companyId) : null;
   const subcompanyLabel = getSubcompanyLabel(worker);
   const directionLabel = latest.direction === "check-in" ? "Anmeldung" : "Abmeldung";
-  const photoSrc = worker ? (worker.photoData || createAvatar(worker)) : createAvatar({ firstName: "?", lastName: "?" });
+  const photoSrc = worker
+    ? sanitizeImageSrc(worker.photoData, createAvatar(worker))
+    : createAvatar({ firstName: "?", lastName: "?" });
   const workerName = worker ? `${worker.firstName} ${worker.lastName}` : "Unbekannt";
   const eventClass = latest.direction === "check-in" ? "porter-event" : "porter-event muted";
 
@@ -2028,10 +2032,11 @@ function renderDashboardWorkerDetail(worker) {
   if (!overlay || !detail) return;
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const subcompanyLabel = getSubcompanyLabel(worker);
+  const safePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
   detail.innerHTML = `
     <button class="close-btn" title="Schließen">&times;</button>
     <div class="worker-detail-card">
-      <img src="${worker.photoData || createAvatar(worker)}" alt="Mitarbeiterfoto" />
+      <img src="${safePhoto}" alt="Mitarbeiterfoto" />
       <h2>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</h2>
       <p><strong>Firma:</strong> ${escapeHtml(company?.name || "-")}</p>
       ${subcompanyLabel ? `<p><strong>Subunternehmen:</strong> ${escapeHtml(subcompanyLabel)}</p>` : ""}
@@ -2044,14 +2049,23 @@ function renderDashboardWorkerDetail(worker) {
       <p><strong>Badge-PIN:</strong> ${worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt"}</p>
       <p><strong>Karten-ID:</strong> ${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</p>
       <div class="button-row">
-        <button type="button" class="primary-button" onclick="triggerWorkerAccess(state.workers.find(w=>w.id==='${worker.id}'),'check-in')">Anmelden (Check-in)</button>
-        <button type="button" class="ghost-button" onclick="triggerWorkerAccess(state.workers.find(w=>w.id==='${worker.id}'),'check-out')">Abmelden (Check-out)</button>
+        <button type="button" class="primary-button" data-worker-id="${escapeHtml(worker.id)}" data-direction="check-in">Anmelden (Check-in)</button>
+        <button type="button" class="ghost-button" data-worker-id="${escapeHtml(worker.id)}" data-direction="check-out">Abmelden (Check-out)</button>
       </div>
     </div>
   `;
   overlay.classList.remove("hidden");
   detail.querySelector(".close-btn").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.add("hidden"); };
+  detail.querySelectorAll("[data-worker-id][data-direction]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetWorker = state.workers.find((item) => item.id === button.dataset.workerId);
+      if (!targetWorker) {
+        return;
+      }
+      triggerWorkerAccess(targetWorker, button.dataset.direction);
+    });
+  });
 }
 
 function renderAccessLog() {
@@ -2320,11 +2334,13 @@ function renderAccessItem(log, options = {}) {
   const { featured = false } = options;
   const worker = state.workers.find((entry) => entry.id === log.workerId);
   const subcompanyLabel = getSubcompanyLabel(worker);
-  const photoSrc = worker ? (worker.photoData || createAvatar(worker)) : createAvatar({ firstName: "?", lastName: "?" });
+  const photoSrc = worker
+    ? sanitizeImageSrc(worker.photoData, createAvatar(worker))
+    : createAvatar({ firstName: "?", lastName: "?" });
   const workerName = worker ? `${worker.firstName} ${worker.lastName}` : "Unbekannt";
   const itemClass = featured ? "list-item recent-access-item clickable access-entry-featured" : "list-item recent-access-item clickable";
   return `
-    <article class="${itemClass}" data-worker-id="${worker ? worker.id : ''}">
+    <article class="${itemClass}" data-worker-id="${worker ? escapeHtml(worker.id) : ""}">
       <div class="access-entry-layout">
         <img class="access-entry-photo" src="${photoSrc}" alt="${escapeHtml(workerName)}" />
         <div class="access-entry-copy">
@@ -2523,7 +2539,9 @@ function showAccessFeedback(workerId, direction, gate, timestamp) {
 
   elements.accessFeedbackTitle.textContent = title;
   elements.accessFeedbackMeta.textContent = `${who} | ${companyLabel}${subLabel} | ${dirLabel} | ${gate} | ${when}`;
-  elements.accessFeedbackPhoto.src = worker ? (worker.photoData || createAvatar(worker)) : createAvatar({ firstName: "?", lastName: "?" });
+  elements.accessFeedbackPhoto.src = worker
+    ? sanitizeImageSrc(worker.photoData, createAvatar(worker))
+    : createAvatar({ firstName: "?", lastName: "?" });
   elements.accessFeedbackPhoto.alt = worker ? `${worker.firstName} ${worker.lastName}` : "Mitarbeiterfoto";
   elements.accessFeedbackOverlay.classList.remove("hidden", "feedback-in", "feedback-out");
   elements.accessFeedbackOverlay.classList.add(direction === "check-in" ? "feedback-in" : "feedback-out");
@@ -5080,7 +5098,10 @@ function buildBadgeId(firstName, lastName, workerType = "worker") {
 }
 
 function createAvatar(worker) {
-  const initials = `${worker.firstName[0] || ""}${worker.lastName[0] || ""}`.toUpperCase();
+  const first = String(worker?.firstName || "");
+  const last = String(worker?.lastName || "");
+  const rawInitials = `${first[0] || ""}${last[0] || ""}`.toUpperCase();
+  const initials = rawInitials.replace(/[^A-Z0-9]/g, "").slice(0, 2) || "BP";
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="320" height="420" viewBox="0 0 320 420">
       <defs>
@@ -5096,6 +5117,27 @@ function createAvatar(worker) {
     </svg>
   `;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function sanitizeImageSrc(value, fallback = "") {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return fallback;
+  }
+  const normalized = raw.toLowerCase();
+  if (normalized.startsWith("data:image/")) {
+    return raw;
+  }
+  if (normalized.startsWith("blob:")) {
+    return raw;
+  }
+  if (normalized.startsWith("https://") || normalized.startsWith("http://")) {
+    return raw;
+  }
+  if (raw.startsWith("/")) {
+    return raw;
+  }
+  return fallback;
 }
 
 function getPlanNetPrice(plan) {
