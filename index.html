@@ -24,22 +24,32 @@
 <body class="auth-locked">
   <div id="authOverlay" class="auth-overlay" style="display:grid;">
     <div class="auth-panel">
+      <div class="auth-lang-switch" role="group" aria-label="Sprache wählen">
+        <button type="button" class="auth-lang-btn" data-ui-lang="de" aria-label="Deutsch">🇩🇪 DE</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="en" aria-label="English">🇬🇧 EN</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="tr" aria-label="Türkçe">🇹🇷 TR</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="ar" aria-label="العربية">🇸🇦 AR</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="fr" aria-label="Français">🇫🇷 FR</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="es" aria-label="Español">🇪🇸 ES</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="it" aria-label="Italiano">🇮🇹 IT</button>
+        <button type="button" class="auth-lang-btn" data-ui-lang="pl" aria-label="Polski">🇵🇱 PL</button>
+      </div>
       <div>
         <img class="website-logo-sync website-logo website-logo-auth" src="./branding/baukometra-logo.svg" alt="Firmenlogo" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22210%22%20height%3D%2284%22%20viewBox%3D%220%200%20210%2084%22%3E%3Crect%20width%3D%22210%22%20height%3D%2284%22%20rx%3D%2212%22%20fill%3D%22%230f4c5c%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3EBK%3C/text%3E%3C/svg%3E';" />
-        <p class="eyebrow">Melde-Seite</p>
-        <h2>Sicher in BauPass Control anmelden</h2>
-        <p class="auth-copy">Super-Admin behält die Systemhoheit. Firmen-Admins sehen nur ihre Firma. Der Drehkreuz-Login bekommt einen schnellen Zutrittsmodus.</p>
+        <p class="eyebrow" data-ui-i18n="authEyebrow">Melde-Seite</p>
+        <h2 data-ui-i18n="authTitle">Sicher in BauPass Control anmelden</h2>
+        <p class="auth-copy" data-ui-i18n="authCopy">Super-Admin behält die Systemhoheit. Firmen-Admins sehen nur ihre Firma. Der Drehkreuz-Login bekommt einen schnellen Zutrittsmodus.</p>
         <div class="auth-system-grid">
           <article class="auth-system-card">
-            <span>Plattform</span>
+            <span data-ui-i18n="authPlatform">Plattform</span>
             <strong id="loginPlatformName">BauPass Control</strong>
           </article>
           <article class="auth-system-card">
-            <span>Betreiber</span>
+            <span data-ui-i18n="authOperator">Betreiber</span>
             <strong id="loginOperatorName">Deine Betriebsfirma</strong>
           </article>
           <article class="auth-system-card full-width">
-            <span>Drehkreuz-Endpunkt</span>
+            <span data-ui-i18n="authTurnstile">Drehkreuz-Endpunkt</span>
             <strong id="loginTurnstileEndpoint">Noch nicht gesetzt</strong>
           </article>
         </div>
@@ -47,40 +57,40 @@
 
       <form id="loginForm" class="auth-form">
         <label>
-          Benutzername
-          <input id="loginUsername" type="text" placeholder="superadmin" required />
+          <span data-ui-i18n="loginUsernameLabel">Benutzername</span>
+          <input id="loginUsername" type="text" placeholder="superadmin" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required />
         </label>
         <label>
-          Passwort
-          <input id="loginPassword" type="password" placeholder="1234" required />
+          <span data-ui-i18n="loginPasswordLabel">Passwort</span>
+          <input id="loginPassword" type="password" placeholder="1234" data-ui-i18n="loginPasswordPlaceholder" data-ui-i18n-attr="placeholder" required />
         </label>
         <label>
-          OTP-Code (wenn 2FA aktiv)
-          <input id="loginOtpCode" type="text" placeholder="123456" />
+          <span data-ui-i18n="loginOtpLabel">OTP-Code (wenn 2FA aktiv)</span>
+          <input id="loginOtpCode" type="text" placeholder="123456" data-ui-i18n="loginOtpPlaceholder" data-ui-i18n-attr="placeholder" />
         </label>
         <label>
-          Zugangstyp
+          <span data-ui-i18n="loginScopeLabel">Zugangstyp</span>
           <select id="loginScope">
-            <option value="auto">Automatisch</option>
-            <option value="server-admin">Server-Admin</option>
-            <option value="company-admin">Firmen-Admin</option>
-            <option value="turnstile">Drehkreuz</option>
+            <option value="auto" data-ui-i18n="loginScopeAuto">Automatisch</option>
+            <option value="server-admin" data-ui-i18n="loginScopeServerAdmin">Server-Admin</option>
+            <option value="company-admin" data-ui-i18n="loginScopeCompanyAdmin">Firmen-Admin</option>
+            <option value="turnstile" data-ui-i18n="loginScopeTurnstile">Drehkreuz</option>
           </select>
         </label>
-        <button type="submit" class="primary-button">Anmelden</button>
+        <button type="submit" class="primary-button" data-ui-i18n="loginButton">Anmelden</button>
       </form>
 
       <div class="auth-hints">
         <div class="meta-box">
-          <p>Demo-Zugänge</p>
-          <p>Super-Admin: superadmin / 1234</p>
-          <p>Firmen-Admin: firma / 1234</p>
-          <p>Drehkreuz: drehkreuz / 1234</p>
+          <p data-ui-i18n="demoAccessTitle">Demo-Zugänge</p>
+          <p data-ui-i18n="demoSuperAdmin">Super-Admin: superadmin / 1234</p>
+          <p data-ui-i18n="demoCompanyAdmin">Firmen-Admin: firma / 1234</p>
+          <p data-ui-i18n="demoTurnstile">Drehkreuz: drehkreuz / 1234</p>
         </div>
         <div class="meta-box install-box">
-          <p>Desktop-App</p>
-          <p id="desktopInstallHint" class="helper-text">Dieses Portal kann auf dem Computer wie ein Programm installiert werden.</p>
-          <button id="desktopInstallButton" type="button" class="ghost-button full-width" hidden>Auf diesem Computer installieren</button>
+          <p data-ui-i18n="desktopAppTitle">Desktop-App</p>
+          <p id="desktopInstallHint" class="helper-text" data-ui-i18n="desktopInstallHint">Dieses Portal kann auf dem Computer wie ein Programm installiert werden.</p>
+          <button id="desktopInstallButton" type="button" class="ghost-button full-width" data-ui-i18n="desktopInstallButton" hidden>Auf diesem Computer installieren</button>
         </div>
       </div>
     </div>
@@ -90,37 +100,47 @@
     <aside class="sidebar">
       <div>
         <img class="website-logo-sync website-logo website-logo-sidebar hidden" alt="Firmenlogo" />
-        <p class="eyebrow">Firmenportal</p>
+        <p class="eyebrow" data-ui-i18n="sidebarEyebrow">Firmenportal</p>
         <h1>BauPass Control</h1>
-        <p class="sidebar-copy">Mitarbeiter erfassen, Fotos aufnehmen, digitale Ausweise erzeugen und Zutritte am Drehkreuz steuern.</p>
+        <p class="sidebar-copy" data-ui-i18n="sidebarCopy">Mitarbeiter erfassen, Fotos aufnehmen, digitale Ausweise erzeugen und Zutritte am Drehkreuz steuern.</p>
       </div>
       <nav class="nav">
-        <button class="nav-link active" data-view="dashboard">Dashboard</button>
-        <button class="nav-link" data-view="workers">Mitarbeiter</button>
-        <button class="nav-link" data-view="badge">Ausweis</button>
-        <button class="nav-link" data-view="access">Zutritt</button>
-        <button class="nav-link" data-view="invoices">Rechnungen</button>
-        <button class="nav-link" data-view="admin">Admin</button>
+        <button class="nav-link active" data-view="dashboard" data-ui-i18n="navDashboard">Dashboard</button>
+        <button class="nav-link" data-view="workers" data-ui-i18n="navWorkers">Mitarbeiter</button>
+        <button class="nav-link" data-view="badge" data-ui-i18n="navBadge">Ausweis</button>
+        <button class="nav-link" data-view="access" data-ui-i18n="navAccess">Zutritt</button>
+        <button class="nav-link" data-view="invoices" data-ui-i18n="navInvoices">Rechnungen</button>
+        <button class="nav-link" data-view="admin" data-ui-i18n="navAdmin">Admin</button>
       </nav>
       <div class="sidebar-card">
-        <p class="sidebar-card-label">Vermietungsmodus</p>
-        <strong>Multi-Firma fähig</strong>
-        <span>Jede Baufirma verwaltet ihr Team getrennt. Super-Admin behält Systemkontrolle.</span>
+        <p class="sidebar-card-label" data-ui-i18n="sidebarCardTitle">Vermietungsmodus</p>
+        <strong data-ui-i18n="sidebarCardStrong">Multi-Firma fähig</strong>
+        <span data-ui-i18n="sidebarCardDesc">Jede Baufirma verwaltet ihr Team getrennt. Super-Admin behält Systemkontrolle.</span>
       </div>
     </aside>
 
     <main class="content">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Systemstatus</p>
-          <h2>Baustellen-Ausweise und Zutritt</h2>
+          <p class="eyebrow" data-ui-i18n="topbarEyebrow">Systemstatus</p>
+          <h2 data-ui-i18n="topbarHeading">Baustellen-Ausweise und Zutritt</h2>
         </div>
         <div class="topbar-actions">
+          <select id="uiLangTopbarSelect" class="ui-lang-select" aria-label="Sprache wählen" title="Interface Language">
+            <option value="de">🇩🇪 DE</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="tr">🇹🇷 TR</option>
+            <option value="ar">🇸🇦 AR</option>
+            <option value="fr">🇫🇷 FR</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="it">🇮🇹 IT</option>
+            <option value="pl">🇵🇱 PL</option>
+          </select>
           <button id="systemThemeToggleButton" class="ghost-button" type="button" title="Aktuell Weiß. Klicken für Dunkel.">Fensterfarbe: Weiß</button>
-          <button id="seedDataButton" class="ghost-button">Demo-Daten einspielen</button>
-          <button id="exportButton" class="primary-button">System exportieren</button>
-          <button id="importButton" class="ghost-button">System importieren</button>
-          <button id="logoutButton" class="ghost-button">Sicher abmelden</button>
+          <button id="seedDataButton" class="ghost-button" data-ui-i18n="btnSeedData">Demo-Daten einspielen</button>
+          <button id="exportButton" class="primary-button" data-ui-i18n="btnExport">System exportieren</button>
+          <button id="importButton" class="ghost-button" data-ui-i18n="btnImport">System importieren</button>
+          <button id="logoutButton" class="ghost-button" data-ui-i18n="btnLogout">Sicher abmelden</button>
         </div>
       </header>
 
@@ -128,14 +148,14 @@
         <div id="sessionCard" class="session-card" style="margin-bottom:24px;"></div>
         <div class="hero-panel">
           <div>
-            <p class="eyebrow">Verbesserter MVP</p>
-            <h3>Digitale Ausweise mit Foto, Badge-ID und Check-in am Drehkreuz</h3>
-            <p>Der Prototyp ist bereits für Vermietung an Baufirmen gedacht: Firmenverwaltung, Mitarbeiter-Stammdaten, lokale Zutrittslogs, Export und Systemkonfiguration.</p>
+            <p class="eyebrow" data-ui-i18n="dashEyebrow">Verbesserter MVP</p>
+            <h3 data-ui-i18n="dashHeading">Digitale Ausweise mit Foto, Badge-ID und Check-in am Drehkreuz</h3>
+            <p data-ui-i18n="dashSubtext">Der Prototyp ist bereits für Vermietung an Baufirmen gedacht: Firmenverwaltung, Mitarbeiter-Stammdaten, lokale Zutrittslogs, Export und Systemkonfiguration.</p>
           </div>
           <div class="hero-badges">
-            <span>Fotoaufnahme</span>
-            <span>Zutrittslog</span>
-            <span>Mandantenfähig</span>
+            <span data-ui-i18n="dashBadge1">Fotoaufnahme</span>
+            <span data-ui-i18n="dashBadge2">Zutrittslog</span>
+            <span data-ui-i18n="dashBadge3">Mandantenfähig</span>
           </div>
         </div>
 
@@ -145,8 +165,8 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Reporting</p>
-                <h3>Zahlung und Sperrstatus</h3>
+                <p class="eyebrow" data-ui-i18n="reportingEyebrow">Reporting</p>
+                <h3 data-ui-i18n="reportingH3">Zahlung und Sperrstatus</h3>
               </div>
             </div>
             <div id="reportingSummaryGrid" class="list"></div>
@@ -156,8 +176,8 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">7 Tage</p>
-                <h3>Zutritte pro Tag</h3>
+                <p class="eyebrow" data-ui-i18n="accessWeekEyebrow">7 Tage</p>
+                <h3 data-ui-i18n="accessWeekH3">Zutritte pro Tag</h3>
               </div>
             </div>
             <div id="reportingAccessDaily" class="list"></div>
@@ -168,11 +188,11 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Letzte Aktivitäten</p>
-                <h3>Zutrittsprotokoll</h3>
+                <p class="eyebrow" data-ui-i18n="recentEyebrow">Letzte Aktivitäten</p>
+                <h3 data-ui-i18n="recentH3">Zutrittsprotokoll</h3>
               </div>
             </div>
-            <div id="dashboardPorterLivePanel" class="porter-live-card empty-state">Letzter Zutritt wird angezeigt, sobald eine An- oder Abmeldung vorliegt.</div>
+            <div id="dashboardPorterLivePanel" class="porter-live-card empty-state" data-ui-i18n="porterLiveEmpty">Letzter Zutritt wird angezeigt, sobald eine An- oder Abmeldung vorliegt.</div>
             <div id="recentAccessList" class="list"></div>
             <div id="dashboardDetailOverlay" class="dashboard-detail-overlay hidden">
               <div id="dashboardWorkerDetail" class="dashboard-worker-detail"></div>
@@ -187,93 +207,93 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Stammdaten</p>
-                <h3>Mitarbeiter oder Besucher erfassen</h3>
+                <p class="eyebrow" data-ui-i18n="workersFormEyebrow">Stammdaten</p>
+                <h3 data-ui-i18n="workersFormH3">Mitarbeiter oder Besucher erfassen</h3>
               </div>
             </div>
 
             <form id="workerForm" class="form-grid">
               <label>
-                Typ
+                <span data-ui-i18n="labelType">Typ</span>
                 <select id="workerType">
-                  <option value="worker">Mitarbeiter</option>
-                  <option value="visitor">Besucher</option>
+                  <option value="worker" data-ui-i18n="optWorker">Mitarbeiter</option>
+                  <option value="visitor" data-ui-i18n="optVisitor">Besucher</option>
                 </select>
               </label>
               <label>
-                Firma
+                <span data-ui-i18n="labelFirm">Firma</span>
                 <select id="companySelect" required></select>
               </label>
               <label>
-                Subunternehmen
+                <span data-ui-i18n="labelSubcompany">Subunternehmen</span>
                 <select id="subcompanySelect">
-                  <option value="">Kein Subunternehmen</option>
+                  <option value="" data-ui-i18n="optNoSubcompany">Kein Subunternehmen</option>
                 </select>
               </label>
               <label>
-                Neues Subunternehmen
+                <span data-ui-i18n="labelNewSubcompany">Neues Subunternehmen</span>
                 <input id="subcompanyName" type="text" placeholder="z. B. Elektro Yilmaz GmbH" />
               </label>
-              <button id="addSubcompanyButton" type="button" class="ghost-button">Subunternehmen anlegen</button>
+              <button id="addSubcompanyButton" type="button" class="ghost-button" data-ui-i18n="btnAddSubcompany">Subunternehmen anlegen</button>
               <label>
-                Vorname
+                <span data-ui-i18n="labelFirstName">Vorname</span>
                 <input id="firstName" type="text" placeholder="Max" required />
               </label>
               <label>
-                Nachname
+                <span data-ui-i18n="labelLastName">Nachname</span>
                 <input id="lastName" type="text" placeholder="Mustermann" required />
               </label>
               <label>
-                Rentenversicherungsnummer
+                <span data-ui-i18n="labelInsuranceNumber">Rentenversicherungsnummer</span>
                 <input id="insuranceNumber" type="text" placeholder="12 345678 A 123" required />
               </label>
               <label>
-                Funktion
+                <span data-ui-i18n="labelRoleField">Funktion</span>
                 <input id="role" type="text" placeholder="Polier, Kranführer, Monteur" required />
               </label>
               <label>
-                Baustelle
+                <span data-ui-i18n="labelSite">Baustelle</span>
                 <input id="site" type="text" placeholder="Neubau Mitte" required />
               </label>
               <label>
-                Physische Karten-ID (NFC/RFID)
+                <span data-ui-i18n="labelPhysicalCard">Physische Karten-ID (NFC/RFID)</span>
                 <input id="physicalCardId" type="text" placeholder="UID oder Kartenkennung" />
               </label>
               <label>
-                Gültig bis
+                <span data-ui-i18n="labelValidUntil">Gültig bis</span>
                 <input id="validUntil" type="date" required />
               </label>
               <div id="visitorFields" class="full-width hidden">
                 <div class="form-grid compact-grid">
                   <label>
-                    Besucherfirma
+                    <span data-ui-i18n="labelVisitorCompany">Besucherfirma</span>
                     <input id="visitorCompany" type="text" placeholder="z. B. Lieferant, Kunde, externe Firma" />
                   </label>
                   <label>
-                    Besuchszweck
+                    <span data-ui-i18n="labelVisitPurpose">Besuchszweck</span>
                     <input id="visitPurpose" type="text" placeholder="z. B. Besprechung, Lieferung, Abnahme" />
                   </label>
                   <label>
-                    Ansprechpartner vor Ort
+                    <span data-ui-i18n="labelHostName">Ansprechpartner vor Ort</span>
                     <input id="hostName" type="text" placeholder="z. B. Bauleiter Mustafa Yilmaz" />
                   </label>
                   <label>
-                    Besuchsende
+                    <span data-ui-i18n="labelVisitEndAt">Besuchsende</span>
                     <input id="visitEndAt" type="datetime-local" />
                   </label>
                 </div>
                 <p class="helper-text">Besucher sind für ein paar Stunden oder bis Tagesende gültig. Offene Zutritte werden spätestens um 00:00 automatisch abgemeldet, die Karte bleibt aber für Auswertungen erhalten.</p>
               </div>
               <label>
-                Status
+                <span data-ui-i18n="labelWorkerStatus">Status</span>
                 <select id="workerStatus">
-                  <option value="aktiv">Aktiv</option>
-                  <option value="gesperrt">Gesperrt</option>
-                  <option value="abgelaufen">Abgelaufen</option>
+                  <option value="aktiv" data-ui-i18n="optStatusActive">Aktiv</option>
+                  <option value="gesperrt" data-ui-i18n="optStatusLocked">Gesperrt</option>
+                  <option value="abgelaufen" data-ui-i18n="optStatusExpired">Abgelaufen</option>
                 </select>
               </label>
               <label>
-                Badge-PIN für App-Login
+                <span data-ui-i18n="labelBadgePin">Badge-PIN für App-Login</span>
                 <input id="badgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4 bis 8 Ziffern" required />
               </label>
               <p id="badgePinHint" class="helper-text">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
@@ -287,9 +307,9 @@
                   <div id="cameraPlaceholder" class="camera-placeholder">Kamera noch nicht gestartet</div>
                 </div>
                 <div class="camera-actions">
-                  <button type="button" id="startCameraButton" class="ghost-button">Kamera starten</button>
-                  <button type="button" id="capturePhotoButton" class="ghost-button">Foto aufnehmen</button>
-                  <button type="button" id="uploadPhotoButton" class="ghost-button">Foto hochladen</button>
+                  <button type="button" id="startCameraButton" class="ghost-button" data-ui-i18n="btnStartCamera">Kamera starten</button>
+                  <button type="button" id="capturePhotoButton" class="ghost-button" data-ui-i18n="btnCapturePhoto">Foto aufnehmen</button>
+                  <button type="button" id="uploadPhotoButton" class="ghost-button" data-ui-i18n="btnUploadPhoto">Foto hochladen</button>
                 </div>
                 <p id="photoDebugText" class="helper-text">Kamera noch nicht gestartet.</p>
                 <label class="camera-option">
@@ -309,28 +329,28 @@
                     <span id="photoZoomValue">1.18x</span>
                   </label>
                   <div class="photo-adjust-grid">
-                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="up" disabled>Hoch</button>
-                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="left" disabled>Links</button>
-                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="right" disabled>Rechts</button>
-                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="down" disabled>Runter</button>
-                    <button type="button" id="photoResetButton" class="ghost-button" disabled>Position zurücksetzen</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="up" disabled data-ui-i18n="btnPhotoUp">↑ Hoch</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="left" disabled data-ui-i18n="btnPhotoLeft">← Links</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="right" disabled data-ui-i18n="btnPhotoRight">Rechts →</button>
+                    <button type="button" class="ghost-button photo-move-btn" data-photo-move="down" disabled data-ui-i18n="btnPhotoDown">Runter ↓</button>
+                    <button type="button" id="photoResetButton" class="ghost-button" disabled data-ui-i18n="btnPhotoReset">Position zurücksetzen</button>
                   </div>
                   <p id="photoAdjustStatus" class="helper-text">Position: X 0 | Y 0</p>
                 </div>
               </div>
 
-              <button id="workerSubmitButton" type="submit" class="primary-button full-width">Mitarbeiter speichern und Ausweis erzeugen</button>
-              <button id="workerCancelEditButton" type="button" class="ghost-button full-width hidden">Bearbeiten abbrechen</button>
+              <button id="workerSubmitButton" type="submit" class="primary-button full-width" data-ui-i18n="btnWorkerSubmit">Mitarbeiter speichern und Ausweis erzeugen</button>
+              <button id="workerCancelEditButton" type="button" class="ghost-button full-width hidden" data-ui-i18n="btnWorkerCancelEdit">Bearbeiten abbrechen</button>
             </form>
           </article>
 
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Datenbestand</p>
-                <h3>Registrierte Mitarbeiter</h3>
+                <p class="eyebrow" data-ui-i18n="workersListEyebrow">Datenbestand</p>
+                <h3 data-ui-i18n="workersListH3">Registrierte Mitarbeiter</h3>
               </div>
-              <button id="workerCsvButton" type="button" class="ghost-button">Mitarbeiterliste als PDF herunterladen</button>
+              <button id="workerCsvButton" type="button" class="ghost-button" data-ui-i18n="btnWorkerCsv">Mitarbeiterliste als PDF herunterladen</button>
             </div>
             <div class="worker-list-toolbar">
               <input id="workerSearchInput" type="search" placeholder="Suchen: Name, Badge-ID, Baustelle …" autocomplete="off" />
@@ -338,12 +358,12 @@
                 <input id="bulkSelectAll" type="checkbox" /> Alle auswählen
               </label>
             </div>
-            <div id="bulkActionBar" class="bulk-action-bar hidden">
+              <div id="bulkActionBar" class="bulk-action-bar hidden">
               <span id="bulkSelectionCount">0 ausgewählt</span>
-              <button id="bulkDeleteButton" type="button" class="danger-button">Ausgewählte löschen</button>
-              <button id="bulkSetActiveButton" type="button" class="ghost-button">Status: aktiv</button>
-              <button id="bulkSetInactiveButton" type="button" class="ghost-button">Status: inaktiv</button>
-              <button id="bulkCancelButton" type="button" class="ghost-button">Abbrechen</button>
+              <button id="bulkDeleteButton" type="button" class="danger-button" data-ui-i18n="btnBulkDelete">Ausgewählte löschen</button>
+              <button id="bulkSetActiveButton" type="button" class="ghost-button" data-ui-i18n="btnBulkActive">Status: aktiv</button>
+              <button id="bulkSetInactiveButton" type="button" class="ghost-button" data-ui-i18n="btnBulkInactive">Status: inaktiv</button>
+              <button id="bulkCancelButton" type="button" class="ghost-button" data-ui-i18n="btnBulkCancel">Abbrechen</button>
             </div>
             <div id="workerList" class="card-list"></div>
             <div id="workerDetailOverlay" class="worker-detail-overlay hidden"></div>
@@ -407,11 +427,11 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Digitaler Ausweis</p>
-                <h3>Badge-Vorschau</h3>
+                <p class="eyebrow" data-ui-i18n="badgeEyebrow">Digitaler Ausweis</p>
+                <h3 data-ui-i18n="badgeH3">Badge-Vorschau</h3>
               </div>
             </div>
-            <div id="badgePreview" class="badge-shell empty-state">
+            <div id="badgePreview" class="badge-shell empty-state" data-ui-i18n="badgeEmptyState">
               Bitte zuerst einen Mitarbeiter anlegen oder aus der Liste auswählen.
             </div>
           </article>
@@ -419,11 +439,11 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Scan-Hilfe</p>
-                <h3>Badge-Code</h3>
+                <p class="eyebrow" data-ui-i18n="badgeScanEyebrow">Scan-Hilfe</p>
+                <h3 data-ui-i18n="badgeScanH3">Badge-Code</h3>
               </div>
             </div>
-            <div id="badgeMeta" class="badge-meta empty-state">
+            <div id="badgeMeta" class="badge-meta empty-state" data-ui-i18n="badgeScanEmpty">
               Kein Badge ausgewählt.
             </div>
           </article>
@@ -435,81 +455,81 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Drehkreuz</p>
-                <h3>Check-in und Check-out</h3>
+                <p class="eyebrow" data-ui-i18n="accessFormEyebrow">Drehkreuz</p>
+                <h3 data-ui-i18n="accessFormH3">Check-in und Check-out</h3>
               </div>
             </div>
 
             <form id="accessForm" class="form-grid compact-grid">
               <label>
-                Badge-ID oder Mitarbeiter
+                <span data-ui-i18n="labelAccessBadge">Badge-ID oder Mitarbeiter</span>
                 <input id="accessWorkerSearch" type="text" placeholder="Name oder Badge-ID suchen" />
                 <select id="accessWorkerSelect" required></select>
               </label>
               <label>
-                Richtung
+                <span data-ui-i18n="labelAccessDir">Richtung</span>
                 <select id="accessDirection">
-                  <option value="check-in">Check-in</option>
-                  <option value="check-out">Check-out</option>
+                  <option value="check-in" data-ui-i18n="optCheckin">Check-in</option>
+                  <option value="check-out" data-ui-i18n="optCheckout">Check-out</option>
                 </select>
               </label>
               <label>
-                Punkt
+                <span data-ui-i18n="labelAccessGate">Punkt</span>
                 <input id="accessGate" type="text" value="Drehkreuz Nord" required />
               </label>
               <label>
-                Notiz
+                <span data-ui-i18n="labelAccessNote">Notiz</span>
                 <input id="accessNote" type="text" placeholder="Optional" />
               </label>
-              <button type="submit" class="primary-button full-width">Zutritt buchen</button>
+              <button type="submit" class="primary-button full-width" data-ui-i18n="btnAccessSubmit">Zutritt buchen</button>
             </form>
 
             <div id="turnstileQuickPanel" class="turnstile-quick-panel"></div>
-            <div id="porterLivePanel" class="porter-live-card empty-state">Pförtner-Live-Ansicht: Mitarbeiter wählen und Zutritt buchen.</div>
+            <div id="porterLivePanel" class="porter-live-card empty-state" data-ui-i18n="porterEmpty">Pförtner-Live-Ansicht: Mitarbeiter wählen und Zutritt buchen.</div>
           </article>
 
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Zutrittsjournal</p>
-                <h3>Eintritt und Austritt mit Zeitstempel</h3>
+                <p class="eyebrow" data-ui-i18n="accessLogEyebrow">Zutrittsjournal</p>
+                <h3 data-ui-i18n="accessLogH3">Eintritt und Austritt mit Zeitstempel</h3>
               </div>
             </div>
 
             <form id="accessFilterForm" class="form-grid compact-grid">
               <label>
-                Von
+                <span data-ui-i18n="labelFrom">Von</span>
                 <input id="accessFrom" type="date" />
               </label>
               <label>
-                Bis
+                <span data-ui-i18n="labelTo">Bis</span>
                 <input id="accessTo" type="date" />
               </label>
               <label>
-                Richtung
+                <span data-ui-i18n="labelFilterDir">Richtung</span>
                 <select id="accessFilterDirection">
-                  <option value="">Alle</option>
-                  <option value="check-in">Check-in</option>
-                  <option value="check-out">Check-out</option>
+                  <option value="" data-ui-i18n="optAllDir">Alle</option>
+                  <option value="check-in" data-ui-i18n="optCheckin">Check-in</option>
+                  <option value="check-out" data-ui-i18n="optCheckout">Check-out</option>
                 </select>
               </label>
               <label>
-                Drehkreuz
+                <span data-ui-i18n="labelFilterGate">Drehkreuz</span>
                 <input id="accessFilterGate" type="text" placeholder="z. B. Drehkreuz Nord" />
               </label>
-              <button type="submit" class="ghost-button">Filter anwenden</button>
-              <button id="accessResetButton" type="button" class="ghost-button">Filter zurücksetzen</button>
-              <button id="accessCsvButton" type="button" class="primary-button full-width">Zutritts-CSV exportieren</button>
+              <button type="submit" class="ghost-button" data-ui-i18n="btnApplyFilter">Filter anwenden</button>
+              <button id="accessResetButton" type="button" class="ghost-button" data-ui-i18n="btnResetFilter">Filter zurücksetzen</button>
+              <button id="accessCsvButton" type="button" class="primary-button full-width" data-ui-i18n="btnAccessCsv">Zutritts-CSV exportieren</button>
             </form>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Tagesbericht</p>
-                <h3>Pro Drehkreuz</h3>
+                <p class="eyebrow" data-ui-i18n="dailyReportEyebrow">Tagesbericht</p>
+                <h3 data-ui-i18n="dailyReportH3">Pro Drehkreuz</h3>
               </div>
               <div class="button-row">
-                <button id="printDailyReportButton" type="button" class="ghost-button">Tagesreport drucken</button>
-                <button id="printVisitorWeeklyReportButton" type="button" class="ghost-button">Besucher-Wochenliste drucken</button>
+                <button id="printDailyReportButton" type="button" class="ghost-button" data-ui-i18n="btnPrintDaily">Tagesreport drucken</button>
+                <button id="printVisitorWeeklyReportButton" type="button" class="ghost-button" data-ui-i18n="btnPrintVisitorWeekly">Besucher-Wochenliste drucken</button>
               </div>
             </div>
             <div id="dayCloseBanner" class="day-close-banner hidden"></div>
@@ -536,8 +556,8 @@
               <article class="summary-block">
                 <div class="panel-heading slim">
                   <div>
-                    <p class="eyebrow">Warnungen</p>
-                    <h3>Eintritt ohne Austritt</h3>
+                    <p class="eyebrow" data-ui-i18n="warningsEyebrow">Warnungen</p>
+                    <h3 data-ui-i18n="warningsH3">Eintritt ohne Austritt</h3>
                   </div>
                 </div>
                 <div id="accessOpenWarnings" class="list"></div>
@@ -554,8 +574,8 @@
           <article class="panel full-width">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Fakturierung</p>
-                <h3>Rechnungen und Zahlungsstatus</h3>
+                <p class="eyebrow" data-ui-i18n="invListEyebrow">Fakturierung</p>
+                <h3 data-ui-i18n="invListH3">Rechnungen und Zahlungsstatus</h3>
               </div>
             </div>
             <div class="meta-box">
@@ -570,11 +590,11 @@
                 <option value="">Alle Status</option>
                 <option value="draft">Entwurf</option>
                 <option value="sent">Versendet</option>
-                <option value="overdue">Überfällig</option>
-                <option value="bezahlt">Bezahlt</option>
-                <option value="send_failed">Fehler</option>
+                <option value="overdue" data-ui-i18n="optOverdue">Überfällig</option>
+                <option value="bezahlt" data-ui-i18n="optPaid">Bezahlt</option>
+                <option value="send_failed" data-ui-i18n="optFailed">Fehler</option>
               </select>
-              <button type="button" class="ghost-button" id="invoiceRefreshButton">Aktualisieren</button>
+              <button type="button" class="ghost-button" id="invoiceRefreshButton" data-ui-i18n="btnRefreshList">Aktualisieren</button>
             </div>
 
             <div id="invoiceManagementList" class="list"></div>
@@ -583,16 +603,16 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Inkasso</p>
-                <h3>Überfällig, vor Sperre, gesperrt</h3>
+                <p class="eyebrow" data-ui-i18n="inkassoEyebrow">Inkasso</p>
+                <h3 data-ui-i18n="inkassoH3">Überfällig, vor Sperre, gesperrt</h3>
               </div>
             </div>
             <div class="button-row" style="margin-bottom:16px; gap:10px;">
               <select id="collectionsFilter" style="min-width:180px;">
-                <option value="all">Alle offenen Positionen</option>
-                <option value="overdue">Überfällig</option>
-                <option value="prelock">Vor Sperre</option>
-                <option value="locked">Bereits gesperrt</option>
+                <option value="all" data-ui-i18n="optAllPositions">Alle offenen Positionen</option>
+                <option value="overdue" data-ui-i18n="optOverdue">Überfällig</option>
+                <option value="prelock" data-ui-i18n="optPrelock">Vor Sperre</option>
+                <option value="locked" data-ui-i18n="optLocked">Bereits gesperrt</option>
               </select>
             </div>
             <div id="collectionsKpiGrid" class="list" style="margin-bottom:12px;"></div>
@@ -606,8 +626,8 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Admin-Zentrale</p>
-                <h3>System &amp; Konfiguration</h3>
+                <p class="eyebrow" data-ui-i18n="adminEyebrow">Admin-Zentrale</p>
+                <h3 data-ui-i18n="adminH3">System &amp; Konfiguration</h3>
               </div>
             </div>
             <div class="meta-box">
@@ -618,24 +638,24 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Systemstatus</p>
-                <h3>Notfallzugriff &amp; Reparatur</h3>
+                <p class="eyebrow" data-ui-i18n="sysStatusEyebrow">Systemstatus</p>
+                <h3 data-ui-i18n="sysStatusH3">Notfallzugriff &amp; Reparatur</h3>
               </div>
             </div>
             <div id="systemStatusPanel" class="card-item">
               <p>Status wird geladen...</p>
             </div>
             <div class="button-row">
-              <button id="refreshSystemStatusButton" type="button" class="ghost-button">Status neu laden</button>
-              <button id="repairSystemButton" type="button" class="ghost-button">Sitzungen reparieren</button>
+              <button id="refreshSystemStatusButton" type="button" class="ghost-button" data-ui-i18n="btnRefreshStatus">Status neu laden</button>
+              <button id="repairSystemButton" type="button" class="ghost-button" data-ui-i18n="btnRepairSessions">Sitzungen reparieren</button>
             </div>
 
             <div class="divider"></div>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Systemhoheit</p>
-                <h3>Super-Admin Einstellungen</h3>
+                <p class="eyebrow" data-ui-i18n="superAdminEyebrow">Systemhoheit</p>
+                <h3 data-ui-i18n="superAdminH3">Super-Admin Einstellungen</h3>
               </div>
             </div>
 
@@ -650,15 +670,15 @@
                 </div>
               </div>
               <label>
-                Plattformname
+                <span data-ui-i18n="labelPlatformName">Plattformname</span>
                 <input id="platformName" type="text" placeholder="BauPass Control" required />
               </label>
               <label>
-                Betreiber
+                <span data-ui-i18n="labelOperatorName">Betreiber</span>
                 <input id="operatorName" type="text" placeholder="Deine Firma" required />
               </label>
               <label class="full-width">
-                Drehkreuz-API Endpoint
+                <span data-ui-i18n="labelTurnstileEp">Drehkreuz-API Endpoint</span>
                 <input id="turnstileEndpoint" type="url" placeholder="https://api.dein-gateway.de/access" />
               </label>
 
@@ -705,34 +725,34 @@
                 </div>
               </div>
               <label>
-                SMTP Host
+                <span data-ui-i18n="labelSmtpHost">SMTP Host</span>
                 <input id="smtpHost" type="text" placeholder="smtp.dein-provider.de" />
               </label>
               <label>
-                SMTP Port
+                <span data-ui-i18n="labelSmtpPort">SMTP Port</span>
                 <input id="smtpPort" type="number" min="1" step="1" value="587" />
               </label>
               <label>
-                SMTP Benutzer
+                <span data-ui-i18n="labelSmtpUser">SMTP Benutzer</span>
                 <input id="smtpUsername" type="text" placeholder="mailer@deinefirma.de" />
               </label>
               <label>
-                SMTP Passwort
+                <span data-ui-i18n="labelSmtpPass">SMTP Passwort</span>
                 <input id="smtpPassword" type="password" placeholder="App-Passwort" />
               </label>
               <label>
-                Absender E-Mail
+                <span data-ui-i18n="labelSenderEmail">Absender E-Mail</span>
                 <input id="smtpSenderEmail" type="email" placeholder="rechnung@deinefirma.de" />
               </label>
               <label>
-                Absender Name
+                <span data-ui-i18n="labelSenderName">Absender Name</span>
                 <input id="smtpSenderName" type="text" placeholder="Deine Firma" />
               </label>
               <label>
-                TLS aktiv
+                <span data-ui-i18n="labelTls">TLS aktiv</span>
                 <select id="smtpUseTls">
-                  <option value="1">Ja</option>
-                  <option value="0">Nein</option>
+                  <option value="1" data-ui-i18n="optTlsYes">Ja</option>
+                  <option value="0" data-ui-i18n="optTlsNo">Nein</option>
                 </select>
               </label>
 
@@ -745,14 +765,14 @@
                 </div>
               </div>
               <label class="full-width">
-                Admin IP-Whitelist (Komma getrennt, optional CIDR)
+                <span data-ui-i18n="labelIpWhitelist">Admin IP-Whitelist (Komma getrennt, optional CIDR)</span>
                 <input id="adminIpWhitelist" type="text" placeholder="203.0.113.10, 203.0.113.0/24" />
               </label>
               <label>
-                Firmen-Domain erzwingen
+                <span data-ui-i18n="labelEnforceDomain">Firmen-Domain erzwingen</span>
                 <select id="enforceTenantDomain">
-                  <option value="0">Nein</option>
-                  <option value="1">Ja</option>
+                  <option value="0" data-ui-i18n="optNo">Nein</option>
+                  <option value="1" data-ui-i18n="optYes">Ja</option>
                 </select>
               </label>
 
@@ -781,36 +801,36 @@
               </label>
               <p class="helper-text full-width">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
 
-              <button type="submit" class="primary-button full-width">Admin-Einstellungen speichern</button>
+              <button type="submit" class="primary-button full-width" data-ui-i18n="btnSaveAdmin">Admin-Einstellungen speichern</button>
             </form>
 
             <div class="divider"></div>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Mandanten</p>
-                <h3>Neue Baufirma anlegen</h3>
+                <p class="eyebrow" data-ui-i18n="companyNewEyebrow">Mandanten</p>
+                <h3 data-ui-i18n="companyNewH3">Neue Baufirma anlegen</h3>
               </div>
             </div>
             <form id="companyForm" class="form-grid compact-grid">
               <label>
-                Firmenname
+                <span data-ui-i18n="labelCompanyName">Firmenname</span>
                 <input id="companyName" type="text" placeholder="Muster Bau GmbH" required />
               </label>
               <label>
-                Ansprechpartner
+                <span data-ui-i18n="labelCompanyContact">Ansprechpartner</span>
                 <input id="companyContact" type="text" placeholder="Sabine Keller" required />
               </label>
               <label>
-                Rechnungs-E-Mail
+                <span data-ui-i18n="labelBillingEmail">Rechnungs-E-Mail</span>
                 <input id="companyBillingEmail" type="email" placeholder="buchhaltung@firma.de" />
               </label>
               <label>
-                Firmen-Zugangsdomain
+                <span data-ui-i18n="labelAccessHost">Firmen-Zugangsdomain</span>
                 <input id="companyAccessHost" type="text" placeholder="firma-a.deine-domain.de" />
               </label>
               <label>
-                Tarif
+                <span data-ui-i18n="labelPlan">Tarif</span>
                 <select id="companyPlan">
                   <option value="tageskarte">Besucherkarte (19 EUR/Tag)</option>
                   <option value="starter">Starter (49 EUR)</option>
@@ -819,43 +839,43 @@
                 </select>
               </label>
               <label>
-                Status
+                <span data-ui-i18n="labelCompanyStatus">Status</span>
                 <select id="companyStatus">
-                  <option value="aktiv">Aktiv</option>
-                  <option value="test">Testphase</option>
-                  <option value="pausiert">Pausiert</option>
-                  <option value="gesperrt">Gesperrt wegen Zahlungsverzug</option>
+                  <option value="aktiv" data-ui-i18n="optCompanyActive">Aktiv</option>
+                  <option value="test" data-ui-i18n="optCompanyTest">Testphase</option>
+                  <option value="pausiert" data-ui-i18n="optCompanyPaused">Pausiert</option>
+                  <option value="gesperrt" data-ui-i18n="optCompanyLocked">Gesperrt wegen Zahlungsverzug</option>
                 </select>
               </label>
-              <button type="submit" class="ghost-button full-width">Baufirma anlegen</button>
+              <button type="submit" class="ghost-button full-width" data-ui-i18n="btnCreateCompany">Baufirma anlegen</button>
             </form>
 
             <div class="divider"></div>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Konto</p>
-                <h3>Passwort ändern</h3>
+                <p class="eyebrow" data-ui-i18n="accountEyebrow">Konto</p>
+                <h3 data-ui-i18n="accountH3">Passwort ändern</h3>
               </div>
             </div>
             <form id="passwordForm" class="form-grid compact-grid">
               <label>
-                Aktuelles Passwort
+                <span data-ui-i18n="labelCurrentPassword">Aktuelles Passwort</span>
                 <input id="currentPassword" type="password" required />
               </label>
               <label>
-                Neues Passwort
+                <span data-ui-i18n="labelNewPassword">Neues Passwort</span>
                 <input id="newPassword" type="password" minlength="8" required />
               </label>
-              <button type="submit" class="ghost-button full-width">Passwort ändern</button>
+              <button type="submit" class="ghost-button full-width" data-ui-i18n="btnChangePassword">Passwort ändern</button>
             </form>
 
             <div class="divider"></div>
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Zwei-Faktor</p>
-                <h3>2FA Verwaltung</h3>
+                <p class="eyebrow" data-ui-i18n="tfaEyebrow">Zwei-Faktor</p>
+                <h3 data-ui-i18n="tfaH3">2FA Verwaltung</h3>
               </div>
             </div>
             <div id="twofaPanel" class="card-item"></div>
@@ -864,8 +884,8 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Mandanten</p>
-                <h3>Baufirmen und Pläne</h3>
+                <p class="eyebrow" data-ui-i18n="companiesListEyebrow">Mandanten</p>
+                <h3 data-ui-i18n="companiesListH3">Baufirmen und Pläne</h3>
               </div>
             </div>
             <div id="companyList" class="card-list"></div>
@@ -874,49 +894,49 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Rechnungen</p>
-                <h3>Mit Logo und Design versenden</h3>
+                <p class="eyebrow" data-ui-i18n="invFormEyebrow">Rechnungen</p>
+                <h3 data-ui-i18n="invFormH3">Mit Logo und Design versenden</h3>
               </div>
             </div>
             <form id="invoiceForm" class="form-grid compact-grid">
               <label>
-                Firma
+                <span data-ui-i18n="labelInvFirm">Firma</span>
                 <select id="invoiceCompanySelect" required></select>
               </label>
               <label>
-                Rechnungsnummer
+                <span data-ui-i18n="labelInvNumber">Rechnungsnummer</span>
                 <input id="invoiceNumber" type="text" placeholder="RE-2026-0001" />
               </label>
               <label>
-                Empfänger E-Mail
+                <span data-ui-i18n="labelInvRecipient">Empfänger E-Mail</span>
                 <input id="invoiceRecipientEmail" type="email" placeholder="buchhaltung@firma.de" required />
               </label>
               <label>
-                Rechnungsdatum
+                <span data-ui-i18n="labelInvDate">Rechnungsdatum</span>
                 <input id="invoiceDate" type="date" required />
               </label>
               <label>
-                Fälligkeitsdatum
+                <span data-ui-i18n="labelInvDueDate">Fälligkeitsdatum</span>
                 <input id="invoiceDueDate" type="date" required />
               </label>
               <label>
-                Leistungszeitraum
+                <span data-ui-i18n="labelInvPeriod">Leistungszeitraum</span>
                 <input id="invoicePeriod" type="text" placeholder="01.04.2026 - 30.04.2026" required />
               </label>
               <label class="full-width">
-                Leistungsbeschreibung
+                <span data-ui-i18n="labelInvDescription">Leistungsbeschreibung</span>
                 <input id="invoiceDescription" type="text" placeholder="Digitale Baustellen-Ausweise + Zutrittskontrolle" required />
               </label>
               <label>
-                Nettobetrag (EUR)
+                <span data-ui-i18n="labelInvNet">Nettobetrag (EUR)</span>
                 <input id="invoiceNetAmount" type="number" min="0" step="0.01" value="0" required />
               </label>
               <label>
-                MwSt. (%)
+                <span data-ui-i18n="labelInvVat">MwSt. (%)</span>
                 <input id="invoiceVatRate" type="number" min="0" max="100" step="0.1" value="19" required />
               </label>
-              <button type="submit" class="primary-button full-width">Rechnung drucken / als PDF speichern</button>
-              <button id="invoiceSendButton" type="button" class="ghost-button full-width">Rechnung per E-Mail senden</button>
+              <button type="submit" class="primary-button full-width" data-ui-i18n="btnPrintInvoice">Rechnung drucken / als PDF speichern</button>
+              <button id="invoiceSendButton" type="button" class="ghost-button full-width" data-ui-i18n="btnSendInvoice">Rechnung per E-Mail senden</button>
             </form>
 
             <div class="divider"></div>
@@ -926,7 +946,7 @@
                 <p class="eyebrow">Vorschau</p>
                 <h3>Rechnung vor Versand prüfen</h3>
               </div>
-              <button id="invoicePreviewButton" type="button" class="ghost-button">Vorschau aktualisieren</button>
+              <button id="invoicePreviewButton" type="button" class="ghost-button" data-ui-i18n="btnUpdatePreview">Vorschau aktualisieren</button>
             </div>
             <iframe id="invoicePreviewFrame" class="invoice-preview-frame" title="Rechnungsvorschau"></iframe>
 
@@ -936,35 +956,35 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Sicherheitsprotokoll</p>
-                <h3>Audit-Log</h3>
+                <p class="eyebrow" data-ui-i18n="auditEyebrow">Sicherheitsprotokoll</p>
+                <h3 data-ui-i18n="auditH3">Audit-Log</h3>
               </div>
             </div>
             <form id="auditFilterForm" class="form-grid compact-grid">
               <label>
-                Event-Typ
+                <span data-ui-i18n="labelAuditEvent">Event-Typ</span>
                 <input id="auditEventType" type="text" placeholder="z. B. worker.deleted" />
               </label>
               <label>
-                Rolle
+                <span data-ui-i18n="labelAuditRole">Rolle</span>
                 <select id="auditActorRole">
-                  <option value="">Alle</option>
+                  <option value="" data-ui-i18n="optAllDir">Alle</option>
                   <option value="superadmin">Super-Admin</option>
                   <option value="company-admin">Firmen-Admin</option>
-                  <option value="turnstile">Drehkreuz</option>
+                  <option value="turnstile" data-ui-i18n="optCheckin">Drehkreuz</option>
                 </select>
               </label>
               <label>
-                Von
+                <span data-ui-i18n="labelFrom">Von</span>
                 <input id="auditFrom" type="date" />
               </label>
               <label>
-                Bis
+                <span data-ui-i18n="labelTo">Bis</span>
                 <input id="auditTo" type="date" />
               </label>
-              <button type="submit" class="ghost-button">Filter anwenden</button>
-              <button id="auditResetButton" type="button" class="ghost-button">Filter zurücksetzen</button>
-              <button id="auditCsvButton" type="button" class="primary-button full-width">Audit-CSV exportieren</button>
+              <button type="submit" class="ghost-button" data-ui-i18n="btnApplyFilter">Filter anwenden</button>
+              <button id="auditResetButton" type="button" class="ghost-button" data-ui-i18n="btnResetFilter">Filter zurücksetzen</button>
+              <button id="auditCsvButton" type="button" class="primary-button full-width" data-ui-i18n="btnAuditCsv">Audit-CSV exportieren</button>
             </form>
             <div id="auditLogList" class="list"></div>
           </article>

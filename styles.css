@@ -554,6 +554,7 @@ select {
   width: min(100%, 540px);
   display: grid;
   gap: 18px;
+  position: relative;
   padding: 28px;
   max-height: calc(100vh - 48px);
   overflow: auto;
@@ -565,6 +566,39 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: var(--shadow);
   animation: auth-enter 420ms ease;
+}
+
+.auth-lang-switch {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100% - 24px);
+}
+
+.auth-lang-btn {
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(18, 21, 24, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  color: #1b2128;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-lang-btn.active {
+  background: rgba(15, 76, 92, 0.12);
+  border-color: rgba(15, 76, 92, 0.45);
+  color: #0f4c5c;
+}
+
+.auth-lang-btn:hover {
+  transform: translateY(-1px);
 }
 
 .auth-system-grid {
@@ -744,6 +778,11 @@ select {
     gap: 12px;
   }
 
+  .auth-lang-switch {
+    position: static;
+    margin-bottom: 4px;
+  }
+
   .auth-copy {
     margin-top: 4px;
     line-height: 1.4;
@@ -784,6 +823,21 @@ select {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.ui-lang-select {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(18, 21, 24, 0.18);
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: inherit;
+}
+.theme-black .ui-lang-select {
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .session-card {
