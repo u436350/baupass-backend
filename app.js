@@ -8870,13 +8870,17 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const docNavLink = document.querySelector("[data-view='documents']");
   if (docNavLink) {
     docNavLink.addEventListener("click", () => {
+      if (!token) return; // nur laden wenn eingeloggt
       loadDocumentInbox();
     });
   }
 
   const refreshBtn = document.querySelector("#docInboxRefreshBtn");
   if (refreshBtn) {
-    refreshBtn.addEventListener("click", loadDocumentInbox);
+    refreshBtn.addEventListener("click", () => {
+      if (!token) return;
+      loadDocumentInbox();
+    });
   }
 
   // Zeige die konfigurierte Dokument-E-Mail-Adresse für den Pförtner
@@ -8952,9 +8956,11 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
         webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
       }
 
-      const win = window.open(webmailUrl, "_blank", "noopener");
+      // Öffne Webmail direkt (kein noopener, damit Browser es nicht blockiert)
+      const win = window.open(webmailUrl, "_blank");
       if (!win) {
-        window.alert(runtimeText("popupBlockedAllow"));
+        // Popup geblockt – als Fallback im aktuellen Tab öffnen
+        window.location.href = webmailUrl;
         return;
       }
 
