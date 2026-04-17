@@ -705,6 +705,21 @@ select {
   line-height: 1;
 }
 
+.auth-lang-select-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .auth-system-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
