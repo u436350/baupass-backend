@@ -574,14 +574,62 @@ select {
   width: 100%;
 }
 
+.auth-lang-field-compact {
+  width: min(100%, 220px);
+  justify-self: end;
+  gap: 5px;
+}
+
 .auth-lang-field > span {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1b2128;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #47505c;
+}
+
+.auth-lang-select-wrap {
+  position: relative;
+}
+
+.auth-lang-select-wrap::before {
+  content: "🌐";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 0.95rem;
+}
+
+.auth-lang-select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #445064;
+  font-size: 0.8rem;
 }
 
 .auth-lang-select {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 30px 8px 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(20, 27, 34, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: #1b2430;
+  font-size: 0.85rem;
   font-weight: 700;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.auth-lang-select:focus-visible {
+  outline: 2px solid rgba(15, 76, 92, 0.32);
+  outline-offset: 1px;
 }
 
 .auth-system-grid {
