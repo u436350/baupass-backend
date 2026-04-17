@@ -46,19 +46,19 @@
       </div>
 
       <form id="loginForm" class="auth-form">
-        <div class="auth-lang-field">
+        <label class="auth-lang-field">
           <span data-ui-i18n="uiLanguageLabel">Sprache</span>
-          <div class="auth-lang-switch" role="group" aria-label="Sprache wählen">
-            <button type="button" class="auth-lang-btn" data-ui-lang="de" aria-label="Deutsch">🇩🇪 DE</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="en" aria-label="English">🇬🇧 EN</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="tr" aria-label="Türkçe">🇹🇷 TR</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="ar" aria-label="العربية">🇸🇦 AR</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="fr" aria-label="Français">🇫🇷 FR</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="es" aria-label="Español">🇪🇸 ES</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="it" aria-label="Italiano">🇮🇹 IT</button>
-            <button type="button" class="auth-lang-btn" data-ui-lang="pl" aria-label="Polski">🇵🇱 PL</button>
-          </div>
-        </div>
+          <select id="uiLangAuthSelect" class="auth-lang-select" aria-label="Sprache wählen">
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="tr">🇹🇷 Türkçe</option>
+            <option value="ar">🇸🇦 العربية</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="pl">🇵🇱 Polski</option>
+          </select>
+        </label>
         <label>
           <span data-ui-i18n="loginUsernameLabel">Benutzername</span>
           <input id="loginUsername" type="text" placeholder="superadmin" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required />

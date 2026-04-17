@@ -2030,9 +2030,8 @@ function applyUiTranslations() {
     }
   });
 
-  document.querySelectorAll(".auth-lang-btn[data-ui-lang]").forEach((btn) => {
-    btn.classList.toggle("active", btn.getAttribute("data-ui-lang") === lang);
-  });
+  const authSelect = document.querySelector("#uiLangAuthSelect");
+  if (authSelect) authSelect.value = lang;
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) topbarSelect.value = lang;
 }
@@ -2047,11 +2046,11 @@ function setUiLang(lang) {
 function initUiLanguageControl() {
   const initial = getStoredUiLang();
   window.localStorage.setItem(UI_LANG_STORAGE_KEY, initial);
-  document.querySelectorAll(".auth-lang-btn[data-ui-lang]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setUiLang(btn.getAttribute("data-ui-lang") || UI_FALLBACK_LANG);
-    });
-  });
+  const authSelect = document.querySelector("#uiLangAuthSelect");
+  if (authSelect) {
+    authSelect.value = initial;
+    authSelect.addEventListener("change", () => setUiLang(authSelect.value || UI_FALLBACK_LANG));
+  }
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) {
     topbarSelect.value = initial;
