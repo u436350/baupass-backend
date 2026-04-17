@@ -58,16 +58,6 @@ function resolveApiBase() {
 const API_BASE = resolveApiBase();
 const UI_LANG_STORAGE_KEY = "baupass-ui-lang";
 const UI_FALLBACK_LANG = "de";
-const AUTH_LANG_META = {
-  de: { code: "DE", flagClass: "flag-de" },
-  en: { code: "EN", flagClass: "flag-gb" },
-  tr: { code: "TR", flagClass: "flag-tr" },
-  ar: { code: "AR", flagClass: "flag-sa" },
-  fr: { code: "FR", flagClass: "flag-fr" },
-  es: { code: "ES", flagClass: "flag-es" },
-  it: { code: "IT", flagClass: "flag-it" },
-  pl: { code: "PL", flagClass: "flag-pl" }
-};
 const UI_TRANSLATIONS = {
   de: {
     authEyebrow: "Melde-Seite",
@@ -2040,14 +2030,8 @@ function applyUiTranslations() {
     }
   });
 
-  const authCode = document.querySelector("#uiLangAuthCode");
-  const authFlag = document.querySelector("#uiLangAuthFlag");
-  const authMeta = AUTH_LANG_META[lang] || AUTH_LANG_META[UI_FALLBACK_LANG];
-  if (authCode) authCode.textContent = authMeta.code;
-  if (authFlag) authFlag.className = `flag-chip ${authMeta.flagClass}`;
-  document.querySelectorAll(".auth-lang-option[data-ui-lang]").forEach((btn) => {
-    btn.classList.toggle("active", btn.getAttribute("data-ui-lang") === lang);
-  });
+  const authSelect = document.querySelector("#uiLangAuthSelect");
+  if (authSelect) authSelect.value = lang;
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) topbarSelect.value = lang;
 }
@@ -2062,29 +2046,10 @@ function setUiLang(lang) {
 function initUiLanguageControl() {
   const initial = getStoredUiLang();
   window.localStorage.setItem(UI_LANG_STORAGE_KEY, initial);
-  const authDropdown = document.querySelector("#uiLangAuthDropdown");
-  const authButton = document.querySelector("#uiLangAuthButton");
-  const authMenu = document.querySelector("#uiLangAuthMenu");
-  if (authDropdown && authButton && authMenu) {
-    authButton.addEventListener("click", () => {
-      const open = authMenu.hidden === false;
-      authMenu.hidden = open;
-      authButton.setAttribute("aria-expanded", open ? "false" : "true");
-    });
-    document.querySelectorAll(".auth-lang-option[data-ui-lang]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const lang = btn.getAttribute("data-ui-lang") || UI_FALLBACK_LANG;
-        setUiLang(lang);
-        authMenu.hidden = true;
-        authButton.setAttribute("aria-expanded", "false");
-      });
-    });
-    document.addEventListener("click", (event) => {
-      if (!authDropdown.contains(event.target)) {
-        authMenu.hidden = true;
-        authButton.setAttribute("aria-expanded", "false");
-      }
-    });
+  const authSelect = document.querySelector("#uiLangAuthSelect");
+  if (authSelect) {
+    authSelect.value = initial;
+    authSelect.addEventListener("change", () => setUiLang(authSelect.value || UI_FALLBACK_LANG));
   }
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) {

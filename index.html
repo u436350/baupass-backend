@@ -26,23 +26,16 @@
     <div class="auth-panel">
       <label class="auth-lang-field auth-lang-field-compact">
         <span data-ui-i18n="uiLanguageLabel">Sprache</span>
-        <div class="auth-lang-dropdown" id="uiLangAuthDropdown">
-          <button id="uiLangAuthButton" class="auth-lang-button" type="button" aria-label="Sprache wählen" aria-haspopup="listbox" aria-expanded="false">
-            <span id="uiLangAuthCode">DE</span>
-            <span id="uiLangAuthFlag" class="flag-chip flag-de" aria-hidden="true"></span>
-            <span class="auth-lang-caret" aria-hidden="true">▾</span>
-          </button>
-          <div id="uiLangAuthMenu" class="auth-lang-menu" role="listbox" hidden>
-            <button type="button" class="auth-lang-option" data-ui-lang="de" role="option"><span>DE</span><span class="flag-chip flag-de" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="en" role="option"><span>EN</span><span class="flag-chip flag-gb" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="tr" role="option"><span>TR</span><span class="flag-chip flag-tr" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="ar" role="option"><span>AR</span><span class="flag-chip flag-sa" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="fr" role="option"><span>FR</span><span class="flag-chip flag-fr" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="es" role="option"><span>ES</span><span class="flag-chip flag-es" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="it" role="option"><span>IT</span><span class="flag-chip flag-it" aria-hidden="true"></span></button>
-            <button type="button" class="auth-lang-option" data-ui-lang="pl" role="option"><span>PL</span><span class="flag-chip flag-pl" aria-hidden="true"></span></button>
-          </div>
-        </div>
+        <select id="uiLangAuthSelect" class="auth-lang-select" aria-label="Sprache wählen">
+          <option value="de">DE 🇩🇪</option>
+          <option value="en">EN 🇬🇧</option>
+          <option value="tr">TR 🇹🇷</option>
+          <option value="ar">AR 🇸🇦</option>
+          <option value="fr">FR 🇫🇷</option>
+          <option value="es">ES 🇪🇸</option>
+          <option value="it">IT 🇮🇹</option>
+          <option value="pl">PL 🇵🇱</option>
+        </select>
       </label>
       <div>
         <img class="website-logo-sync website-logo website-logo-auth" src="./branding/baukometra-logo.svg" alt="Firmenlogo" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22210%22%20height%3D%2284%22%20viewBox%3D%220%200%20210%2084%22%3E%3Crect%20width%3D%22210%22%20height%3D%2284%22%20rx%3D%2212%22%20fill%3D%22%230f4c5c%22/%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2232%22%20font-weight%3D%22700%22%20fill%3D%22white%22%3EBK%3C/text%3E%3C/svg%3E';" />
