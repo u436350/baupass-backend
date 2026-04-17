@@ -1,11 +1,11 @@
-const SHELL_CACHE = "baupass-control-shell-v32";
-const RUNTIME_CACHE = "baupass-control-runtime-v32";
+const SHELL_CACHE = "baupass-control-shell-v33";
+const RUNTIME_CACHE = "baupass-control-runtime-v33";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/index.html?v=20260417l",
+  "/index.html?v=20260417m",
   "/app.js",
-  "/app.js?v=20260417l",
+  "/app.js?v=20260417m",
   "/styles.css",
   "/styles.css?v=20260417j",
   "/control-manifest.json",

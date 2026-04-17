@@ -15,7 +15,7 @@
   <title>BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260417l";
+        const buildTag = "20260417m";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -350,17 +350,17 @@
                 <p id="photoDebugText" class="helper-text">Kamera noch nicht gestartet.</p>
                 <label class="camera-option">
                   <input id="whiteBgBoost" type="checkbox" checked disabled />
-                  Hintergrund komplett weiß (aktiv)
+                  <span id="photoWhiteBgLabel">Hintergrund komplett weiß (aktiv)</span>
                 </label>
                 <canvas id="photoCanvas" width="480" height="360" hidden></canvas>
                 <div class="photo-preview-block" style="margin: 12px 0; text-align: center;">
                   <img id="capturedPhoto" src="" alt="Foto-Vorschau" style="max-width: 220px; max-height: 280px; border-radius: 10px; border: 1px solid #ccc; background: #fff; display: none;" />
                 </div>
                 <div class="photo-adjust-controls">
-                  <p class="helper-text">Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.</p>
+                  <p id="photoAdjustHelp" class="helper-text">Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.</p>
                   <p id="photoRequiredHint" class="helper-text helper-text-warning">Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.</p>
                   <label class="photo-zoom-row">
-                    Zoom / Zuschneiden
+                    <span id="photoZoomCropLabel">Zoom / Zuschneiden</span>
                     <input id="photoZoom" type="range" min="1" max="1.8" step="0.02" value="1.18" disabled />
                     <span id="photoZoomValue">1.18x</span>
                   </label>
@@ -391,7 +391,7 @@
             <div class="worker-list-toolbar">
               <input id="workerSearchInput" type="search" placeholder="Suchen: Name, Badge-ID, Baustelle …" autocomplete="off" />
               <label class="bulk-select-all-label">
-                <input id="bulkSelectAll" type="checkbox" /> Alle auswählen
+                <input id="bulkSelectAll" type="checkbox" /> <span id="bulkSelectAllText">Alle auswählen</span>
               </label>
             </div>
               <div id="bulkActionBar" class="bulk-action-bar hidden">
@@ -452,7 +452,7 @@
         </div>
 
         <div class="photo-zoom-row">
-          <label for="photoSharpen">Schärfe:</label>
+          <label id="photoSharpenLabel" for="photoSharpen">Schärfe:</label>
           <input id="photoSharpen" type="range" min="0" max="2" step="0.01" value="0.28" disabled>
           <span id="photoSharpenValue">Normal</span>
         </div>
@@ -582,8 +582,8 @@
               <article class="summary-block">
                 <div class="panel-heading slim">
                   <div>
-                    <p class="eyebrow">Stundenanalyse</p>
-                    <h3>Eintritt/Austritt je Stunde</h3>
+                    <p class="eyebrow" data-ui-i18n="hourlyEyebrow">Stundenanalyse</p>
+                    <h3 data-ui-i18n="hourlyH3">Eintritt/Austritt je Stunde</h3>
                   </div>
                 </div>
                 <div id="accessHourlyGrid" class="hourly-grid"></div>
@@ -1051,6 +1051,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260417l"></script>
+  <script src="./app.js?v=20260417m"></script>
 </body>
 </html>

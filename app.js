@@ -2132,6 +2132,7 @@ function applyUiTranslations() {
   });
 
   applyUiPlaceholders();
+  applyRuntimeUiTexts();
 
   updateAuthLanguageControl(lang);
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
@@ -2467,6 +2468,58 @@ function normalizeLog(entry) {
 
 function getRuntimeUiTexts() {
   const lang = getStoredUiLang();
+  const base = {
+    sessionLoggedIn: "Signed in",
+    sessionRole: "Role",
+    roleUnknown: "Unknown",
+    roleSuperadmin: "Superadmin",
+    roleCompanyAdmin: "Company admin",
+    roleTurnstile: "Turnstile",
+    statsWorkersTotal: "Workers total",
+    statsWorkersActive: "Active workers",
+    statsVisitorsTotal: "Visitors total",
+    statsCompanies: "Companies",
+    statsAccessToday: "Access today",
+    badgePinHintVisitor: "Visitors use the one-time link/QR. A badge PIN is not required for visitors.",
+    badgePinHintWorker: "Badge login in the worker app now works only with badge ID and this PIN. While editing, you can set a new PIN here.",
+    workerListEmpty: "No workers created yet.",
+    workerListNoResults: "No results for \"{term}\".",
+    badgeEmptyStateShort: "Please create a worker first.",
+    badgeNoneSelected: "No badge selected.",
+    dayReportEmpty: "No data available for the daily report yet.",
+    hourlyEmpty: "No hourly values available.",
+    summaryEntries: "Entries",
+    summaryExits: "Exits",
+    summaryTotal: "Total",
+    summaryLastBooking: "Latest booking",
+    summaryPeople: "Visitors / Workers",
+    hourlyIn: "In",
+    hourlyOut: "Out",
+    cameraNotStarted: "Camera not started.",
+    cameraUnavailableWithHint: "Browser camera unavailable.{hint}",
+    cameraHintSecureContext: " HTTPS or localhost is required.",
+    cameraActiveCanCapture: "Camera active. You can now take a photo.",
+    cameraNeedsHttps: "Browser camera requires HTTPS or localhost.",
+    cameraAccessBlocked: "Camera access was blocked. Please allow camera permission in the browser.",
+    cameraNotFound: "No camera found.",
+    cameraInUse: "Camera is already in use by another app or browser tab.",
+    cameraConstraintFailed: "Camera could not be started with the requested settings.",
+    cameraApiMissing: "This browser does not provide a live camera API.",
+    cameraStartFailed: "Camera could not be started: {reason}",
+    photoCaptured: "Photo captured ({preview})",
+    photoPosition: "Position: X {x} | Y {y}",
+    photoSharpenNormal: "Normal",
+    photoSharpenSoft: "Soft",
+    photoSharpenVerySharp: "Very sharp",
+    photoRequiredOk: "Photo captured. Badge can be saved.",
+    photoRequiredMissing: "Required: Without a photo, the badge cannot be saved.",
+    bulkSelectedCount: "{count} selected",
+    photoWhiteBgActive: "Background fully white (active)",
+    photoAdjustHelp: "Move the photo after capture so it fits cleanly on the right side of the badge.",
+    photoZoomCropLabel: "Zoom / Crop",
+    photoSharpenLabel: "Sharpness:",
+    bulkSelectAllLabel: "Select all",
+  };
   const map = {
     de: {
       sessionLoggedIn: "Angemeldet",
@@ -2480,19 +2533,45 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "Besucher gesamt",
       statsCompanies: "Firmen",
       statsAccessToday: "Zutritte heute",
-    },
-    en: {
-      sessionLoggedIn: "Signed in",
-      sessionRole: "Role",
-      roleUnknown: "Unknown",
-      roleSuperadmin: "Superadmin",
-      roleCompanyAdmin: "Company admin",
-      roleTurnstile: "Turnstile",
-      statsWorkersTotal: "Workers total",
-      statsWorkersActive: "Active workers",
-      statsVisitorsTotal: "Visitors total",
-      statsCompanies: "Companies",
-      statsAccessToday: "Access today",
+      badgePinHintVisitor: "Besucher nutzen den Einmal-Link/QR. Eine Badge-PIN ist fuer Besucher nicht erforderlich.",
+      badgePinHintWorker: "Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.",
+      workerListEmpty: "Noch keine Mitarbeiter angelegt.",
+      workerListNoResults: "Keine Treffer fuer \"{term}\".",
+      badgeEmptyStateShort: "Bitte zuerst einen Mitarbeiter anlegen.",
+      badgeNoneSelected: "Kein Badge ausgewaehlt.",
+      dayReportEmpty: "Noch keine Daten fuer den Tagesbericht.",
+      hourlyEmpty: "Keine Stundenwerte verfuegbar.",
+      summaryEntries: "Eintritte",
+      summaryExits: "Austritte",
+      summaryTotal: "Gesamt",
+      summaryLastBooking: "Letzte Buchung",
+      summaryPeople: "Besucher / Mitarbeiter",
+      hourlyIn: "In",
+      hourlyOut: "Out",
+      cameraNotStarted: "Kamera noch nicht gestartet.",
+      cameraUnavailableWithHint: "Browser-Kamera nicht verfuegbar.{hint}",
+      cameraHintSecureContext: " HTTPS oder localhost ist erforderlich.",
+      cameraActiveCanCapture: "Kamera aktiv. Du kannst jetzt ein Foto aufnehmen.",
+      cameraNeedsHttps: "Browser-Kamera benoetigt HTTPS oder localhost.",
+      cameraAccessBlocked: "Kamera-Zugriff wurde blockiert. Bitte Browser-Berechtigung fuer Kamera erlauben.",
+      cameraNotFound: "Keine Kamera gefunden.",
+      cameraInUse: "Kamera ist bereits von einer anderen App oder Browser-Registerkarte belegt.",
+      cameraConstraintFailed: "Kamera konnte mit den angeforderten Einstellungen nicht gestartet werden.",
+      cameraApiMissing: "Dieser Browser stellt keine Live-Kamera-API bereit.",
+      cameraStartFailed: "Kamera konnte nicht gestartet werden: {reason}",
+      photoCaptured: "Foto erfasst ({preview})",
+      photoPosition: "Position: X {x} | Y {y}",
+      photoSharpenNormal: "Normal",
+      photoSharpenSoft: "Weich",
+      photoSharpenVerySharp: "Sehr scharf",
+      photoRequiredOk: "Foto erfasst. Ausweis kann gespeichert werden.",
+      photoRequiredMissing: "Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.",
+      bulkSelectedCount: "{count} ausgewaehlt",
+      photoWhiteBgActive: "Hintergrund komplett weiss (aktiv)",
+      photoAdjustHelp: "Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.",
+      photoZoomCropLabel: "Zoom / Zuschneiden",
+      photoSharpenLabel: "Schaerfe:",
+      bulkSelectAllLabel: "Alle auswaehlen",
     },
     tr: {
       sessionLoggedIn: "Giris yapan",
@@ -2573,7 +2652,68 @@ function getRuntimeUiTexts() {
       statsAccessToday: "Wejscia dzis",
     },
   };
-  return map[lang] || map.de;
+  return {
+    ...base,
+    ...(map[lang] || map.de),
+  };
+}
+
+function runtimeText(key) {
+  const texts = getRuntimeUiTexts();
+  return texts[key] || "";
+}
+
+function runtimeTextTemplate(key, values = {}) {
+  let template = runtimeText(key);
+  Object.entries(values).forEach(([token, value]) => {
+    template = template.replace(new RegExp(`\\{${token}\\}`, "g"), String(value));
+  });
+  return template;
+}
+
+function applyRuntimeUiTexts() {
+  const cameraPlaceholder = document.querySelector("#cameraPlaceholder");
+  const photoDebugText = document.querySelector("#photoDebugText");
+  const photoWhiteBgLabel = document.querySelector("#photoWhiteBgLabel");
+  const photoAdjustHelp = document.querySelector("#photoAdjustHelp");
+  const photoZoomCropLabel = document.querySelector("#photoZoomCropLabel");
+  const photoSharpenLabel = document.querySelector("#photoSharpenLabel");
+  const photoRequiredHint = document.querySelector("#photoRequiredHint");
+  const photoAdjustStatus = document.querySelector("#photoAdjustStatus");
+  const badgePinHint = document.querySelector("#badgePinHint");
+  const bulkSelectAllText = document.querySelector("#bulkSelectAllText");
+
+  if (cameraPlaceholder && !cameraPlaceholder.hidden) {
+    cameraPlaceholder.textContent = runtimeText("cameraNotStarted");
+  }
+  if (photoDebugText) {
+    const current = (photoDebugText.textContent || "").trim();
+    const defaultDe = "Kamera noch nicht gestartet.";
+    const defaultEn = "Camera not started.";
+    if (!current || current === defaultDe || current === defaultEn) {
+      photoDebugText.textContent = runtimeText("cameraNotStarted");
+    }
+  }
+  if (photoWhiteBgLabel) photoWhiteBgLabel.textContent = runtimeText("photoWhiteBgActive");
+  if (photoAdjustHelp) photoAdjustHelp.textContent = runtimeText("photoAdjustHelp");
+  if (photoZoomCropLabel) photoZoomCropLabel.textContent = runtimeText("photoZoomCropLabel");
+  if (photoSharpenLabel) photoSharpenLabel.textContent = runtimeText("photoSharpenLabel");
+  if (photoRequiredHint && photoRequiredHint.classList.contains("helper-text-warning")) {
+    photoRequiredHint.textContent = runtimeText("photoRequiredMissing");
+  }
+  if (photoAdjustStatus) {
+    const current = (photoAdjustStatus.textContent || "").trim();
+    if (!current || current.startsWith("Position:")) {
+      photoAdjustStatus.textContent = runtimeTextTemplate("photoPosition", { x: 0, y: 0 });
+    }
+  }
+  if (badgePinHint) {
+    const workerType = document.querySelector("#workerType")?.value || "worker";
+    badgePinHint.textContent = workerType === "visitor"
+      ? runtimeText("badgePinHintVisitor")
+      : runtimeText("badgePinHintWorker");
+  }
+  if (bulkSelectAllText) bulkSelectAllText.textContent = runtimeText("bulkSelectAllLabel");
 }
 
 function getRoleLabel(role) {
@@ -2791,8 +2931,8 @@ function syncWorkerTypeUi() {
   }
   if (elements.badgePinHint) {
     elements.badgePinHint.textContent = isVisitor
-      ? "Besucher nutzen den Einmal-Link/QR. Eine Badge-PIN ist für Besucher nicht erforderlich."
-      : "Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.";
+      ? runtimeText("badgePinHintVisitor")
+      : runtimeText("badgePinHintWorker");
   }
   if (isVisitor && elements.visitEndAt && !elements.visitEndAt.value) {
     const defaultEnd = new Date(Date.now() + (8 * 60 * 60 * 1000));
@@ -3347,7 +3487,10 @@ function renderWorkerList() {
     .sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
 
   if (!workers.length) {
-    elements.workerList.innerHTML = `<div class="empty-state">${searchTerm ? "Keine Treffer f\u00fcr \u00ab" + escapeHtml(searchTerm) + "\u00bb." : "Noch keine Mitarbeiter angelegt."}</div>`;
+    const emptyText = searchTerm
+      ? runtimeTextTemplate("workerListNoResults", { term: escapeHtml(searchTerm) })
+      : runtimeText("workerListEmpty");
+    elements.workerList.innerHTML = `<div class="empty-state">${emptyText}</div>`;
     return;
   }
 
@@ -4094,9 +4237,9 @@ function renderBadge() {
   const worker = state.workers.find((entry) => entry.id === state.selectedWorkerId) || state.workers[0] || null;
 
   if (!worker) {
-    elements.badgePreview.innerHTML = "Bitte zuerst einen Mitarbeiter anlegen.";
+    elements.badgePreview.innerHTML = runtimeText("badgeEmptyStateShort");
     elements.badgePreview.className = "badge-shell empty-state";
-    elements.badgeMeta.innerHTML = "Kein Badge ausgewaehlt.";
+    elements.badgeMeta.innerHTML = runtimeText("badgeNoneSelected");
     elements.badgeMeta.className = "badge-meta empty-state";
     return;
   }
@@ -4368,7 +4511,7 @@ function renderAccessLog() {
 function renderAccessSummary() {
   const entries = [...state.accessLogs];
   if (!entries.length) {
-    elements.accessSummaryGrid.innerHTML = '<div class="empty-state">Noch keine Daten fuer den Tagesbericht.</div>';
+    elements.accessSummaryGrid.innerHTML = `<div class="empty-state">${runtimeText("dayReportEmpty")}</div>`;
     return;
   }
 
@@ -4414,12 +4557,12 @@ function renderAccessSummary() {
       (item) => `
         <article class="summary-card">
           <strong>${escapeHtml(item.gate)}</strong>
-          <span>Eintritte: ${item.checkIn}</span>
-          <span>Austritte: ${item.checkOut}</span>
-          <span>Gesamt: ${item.total}</span>
-          <span>Letzte Buchung: ${formatTimestamp(item.latest)}</span>
+          <span>${runtimeText("summaryEntries")}: ${item.checkIn}</span>
+          <span>${runtimeText("summaryExits")}: ${item.checkOut}</span>
+          <span>${runtimeText("summaryTotal")}: ${item.total}</span>
+          <span>${runtimeText("summaryLastBooking")}: ${formatTimestamp(item.latest)}</span>
           <div class="summary-visitor-block">
-            <span class="summary-visitor-title">Besucher / Mitarbeiter:</span>
+            <span class="summary-visitor-title">${runtimeText("summaryPeople")}:</span>
             <div class="summary-visitor-list">${item.visitors.map((name) => `<span class="summary-visitor-pill">${escapeHtml(name)}</span>`).join("")}</div>
           </div>
         </article>
@@ -4431,7 +4574,7 @@ function renderAccessSummary() {
 function renderAccessHourly() {
   const rows = state.accessInsights.hourly || [];
   if (!rows.length) {
-    elements.accessHourlyGrid.innerHTML = '<div class="empty-state">Keine Stundenwerte verfuegbar.</div>';
+    elements.accessHourlyGrid.innerHTML = `<div class="empty-state">${runtimeText("hourlyEmpty")}</div>`;
     return;
   }
 
@@ -4440,8 +4583,8 @@ function renderAccessHourly() {
       (row) => `
         <article class="hour-row">
           <strong>${escapeHtml(row.hour)}</strong>
-          <span>In: ${Number(row.checkIn) || 0}</span>
-          <span>Out: ${Number(row.checkOut) || 0}</span>
+          <span>${runtimeText("hourlyIn")}: ${Number(row.checkIn) || 0}</span>
+          <span>${runtimeText("hourlyOut")}: ${Number(row.checkOut) || 0}</span>
         </article>
       `
     )
@@ -6173,30 +6316,30 @@ async function startCamera() {
   const buildCameraErrorMessage = (error) => {
     const errorName = String(error?.name || "").trim();
     if (!window.isSecureContext) {
-      return "Browser-Kamera benoetigt HTTPS oder localhost.";
+      return runtimeText("cameraNeedsHttps");
     }
     if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-      return "Kamera-Zugriff wurde blockiert. Bitte Browser-Berechtigung fuer Kamera erlauben.";
+      return runtimeText("cameraAccessBlocked");
     }
     if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
-      return "Keine Kamera gefunden.";
+      return runtimeText("cameraNotFound");
     }
     if (errorName === "NotReadableError" || errorName === "TrackStartError") {
-      return "Kamera ist bereits von einer anderen App oder Browser-Registerkarte belegt.";
+      return runtimeText("cameraInUse");
     }
     if (errorName === "OverconstrainedError" || errorName === "ConstraintNotSatisfiedError") {
-      return "Kamera konnte mit den angeforderten Einstellungen nicht gestartet werden.";
+      return runtimeText("cameraConstraintFailed");
     }
     if (errorName === "" && error?.message === "getUserMedia_not_supported") {
-      return "Dieser Browser stellt keine Live-Kamera-API bereit.";
+      return runtimeText("cameraApiMissing");
     }
-    return `Kamera konnte nicht gestartet werden: ${error?.message || errorName || "unbekannter Fehler"}`;
+    return runtimeTextTemplate("cameraStartFailed", { reason: error?.message || errorName || "unknown error" });
   };
 
   if (!navigator.mediaDevices?.getUserMedia && !legacyGetUserMedia) {
     if (elements.photoDebugText) {
-      const secureHint = window.isSecureContext ? "" : " HTTPS oder localhost ist erforderlich.";
-      elements.photoDebugText.textContent = `Browser-Kamera nicht verfuegbar.${secureHint}`;
+      const secureHint = window.isSecureContext ? "" : runtimeText("cameraHintSecureContext");
+      elements.photoDebugText.textContent = runtimeTextTemplate("cameraUnavailableWithHint", { hint: secureHint });
       elements.photoDebugText.style.color = "#8a5a00";
     }
     return;
@@ -6267,7 +6410,7 @@ async function startCamera() {
     elements.cameraPreview.style.visibility = "visible";
     elements.cameraPlaceholder.hidden = true;
     if (elements.photoDebugText) {
-      elements.photoDebugText.textContent = "Kamera aktiv. Du kannst jetzt ein Foto aufnehmen.";
+      elements.photoDebugText.textContent = runtimeText("cameraActiveCanCapture");
       elements.photoDebugText.style.color = "#0b7a3b";
     }
   } catch (error) {
@@ -6381,7 +6524,9 @@ async function capturePhoto() {
   applyPhotoEditorTransform();
 
   if (elements.photoDebugText) {
-    elements.photoDebugText.textContent = `Foto erfasst (${photo ? photo.slice(0, 30) : "leer"})`;
+    elements.photoDebugText.textContent = runtimeTextTemplate("photoCaptured", {
+      preview: photo ? photo.slice(0, 30) : "empty",
+    });
     elements.photoDebugText.style.color = "#0b7a3b";
   }
 
@@ -6696,7 +6841,10 @@ function updatePhotoAdjustControlsState() {
   }
 
   if (elements.photoAdjustStatus) {
-    elements.photoAdjustStatus.textContent = `Position: X ${photoEditorOffset.x} | Y ${photoEditorOffset.y}`;
+    elements.photoAdjustStatus.textContent = runtimeTextTemplate("photoPosition", {
+      x: photoEditorOffset.x,
+      y: photoEditorOffset.y,
+    });
   }
 
   if (elements.photoZoom) {
@@ -6714,19 +6862,19 @@ function updatePhotoAdjustControlsState() {
   }
 
   if (elements.photoSharpenValue) {
-    let label = "Normal";
-    if (photoSharpenAmount < 0.13) label = "Weich";
-    else if (photoSharpenAmount > 0.45) label = "Sehr scharf";
+    let label = runtimeText("photoSharpenNormal");
+    if (photoSharpenAmount < 0.13) label = runtimeText("photoSharpenSoft");
+    else if (photoSharpenAmount > 0.45) label = runtimeText("photoSharpenVerySharp");
     elements.photoSharpenValue.textContent = label;
   }
 
   if (elements.photoRequiredHint) {
     if (hasPhoto) {
-      elements.photoRequiredHint.textContent = "Foto erfasst. Ausweis kann gespeichert werden.";
+      elements.photoRequiredHint.textContent = runtimeText("photoRequiredOk");
       elements.photoRequiredHint.classList.remove("helper-text-warning");
       elements.photoRequiredHint.classList.add("helper-text-ok");
     } else {
-      elements.photoRequiredHint.textContent = "Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.";
+      elements.photoRequiredHint.textContent = runtimeText("photoRequiredMissing");
       elements.photoRequiredHint.classList.remove("helper-text-ok");
       elements.photoRequiredHint.classList.add("helper-text-warning");
     }
@@ -6743,7 +6891,10 @@ function updatePhotoAdjustControlsState() {
     elements.photoResetButton.disabled = !hasPhoto;
   }
   if (elements.photoAdjustStatus) {
-    elements.photoAdjustStatus.textContent = `Position: X ${photoEditorOffset.x} | Y ${photoEditorOffset.y}`;
+    elements.photoAdjustStatus.textContent = runtimeTextTemplate("photoPosition", {
+      x: photoEditorOffset.x,
+      y: photoEditorOffset.y,
+    });
   }
   if (elements.photoZoom) {
     elements.photoZoom.disabled = !hasPhoto;
@@ -6757,9 +6908,9 @@ function updatePhotoAdjustControlsState() {
     elements.photoSharpen.value = String(photoSharpenAmount);
   }
   if (elements.photoSharpenValue) {
-    let label = "Normal";
-    if (photoSharpenAmount < 0.13) label = "Weich";
-    else if (photoSharpenAmount > 0.45) label = "Sehr scharf";
+    let label = runtimeText("photoSharpenNormal");
+    if (photoSharpenAmount < 0.13) label = runtimeText("photoSharpenSoft");
+    else if (photoSharpenAmount > 0.45) label = runtimeText("photoSharpenVerySharp");
     elements.photoSharpenValue.textContent = label;
   }
 }
@@ -6779,7 +6930,9 @@ elements.photoMoveButtons.forEach((button) => {
     elements.capturedPhoto.style.transform = `translate(${x}px, ${y}px)`;
     elements.capturedPhoto.setAttribute('data-x', x);
     elements.capturedPhoto.setAttribute('data-y', y);
-    if (elements.photoAdjustStatus) elements.photoAdjustStatus.textContent = `Position: X ${x} | Y ${y}`;
+    if (elements.photoAdjustStatus) {
+      elements.photoAdjustStatus.textContent = runtimeTextTemplate("photoPosition", { x, y });
+    }
   };
 });
 
@@ -7811,7 +7964,9 @@ function getSelectedWorkerIds() {
 function updateBulkActionBar() {
   const count = getSelectedWorkerIds().length;
   if (elements.bulkActionBar) elements.bulkActionBar.classList.toggle("hidden", count === 0);
-  if (elements.bulkSelectionCount) elements.bulkSelectionCount.textContent = `${count} ausgewählt`;
+  if (elements.bulkSelectionCount) {
+    elements.bulkSelectionCount.textContent = runtimeTextTemplate("bulkSelectedCount", { count });
+  }
 }
 
 async function bulkSetStatus(status) {
