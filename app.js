@@ -3701,7 +3701,23 @@ function normalizeWorkerAppLink(rawLink) {
 }
 
 async function loadAllData() {
-  const bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, { auth: false });
+  let bootstrap;
+  try {
+    bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, {
+      auth: false,
+      // Bei Cross-Site-Cookies (z. B. Railway) kann der Cookie fehlen.
+      // Wenn bereits ein Token im Speicher ist, sende es explizit mit.
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  } catch (error) {
+    // Nicht eingeloggt ist beim ersten Laden ein normaler Zustand.
+    if (["unauthorized", "invalid_session", "session_expired"].includes(String(error?.message || ""))) {
+      clearSession();
+      sessionExpiryNoticeShown = false;
+      return;
+    }
+    throw error;
+  }
   if (bootstrap?.token) {
     token = bootstrap.token;
   }
@@ -8870,7 +8886,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const docNavLink = document.querySelector("[data-view='documents']");
   if (docNavLink) {
     docNavLink.addEventListener("click", () => {
-      if (!token) return; // nur laden wenn eingeloggt
+      if (!token) {
+        handleExpiredControlSession();
+        return;
+      }
       loadDocumentInbox();
     });
   }
@@ -8878,7 +8897,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const refreshBtn = document.querySelector("#docInboxRefreshBtn");
   if (refreshBtn) {
     refreshBtn.addEventListener("click", () => {
-      if (!token) return;
+      if (!token) {
+        handleExpiredControlSession();
+        return;
+      }
       loadDocumentInbox();
     });
   }
@@ -8933,6 +8955,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const syncBtn = document.querySelector("#docInboxSyncBtn");
   if (syncBtn) {
     syncBtn.addEventListener("click", async () => {
+      if (!token) {
+        handleExpiredControlSession();
+        return;
+      }
       await runDocumentInboxSync(syncBtn);
     });
   }
@@ -8940,6 +8966,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const pollBtn = document.querySelector("#docInboxPollBtn");
   if (pollBtn) {
     pollBtn.addEventListener("click", () => {
+      if (!token) {
+        handleExpiredControlSession();
+        return;
+      }
       const imapHostVal = (state.settings?.imapHost || "").toLowerCase();
       let webmailUrl;
       if (imapHostVal.includes("gmail") || imapHostVal.includes("google")) {
