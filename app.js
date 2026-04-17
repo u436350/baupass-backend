@@ -86,6 +86,9 @@ const UI_TRANSLATIONS = {
     desktopAppTitle: "Desktop-App",
     desktopInstallHint: "Dieses Portal kann auf dem Computer wie ein Programm installiert werden.",
     desktopInstallButton: "Auf diesem Computer installieren",
+    appTitle: "BauPass Control",
+    alertInstallUnavailable: "Die Installation ist in diesem Browser gerade nicht direkt verfuegbar. In Chrome oder Edge kannst du im Browser-Menue 'App installieren' waehlen.",
+    alertSessionExpired: "Sitzung abgelaufen. Bitte neu anmelden.",
     // Shell
     sidebarEyebrow: "Firmenportal",
     sidebarCopy: "Mitarbeiter erfassen, Fotos aufnehmen, digitale Ausweise erzeugen und Zutritte am Drehkreuz steuern.",
@@ -112,6 +115,20 @@ const UI_TRANSLATIONS = {
     dashBadge3: "Mandantenf\u00e4hig",
     reportingEyebrow: "Reporting",
     reportingH3: "Zahlung und Sperrstatus",
+    reportingPaid: "Bezahlt",
+    reportingOpen: "Offen",
+    reportingOverdue: "Ueberfaellig",
+    reportingInvoicesLabel: "Rechnungen",
+    reportingOverdueTotal: "Ueberfaellige Summe",
+    reportingLockedCompanies: "Gesperrte Firmen",
+    reportingAutoSuspensions30d: "Auto-Sperren (30d)",
+    reportingGeneratedAt: "Stand",
+    reportingNoOverdueCompanies: "Keine ueberfaelligen Firmen vorhanden.",
+    reportingFallbackCompany: "Firma",
+    reportingOverdueInvoicesLabel: "ueberfaellige Rechnungen",
+    reportingNoAccessDataLast7Days: "Keine Zutrittsdaten fuer die letzten 7 Tage.",
+    reportingCheckin: "Check-in",
+    reportingCheckout: "Check-out",
     accessWeekEyebrow: "7 Tage",
     accessWeekH3: "Zutritte pro Tag",
     recentEyebrow: "Letzte Aktivit\u00e4ten",
@@ -338,6 +355,9 @@ const UI_TRANSLATIONS = {
     desktopAppTitle: "Desktop App",
     desktopInstallHint: "This portal can be installed on your computer like a native app.",
     desktopInstallButton: "Install on this computer",
+    appTitle: "BauPass Control",
+    alertInstallUnavailable: "Installation is not directly available in this browser right now. In Chrome or Edge, choose 'Install app' from the browser menu.",
+    alertSessionExpired: "Session expired. Please sign in again.",
     // Shell
     sidebarEyebrow: "Company Portal",
     sidebarCopy: "Register workers, take photos, generate digital ID cards and control access at turnstiles.",
@@ -364,6 +384,20 @@ const UI_TRANSLATIONS = {
     dashBadge3: "Multi-tenant",
     reportingEyebrow: "Reporting",
     reportingH3: "Payment & Block Status",
+    reportingPaid: "Paid",
+    reportingOpen: "Open",
+    reportingOverdue: "Overdue",
+    reportingInvoicesLabel: "invoices",
+    reportingOverdueTotal: "Overdue total",
+    reportingLockedCompanies: "Blocked companies",
+    reportingAutoSuspensions30d: "Auto suspensions (30d)",
+    reportingGeneratedAt: "Generated",
+    reportingNoOverdueCompanies: "No overdue companies found.",
+    reportingFallbackCompany: "Company",
+    reportingOverdueInvoicesLabel: "overdue invoices",
+    reportingNoAccessDataLast7Days: "No access data for the last 7 days.",
+    reportingCheckin: "Check-in",
+    reportingCheckout: "Check-out",
     accessWeekEyebrow: "7 Days",
     accessWeekH3: "Access per Day",
     recentEyebrow: "Recent Activity",
@@ -3232,7 +3266,7 @@ async function triggerDesktopInstall() {
     return;
   }
   if (!deferredDesktopInstallPrompt) {
-    window.alert("Die Installation ist in diesem Browser gerade nicht direkt verfügbar. In Chrome oder Edge kannst du im Browser-Menü 'App installieren' wählen.");
+    window.alert(uiT("alertInstallUnavailable"));
     return;
   }
   deferredDesktopInstallPrompt.prompt();
@@ -3470,7 +3504,7 @@ function handleExpiredControlSession() {
     return;
   }
   sessionExpiryNoticeShown = true;
-  window.alert("Sitzung abgelaufen. Bitte neu anmelden.");
+  window.alert(uiT("alertSessionExpired"));
 }
 
 function startHeartbeat() {
@@ -3783,12 +3817,12 @@ function renderReportingPanels() {
   const kpis = state.reporting?.kpis || {};
   const generatedAt = state.reporting?.generatedAt || "";
   const summaryCards = [
-    ["Bezahlt", formatCurrencyEur(kpis.paidTotal)],
-    ["Offen", formatCurrencyEur(kpis.openTotal)],
-    ["Überfällig", `${Number(kpis.overdueInvoiceCount || 0)} Rechnungen`],
-    ["Überfällige Summe", formatCurrencyEur(kpis.overdueTotal)],
-    ["Gesperrte Firmen", String(Number(kpis.lockedCompanies || 0))],
-    ["Auto-Sperren (30d)", String(Number(kpis.suspensionsLast30d || 0))]
+    [uiT("reportingPaid"), formatCurrencyEur(kpis.paidTotal)],
+    [uiT("reportingOpen"), formatCurrencyEur(kpis.openTotal)],
+    [uiT("reportingOverdue"), `${Number(kpis.overdueInvoiceCount || 0)} ${uiT("reportingInvoicesLabel")}`],
+    [uiT("reportingOverdueTotal"), formatCurrencyEur(kpis.overdueTotal)],
+    [uiT("reportingLockedCompanies"), String(Number(kpis.lockedCompanies || 0))],
+    [uiT("reportingAutoSuspensions30d"), String(Number(kpis.suspensionsLast30d || 0))]
   ];
 
   summaryGrid.innerHTML = summaryCards
@@ -3798,17 +3832,17 @@ function renderReportingPanels() {
         <strong>${escapeHtml(String(value))}</strong>
       </article>
     `)
-    .join("") + (generatedAt ? `<p class="helper-text">Stand: ${escapeHtml(formatTimestamp(generatedAt))}</p>` : "");
+    .join("") + (generatedAt ? `<p class="helper-text">${escapeHtml(uiT("reportingGeneratedAt"))}: ${escapeHtml(formatTimestamp(generatedAt))}</p>` : "");
 
   const topCompanies = state.reporting?.topOverdueCompanies || [];
   if (!topCompanies.length) {
-    topOverdueList.innerHTML = '<div class="empty-state">Keine überfälligen Firmen vorhanden.</div>';
+    topOverdueList.innerHTML = `<div class="empty-state">${escapeHtml(uiT("reportingNoOverdueCompanies"))}</div>`;
   } else {
     topOverdueList.innerHTML = topCompanies
       .map((entry) => `
         <article class="card-item">
-          <strong>${escapeHtml(entry.companyName || "Firma")}</strong>
-          <p class="helper-text">${Number(entry.overdueCount || 0)} überfällige Rechnungen</p>
+          <strong>${escapeHtml(entry.companyName || uiT("reportingFallbackCompany"))}</strong>
+          <p class="helper-text">${Number(entry.overdueCount || 0)} ${escapeHtml(uiT("reportingOverdueInvoicesLabel"))}</p>
           <p>${escapeHtml(formatCurrencyEur(entry.overdueTotal))}</p>
         </article>
       `)
@@ -3817,7 +3851,7 @@ function renderReportingPanels() {
 
   const dailyRows = state.reporting?.accessDaily || [];
   if (!dailyRows.length) {
-    accessDailyList.innerHTML = '<div class="empty-state">Keine Zutrittsdaten für die letzten 7 Tage.</div>';
+    accessDailyList.innerHTML = `<div class="empty-state">${escapeHtml(uiT("reportingNoAccessDataLast7Days"))}</div>`;
   } else {
     const maxDaily = Math.max(
       ...dailyRows.map((entry) => Number(entry.checkIn || 0) + Number(entry.checkOut || 0)),
@@ -3833,11 +3867,11 @@ function renderReportingPanels() {
         return `
         <article class="card-item">
           <strong>${escapeHtml(formatDate(entry.day))}</strong>
-          <p class="helper-text">Check-in: ${escapeHtml(String(checkIn))}</p>
+          <p class="helper-text">${escapeHtml(uiT("reportingCheckin"))}: ${escapeHtml(String(checkIn))}</p>
           <div style="height:8px; background:#e6edf2; border-radius:6px; overflow:hidden; margin:4px 0 8px;">
             <div style="height:100%; width:${inWidth}%; background:#0f7a5a;"></div>
           </div>
-          <p class="helper-text">Check-out: ${escapeHtml(String(checkOut))}</p>
+          <p class="helper-text">${escapeHtml(uiT("reportingCheckout"))}: ${escapeHtml(String(checkOut))}</p>
           <div style="height:8px; background:#e6edf2; border-radius:6px; overflow:hidden; margin:4px 0 0;">
             <div style="height:100%; width:${outWidth}%; background:#4c6faf;"></div>
           </div>

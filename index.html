@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="BauPass Control" />
   <meta name="application-name" content="BauPass Control" />
-  <title>BauPass Control</title>
+  <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
         const buildTag = "20260417m";
@@ -147,7 +147,7 @@
       <div>
         <img class="website-logo-sync website-logo website-logo-sidebar hidden" alt="Firmenlogo" />
         <p class="eyebrow" data-ui-i18n="sidebarEyebrow">Firmenportal</p>
-        <h1>BauPass Control</h1>
+        <h1 data-ui-i18n="appTitle">BauPass Control</h1>
         <p class="sidebar-copy" data-ui-i18n="sidebarCopy">Mitarbeiter erfassen, Fotos aufnehmen, digitale Ausweise erzeugen und Zutritte am Drehkreuz steuern.</p>
       </div>
       <nav class="nav">
@@ -729,10 +729,10 @@
               <label>
                 Vermietungsmodell
                 <select id="rentalModel">
-                  <option value="tageskarte">Besucherkarte (empfohlen)</option>
-                  <option value="monatlich">Monatlich pro Baustelle</option>
-                  <option value="pro-mitarbeiter">Pro Mitarbeiter</option>
-                  <option value="pauschal">Pauschal pro Firma</option>
+                  <option value="tageskarte" data-ui-i18n="optPlanDayPassRecommended">Besucherkarte (empfohlen)</option>
+                  <option value="monatlich" data-ui-i18n="optPlanMonthlySite">Monatlich pro Baustelle</option>
+                  <option value="pro-mitarbeiter" data-ui-i18n="optPlanPerWorker">Pro Mitarbeiter</option>
+                  <option value="pauschal" data-ui-i18n="optPlanFlatCompany">Pauschal pro Firma</option>
                 </select>
               </label>
               <label>
@@ -817,7 +817,7 @@
                 <div class="form-section-icon">📱</div>
                 <div class="form-section-label">
                   <p class="eyebrow">App-Features</p>
-                  <h4>Mitarbeiter-App</h4>
+                  <h4 data-ui-i18n="adminWorkerAppSectionTitle">Mitarbeiter-App</h4>
                 </div>
               </div>
               <label class="full-width">
@@ -827,7 +827,7 @@
                   <option value="0">Gesperrt &ndash; Mobile-App ist deaktiviert</option>
                 </select>
               </label>
-              <p class="helper-text full-width">Steuert die komplette Mitarbeiter-App: Login, digitaler Ausweis und QR-Nutzung auf dem Handy.</p>
+              <p class="helper-text full-width" data-ui-i18n="adminWorkerAppSectionCopy">Steuert die komplette Mitarbeiter-App: Login, digitaler Ausweis und QR-Nutzung auf dem Handy.</p>
               <label class="full-width">
                 Ausweis mit PIN-Sperre sichern (nach 2min Inaktivität)
                 <select id="workerPassLockEnabled">
@@ -835,7 +835,7 @@
                   <option value="0">Deaktiviert &ndash; Ausweis jederzeit frei zugänglich</option>
                 </select>
               </label>
-              <p class="helper-text full-width">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
+              <p class="helper-text full-width" data-ui-i18n="adminWorkerAppPinLockHint">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
 
               <button type="submit" class="primary-button full-width" data-ui-i18n="btnSaveAdmin">Admin-Einstellungen speichern</button>
             </form>
@@ -868,7 +868,7 @@
               <label>
                 <span data-ui-i18n="labelPlan">Tarif</span>
                 <select id="companyPlan">
-                  <option value="tageskarte">Besucherkarte (19 EUR/Tag)</option>
+                  <option value="tageskarte" data-ui-i18n="optPlanDayPassPrice">Besucherkarte (19 EUR/Tag)</option>
                   <option value="starter">Starter (49 EUR)</option>
                   <option value="professional">Professional (99 EUR)</option>
                   <option value="enterprise">Enterprise (199 EUR)</option>
