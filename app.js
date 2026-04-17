@@ -5746,6 +5746,7 @@ async function handleLoginSubmit(event) {
     }
 
     token = payload.token;
+    state.currentUser = payload.user;
     elements.loginForm.reset();
 
     await loadAllData();
