@@ -5415,10 +5415,6 @@ def list_system_alerts():
 
 @app.get("/")
 def root():
-    cookie_token = request.cookies.get(SESSION_COOKIE_NAME, "")
-    user = get_user_from_session_token(cookie_token)
-    if not user:
-        return render_login_page()
     return send_from_directory(BASE_DIR, "index.html")
 
 
@@ -5441,11 +5437,6 @@ def worker_icon_png(icon_size: int):
 
 @app.get("/<path:path>")
 def static_proxy(path):
-    if path.lower() == "index.html":
-        cookie_token = request.cookies.get(SESSION_COOKIE_NAME, "")
-        user = get_user_from_session_token(cookie_token)
-        if not user:
-            return render_login_page()
     target = BASE_DIR / path
     if target.exists() and target.is_file():
         return send_from_directory(BASE_DIR, path)
