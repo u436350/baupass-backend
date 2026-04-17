@@ -1,4 +1,4 @@
-const CACHE_NAME = "baupass-worker-v7";
+const CACHE_NAME = "baupass-worker-v8";
 const STATIC_FILES = [
   "/worker.html",
   "/worker.css",

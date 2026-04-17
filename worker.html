@@ -73,6 +73,19 @@
         <h2 data-i18n="loginTitle">Digitalen Ausweis aktivieren</h2>
       </div>
       <p class="section-copy" data-i18n="loginCopy">Du kannst den Ausweis per Mitarbeiter-Link oder direkt mit deiner Badge-ID von der Karte aktivieren.</p>
+      <div class="lang-option-block">
+        <label class="lang-option-label" for="workerLanguageSelect" data-i18n="languageLabel">Sprache</label>
+        <select id="workerLanguageSelect" class="lang-option-select" aria-label="Sprache auswählen">
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="pl">🇵🇱 Polski</option>
+        </select>
+      </div>
       <div id="workerNotice" class="worker-notice hidden" role="alert" aria-live="polite"></div>
       <form id="workerLoginForm" class="grid">
         <label>
@@ -166,19 +179,6 @@
             <span class="info-icon">📍</span>
             <span class="info-label" data-i18n="fieldSite">Baustelle</span>
             <a id="workerSite" class="info-value site-inline-link" href="#" target="_blank" rel="noopener noreferrer">–</a>
-          </div>
-          <div class="lang-option-block">
-            <label class="lang-option-label" for="workerLanguageSelect" data-i18n="languageLabel">Sprache</label>
-            <select id="workerLanguageSelect" class="lang-option-select" aria-label="Sprache auswählen">
-              <option value="de">🇩🇪 Deutsch</option>
-              <option value="en">🇬🇧 English</option>
-              <option value="tr">🇹🇷 Türkçe</option>
-              <option value="ar">🇸🇦 العربية</option>
-              <option value="fr">🇫🇷 Français</option>
-              <option value="es">🇪🇸 Español</option>
-              <option value="it">🇮🇹 Italiano</option>
-              <option value="pl">🇵🇱 Polski</option>
-            </select>
           </div>
         </div>
       </div>
