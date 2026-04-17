@@ -8863,7 +8863,9 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
 }
 
 // Dokument-Inbox beim Wechsel zur documents-View laden
-document.addEventListener("DOMContentLoaded", () => {
+// DOM ist bereits bereit wenn app.js am Ende von <body> läuft.
+// Führe sofort aus, statt auf DOMContentLoaded zu warten (wird sonst nie gefeuert).
+(function initDocumentSection() {
   // Documents Nav-Link
   const docNavLink = document.querySelector("[data-view='documents']");
   if (docNavLink) {
@@ -9006,4 +9008,4 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-});
+})();
