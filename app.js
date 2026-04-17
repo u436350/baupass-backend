@@ -2749,8 +2749,12 @@ function normalizeWorkerAppLink(rawLink) {
 
 async function loadAllData() {
   const bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, { auth: false });
-  token = bootstrap.token || token;
-  state.currentUser = bootstrap.user || null;
+  if (bootstrap?.token) {
+    token = bootstrap.token;
+  }
+  if (bootstrap?.user) {
+    state.currentUser = bootstrap.user;
+  }
   sessionExpiryNoticeShown = false;
 
   const reportUrl = `${API_BASE}/api/reporting/summary`;
