@@ -553,9 +553,9 @@ select {
 .auth-panel {
   width: min(100%, 540px);
   display: grid;
-  gap: 18px;
+  gap: 14px;
   position: relative;
-  padding: 28px;
+  padding: 24px;
   max-height: calc(100vh - 48px);
   overflow: hidden;
   margin: 0;
@@ -775,7 +775,7 @@ select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .auth-system-card {
@@ -922,13 +922,24 @@ select {
 
 .auth-form {
   display: grid;
-  gap: 12px;
-  margin-top: -10px;
+  gap: 8px;
+  margin-top: -18px;
+}
+
+.auth-form label {
+  gap: 5px;
+}
+
+.auth-form input,
+.auth-form select {
+  background: #ffffff;
+  color: #1b2430;
+  border-color: rgba(20, 27, 34, 0.14);
 }
 
 .auth-form .primary-button {
-  margin-top: 14px;
-  margin-bottom: 12px;
+  margin-top: 8px;
+  margin-bottom: 4px;
   box-shadow: 0 14px 30px rgba(217, 93, 57, 0.24);
 }
 
@@ -964,7 +975,7 @@ select {
   }
 
   .auth-form {
-    gap: 10px;
+    gap: 8px;
   }
 
   .auth-form input {
@@ -2337,6 +2348,13 @@ body.theme-black textarea {
   background: #111111;
   color: #f5f5f5;
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.theme-black .auth-form input,
+body.theme-black .auth-form select {
+  background: #ffffff;
+  color: #1b2430;
+  border-color: rgba(20, 27, 34, 0.16);
 }
 
 body.theme-black .sidebar {
