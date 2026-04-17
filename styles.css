@@ -788,14 +788,13 @@ select {
 
 .auth-form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  margin-top: -2px;
 }
 
 .auth-form .primary-button {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  box-shadow: 0 -10px 20px rgba(255, 252, 246, 0.95), 0 14px 30px rgba(217, 93, 57, 0.24);
+  margin-top: 10px;
+  box-shadow: 0 14px 30px rgba(217, 93, 57, 0.24);
 }
 
 .auth-hints {
