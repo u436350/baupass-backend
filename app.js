@@ -2009,6 +2009,61 @@ function uiT(key) {
   return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS[UI_FALLBACK_LANG]?.[key] || key;
 }
 
+const UI_PLACEHOLDER_TEXTS = {
+  subcompanyName: { de: "z. B. Elektro Yilmaz GmbH", intl: "e.g. Elektro Yilmaz Ltd" },
+  firstName: { de: "Max", intl: "John" },
+  lastName: { de: "Mustermann", intl: "Smith" },
+  insuranceNumber: { de: "12 345678 A 123", intl: "12 345678 A 123" },
+  role: { de: "Polier, Kranfuehrer, Monteur", intl: "Foreman, Crane operator, Installer" },
+  site: { de: "Neubau Mitte", intl: "Central construction site" },
+  physicalCardId: { de: "UID oder Kartenkennung", intl: "UID or card identifier" },
+  visitorCompany: { de: "z. B. Lieferant, Kunde, externe Firma", intl: "e.g. Supplier, Customer, External company" },
+  visitPurpose: { de: "z. B. Besprechung, Lieferung, Abnahme", intl: "e.g. Meeting, Delivery, Inspection" },
+  hostName: { de: "z. B. Bauleiter Mustafa Yilmaz", intl: "e.g. Site manager Michael Miller" },
+  badgePin: { de: "4 bis 8 Ziffern", intl: "4 to 8 digits" },
+  workerSearchInput: { de: "Suchen: Name, Badge-ID, Baustelle ...", intl: "Search: Name, Badge ID, Site ..." },
+  accessWorkerSearch: { de: "Name oder Badge-ID suchen", intl: "Search name or Badge ID" },
+  accessNote: { de: "Optional", intl: "Optional" },
+  accessFilterGate: { de: "z. B. Drehkreuz Nord", intl: "e.g. Gate North" },
+  dayCloseComment: { de: "z. B. Schichtleiter informiert, Austritt wird nachgetragen", intl: "e.g. Shift lead informed, exit will be recorded later" },
+  invoiceFilterCompany: { de: "Nach Firma filtern...", intl: "Filter by company..." },
+  platformName: { de: "BauPass Control", intl: "BauPass Control" },
+  operatorName: { de: "Deine Firma", intl: "Your company" },
+  turnstileEndpoint: { de: "https://api.dein-gateway.de/access", intl: "https://api.your-gateway.com/access" },
+  smtpHost: { de: "smtp.dein-provider.de", intl: "smtp.your-provider.com" },
+  smtpUsername: { de: "mailer@deinefirma.de", intl: "mailer@yourcompany.com" },
+  smtpPassword: { de: "App-Passwort", intl: "App password" },
+  smtpSenderEmail: { de: "rechnung@deinefirma.de", intl: "billing@yourcompany.com" },
+  smtpSenderName: { de: "Deine Firma", intl: "Your company" },
+  adminIpWhitelist: { de: "203.0.113.10, 203.0.113.0/24", intl: "203.0.113.10, 203.0.113.0/24" },
+  companyName: { de: "Muster Bau GmbH", intl: "Example Construction Ltd" },
+  companyContact: { de: "Sabine Keller", intl: "Sarah Keller" },
+  companyBillingEmail: { de: "buchhaltung@firma.de", intl: "billing@company.com" },
+  companyAccessHost: { de: "firma-a.deine-domain.de", intl: "company-a.your-domain.com" },
+  invoiceNumber: { de: "RE-2026-0001", intl: "INV-2026-0001" },
+  invoiceRecipientEmail: { de: "buchhaltung@firma.de", intl: "billing@company.com" },
+  invoicePeriod: { de: "01.04.2026 - 30.04.2026", intl: "2026-04-01 - 2026-04-30" },
+  invoiceDescription: { de: "Digitale Baustellen-Ausweise + Zutrittskontrolle", intl: "Digital site IDs + access control" },
+  auditEventType: { de: "z. B. worker.deleted", intl: "e.g. worker.deleted" },
+};
+
+function applyUiPlaceholders() {
+  const lang = getStoredUiLang();
+  const useGerman = lang === "de";
+  Object.entries(UI_PLACEHOLDER_TEXTS).forEach(([elementId, texts]) => {
+    const element = document.querySelector(`#${elementId}`);
+    if (!element) {
+      return;
+    }
+    const nextPlaceholder = useGerman
+      ? (texts.de || "")
+      : (texts[lang] || texts.intl || texts.de || "");
+    if (nextPlaceholder) {
+      element.setAttribute("placeholder", nextPlaceholder);
+    }
+  });
+}
+
 const UI_LANGUAGE_META = {
   de: { code: "DE", flag: "de" },
   en: { code: "EN", flag: "en" },
@@ -2076,6 +2131,8 @@ function applyUiTranslations() {
     }
   });
 
+  applyUiPlaceholders();
+
   updateAuthLanguageControl(lang);
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) topbarSelect.value = lang;
@@ -2085,6 +2142,7 @@ function setUiLang(lang) {
   const normalized = normalizeUiLang(lang);
   window.localStorage.setItem(UI_LANG_STORAGE_KEY, normalized);
   applyUiTranslations();
+  applySystemTheme(getStoredSystemTheme(), { persist: false });
   updateDesktopInstallHint();
 }
 
