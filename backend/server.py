@@ -5500,6 +5500,61 @@ ALLOWED_DOC_TYPES = {
 DOCS_UPLOAD_DIR = BASE_DIR / "backend" / "uploads" / "documents"
 
 
+def _parse_imap_attachment_limit_bytes() -> int:
+    raw = os.getenv("BAUPASS_IMAP_MAX_ATTACHMENT_MB", "15")
+    try:
+        mb = max(1, int(raw))
+    except (TypeError, ValueError):
+        mb = 15
+    return mb * 1024 * 1024
+
+
+MAX_IMAP_ATTACHMENT_BYTES = _parse_imap_attachment_limit_bytes()
+
+
+def _decode_mime_header(value) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    try:
+        from email.header import decode_header
+
+        parts = []
+        for chunk, encoding in decode_header(text):
+            if isinstance(chunk, bytes):
+                parts.append(chunk.decode(encoding or "utf-8", errors="replace"))
+            else:
+                parts.append(str(chunk))
+        return "".join(parts).strip()
+    except Exception:
+        return text.strip()
+
+
+def _sanitize_attachment_filename(filename: str) -> str:
+    decoded = _decode_mime_header(filename)
+    cleaned = clean_text_input(decoded, max_len=220)
+    cleaned = cleaned.replace("\\", "_").replace("/", "_").replace(":", "_")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
+    cleaned = re.sub(r"[^A-Za-z0-9._()\- ]", "_", cleaned)
+    cleaned = re.sub(r"\.{2,}", ".", cleaned)
+    cleaned = re.sub(r"_+", "_", cleaned)
+    if not cleaned:
+        cleaned = "anhang.bin"
+    if cleaned.startswith("."):
+        cleaned = f"file{cleaned}"
+    if "." not in Path(cleaned).name:
+        cleaned = f"{cleaned}.bin"
+    return cleaned[:180]
+
+
+def _stored_file_path(file_path: Path) -> str:
+    resolved = file_path.resolve()
+    try:
+        return str(resolved.relative_to(BASE_DIR))
+    except ValueError:
+        return str(resolved)
+
+
 def get_imap_settings(db):
     row = db.execute(
         "SELECT imap_host, imap_port, imap_username, imap_password, imap_folder, imap_use_ssl FROM settings WHERE id = 1"
@@ -5566,8 +5621,8 @@ def poll_imap_inbox():
 
                 msg = _email.message_from_bytes(raw, policy=_email_policy.compat32)
                 message_id = str(msg.get("Message-ID") or "").strip()
-                from_addr = str(msg.get("From") or "").strip()
-                subject = str(msg.get("Subject") or "").strip()
+                from_addr = _decode_mime_header(msg.get("From") or "")
+                subject = _decode_mime_header(msg.get("Subject") or "")
                 received_at = now_iso()
 
                 # Doppelten Einlese-Schutz via message_id
@@ -5581,21 +5636,32 @@ def poll_imap_inbox():
                 body_text = ""
                 attachments_data = []
 
+                skipped_oversized = 0
                 for part in msg.walk():
+                    if part.is_multipart():
+                        continue
                     ctype = part.get_content_type()
-                    disp = str(part.get("Content-Disposition") or "")
-                    if ctype == "text/plain" and "attachment" not in disp:
+                    disposition = str(part.get_content_disposition() or "").lower()
+                    filename_header = part.get_filename()
+
+                    if ctype == "text/plain" and disposition != "attachment" and not filename_header:
                         try:
-                            body_text = part.get_payload(decode=True).decode("utf-8", errors="replace")
+                            payload_text = part.get_payload(decode=True)
+                            if payload_text:
+                                charset = part.get_content_charset() or "utf-8"
+                                body_text = payload_text.decode(charset, errors="replace")
                         except Exception:
                             body_text = ""
-                    elif part.get_filename():
-                        filename = part.get_filename() or "anhang"
+                    elif filename_header or disposition == "attachment":
+                        filename = _sanitize_attachment_filename(filename_header or "anhang.bin")
                         payload = part.get_payload(decode=True)
                         if payload:
+                            if len(payload) > MAX_IMAP_ATTACHMENT_BYTES:
+                                skipped_oversized += 1
+                                continue
                             attachments_data.append({
                                 "filename": filename,
-                                "content_type": ctype,
+                                "content_type": ctype or "application/octet-stream",
                                 "file_size": len(payload),
                                 "file_data": payload,
                             })
@@ -5611,6 +5677,15 @@ def poll_imap_inbox():
                     db.execute(
                         "INSERT INTO email_attachments (id, inbox_id, filename, content_type, file_size, file_data) VALUES (?,?,?,?,?,?)",
                         (att_id, inbox_id, att["filename"], att["content_type"], att["file_size"], att["file_data"]),
+                    )
+
+                if skipped_oversized > 0:
+                    create_system_alert(
+                        db,
+                        code="imap_attachment_too_large",
+                        severity="warning",
+                        message="Ein oder mehrere Mail-Anhänge wurden wegen Größenlimit verworfen.",
+                        details={"messageId": message_id, "skipped": skipped_oversized, "maxBytes": MAX_IMAP_ATTACHMENT_BYTES},
                     )
 
                 # Mail als gelesen markieren
@@ -5749,24 +5824,43 @@ def assign_attachment_to_worker(inbox_id, attachment_id):
         return jsonify({"error": "forbidden_worker"}), 403
 
     # Datei auf Filesystem speichern
-    worker_doc_dir = DOCS_UPLOAD_DIR / worker_id
+    base_upload_root = DOCS_UPLOAD_DIR.resolve()
+    worker_doc_dir = (DOCS_UPLOAD_DIR / worker_id).resolve()
+    if worker_doc_dir != base_upload_root and base_upload_root not in worker_doc_dir.parents:
+        return jsonify({"error": "invalid_storage_path"}), 400
     try:
         worker_doc_dir.mkdir(parents=True, exist_ok=True)
     except Exception as exc:
         return jsonify({"error": "storage_error", "detail": str(exc)}), 500
 
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    safe_name = re.sub(r"[^\w.\-]", "_", att["filename"])[:80]
-    file_path = worker_doc_dir / f"{doc_type}_{ts}_{safe_name}"
+    safe_name = _sanitize_attachment_filename(att["filename"] or "anhang.bin")
+    file_path = (worker_doc_dir / f"{doc_type}_{ts}_{safe_name}").resolve()
+    if worker_doc_dir not in file_path.parents:
+        return jsonify({"error": "invalid_target_path"}), 400
 
     file_data = att["file_data"]
     if not file_data:
         return jsonify({"error": "attachment_no_data"}), 400
 
+    if isinstance(file_data, memoryview):
+        file_data = file_data.tobytes()
+    elif isinstance(file_data, bytearray):
+        file_data = bytes(file_data)
+    elif isinstance(file_data, str):
+        file_data = file_data.encode("utf-8", errors="replace")
+    else:
+        file_data = bytes(file_data)
+
+    if len(file_data) > MAX_IMAP_ATTACHMENT_BYTES:
+        return jsonify({"error": "attachment_too_large", "maxBytes": MAX_IMAP_ATTACHMENT_BYTES}), 400
+
     try:
-        file_path.write_bytes(bytes(file_data))
+        file_path.write_bytes(file_data)
     except Exception as exc:
         return jsonify({"error": "write_error", "detail": str(exc)}), 500
+
+    stored_path = _stored_file_path(file_path)
 
     doc_id = f"doc-{secrets.token_hex(8)}"
     db.execute(
@@ -5778,9 +5872,9 @@ def assign_attachment_to_worker(inbox_id, attachment_id):
             worker_id,
             worker["company_id"],
             doc_type,
-            att["filename"],
-            str(file_path.relative_to(BASE_DIR)),
-            att["file_size"],
+            safe_name,
+            stored_path,
+            len(file_data),
             inbox_row["from_addr"],
             inbox_id,
             g.current_user["id"],
@@ -5792,7 +5886,7 @@ def assign_attachment_to_worker(inbox_id, attachment_id):
     # Anhang als zugewiesen markieren
     db.execute(
         "UPDATE email_attachments SET assigned_worker_id = ?, assigned_doc_type = ?, saved_path = ? WHERE id = ?",
-        (worker_id, doc_type, str(file_path.relative_to(BASE_DIR)), attachment_id),
+        (worker_id, doc_type, stored_path, attachment_id),
     )
 
     # Wenn alle Anhänge dieser Mail zugewiesen sind → Mail als processed markieren
