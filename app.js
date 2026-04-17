@@ -2009,6 +2009,52 @@ function uiT(key) {
   return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS[UI_FALLBACK_LANG]?.[key] || key;
 }
 
+const UI_LANGUAGE_META = {
+  de: { code: "DE", flag: "🇩🇪" },
+  en: { code: "EN", flag: "🇬🇧" },
+  tr: { code: "TR", flag: "🇹🇷" },
+  ar: { code: "AR", flag: "🇸🇦" },
+  fr: { code: "FR", flag: "🇫🇷" },
+  es: { code: "ES", flag: "🇪🇸" },
+  it: { code: "IT", flag: "🇮🇹" },
+  pl: { code: "PL", flag: "🇵🇱" },
+};
+
+function updateAuthLanguageControl(lang) {
+  const normalized = normalizeUiLang(lang);
+  const meta = UI_LANGUAGE_META[normalized] || UI_LANGUAGE_META[UI_FALLBACK_LANG];
+  const authSelect = document.querySelector("#uiLangAuthSelect");
+  if (authSelect) {
+    authSelect.value = normalized;
+  }
+
+  const triggerFlag = document.querySelector("#uiLangAuthTriggerFlag");
+  const triggerCode = document.querySelector("#uiLangAuthTriggerCode");
+  if (triggerFlag) triggerFlag.textContent = meta.flag;
+  if (triggerCode) triggerCode.textContent = meta.code;
+
+  document.querySelectorAll(".auth-lang-option[data-ui-lang-option]").forEach((button) => {
+    const isActive = button.getAttribute("data-ui-lang-option") === normalized;
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+}
+
+function closeAuthLanguageMenu() {
+  const shell = document.querySelector("#uiLangAuthShell");
+  const trigger = document.querySelector("#uiLangAuthTrigger");
+  if (shell) shell.classList.remove("is-open");
+  if (trigger) trigger.setAttribute("aria-expanded", "false");
+}
+
+function toggleAuthLanguageMenu() {
+  const shell = document.querySelector("#uiLangAuthShell");
+  const trigger = document.querySelector("#uiLangAuthTrigger");
+  if (!shell || !trigger) return;
+  const nextOpen = !shell.classList.contains("is-open");
+  shell.classList.toggle("is-open", nextOpen);
+  trigger.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+}
+
 function applyUiTranslations() {
   const lang = getStoredUiLang();
   const isRtl = lang === "ar";
@@ -2030,8 +2076,7 @@ function applyUiTranslations() {
     }
   });
 
-  const authSelect = document.querySelector("#uiLangAuthSelect");
-  if (authSelect) authSelect.value = lang;
+  updateAuthLanguageControl(lang);
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) topbarSelect.value = lang;
 }
@@ -2047,10 +2092,32 @@ function initUiLanguageControl() {
   const initial = getStoredUiLang();
   window.localStorage.setItem(UI_LANG_STORAGE_KEY, initial);
   const authSelect = document.querySelector("#uiLangAuthSelect");
+  const authShell = document.querySelector("#uiLangAuthShell");
+  const authTrigger = document.querySelector("#uiLangAuthTrigger");
   if (authSelect) {
     authSelect.value = initial;
     authSelect.addEventListener("change", () => setUiLang(authSelect.value || UI_FALLBACK_LANG));
   }
+  if (authTrigger) {
+    authTrigger.addEventListener("click", () => toggleAuthLanguageMenu());
+  }
+  document.querySelectorAll(".auth-lang-option[data-ui-lang-option]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextLang = button.getAttribute("data-ui-lang-option") || UI_FALLBACK_LANG;
+      closeAuthLanguageMenu();
+      setUiLang(nextLang);
+    });
+  });
+  document.addEventListener("click", (event) => {
+    if (!authShell || !authShell.contains(event.target)) {
+      closeAuthLanguageMenu();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAuthLanguageMenu();
+    }
+  });
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) {
     topbarSelect.value = initial;
