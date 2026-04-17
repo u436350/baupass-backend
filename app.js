@@ -162,6 +162,11 @@ const UI_TRANSLATIONS = {
     docTypeSonstiges: "Sonstiges",
     workerDocsHeading: "Gespeicherte Dokumente",
     workerDocsEmpty: "Keine Dokumente hinterlegt.",
+    workerAkteLabel: "Mitarbeiter-Akte",
+    btnUploadWorkerDoc: "Dokument hochladen",
+    btnConfirmUpload: "Hochladen",
+    docUploadSuccess: "Dokument erfolgreich hochgeladen.",
+    confirmDeleteDoc: "Dokument wirklich l\u00f6schen?",
     btnDownloadDoc: "Download",
     btnDeleteDoc: "L\u00f6schen",
     imapSectionEyebrow: "Dokument-Eingang",
@@ -478,6 +483,11 @@ const UI_TRANSLATIONS = {
     docTypeSonstiges: "Other",
     workerDocsHeading: "Stored Documents",
     workerDocsEmpty: "No documents on file.",
+    workerAkteLabel: "Worker File",
+    btnUploadWorkerDoc: "Upload document",
+    btnConfirmUpload: "Upload",
+    docUploadSuccess: "Document uploaded successfully.",
+    confirmDeleteDoc: "Really delete this document?",
     btnDownloadDoc: "Download",
     btnDeleteDoc: "Delete",
     imapSectionEyebrow: "Document Inbox",
@@ -4538,9 +4548,13 @@ function showWorkerDetailOverlay(worker) {
         ${canResetPin ? `<button type="button" class="ghost-button" id="workerResetPinBtn">${uiT("btnResetPin")}</button>` : ""}
       </div>
       ${!isVisitorWorker(worker) ? `
+      <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;" />
       <div class="worker-docs-section">
-        <h4 style="margin:16px 0 8px">${escapeHtml(uiT("workerDocsHeading"))}</h4>
-        <div id="workerDocsList">…</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h4 style="margin:0;">${escapeHtml(uiT("workerDocsHeading"))}</h4>
+          <span class="muted" style="font-size:0.82em;">${escapeHtml(uiT("workerAkteLabel"))}</span>
+        </div>
+        <div id="workerDocsList"><p class="muted">…</p></div>
       </div>` : ""}
     </div>
   `;
@@ -8739,36 +8753,74 @@ function openDocAssignPanel(inboxId, attachmentId, filename) {
 async function loadWorkerDocuments(workerId) {
   try {
     const data = await apiRequest(API_BASE + `/api/workers/${workerId}/documents`);
-    return data.documents || [];
+    return Array.isArray(data) ? data : (data.documents || []);
   } catch {
     return [];
   }
 }
 
+async function uploadWorkerDocument(workerId, file, docType, notes) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("docType", docType);
+  fd.append("notes", notes);
+  const response = await fetch(API_BASE + `/api/workers/${workerId}/documents/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || `http_${response.status}`);
+  return payload;
+}
+
 function renderWorkerDocuments(docs, workerId, containerEl) {
   if (!containerEl) return;
-  if (!docs.length) {
-    containerEl.innerHTML = `<p class="muted">${escapeHtml(uiT("workerDocsEmpty"))}</p>`;
-    return;
-  }
   const role = String(getCurrentUser()?.role || "").toLowerCase();
   const canDelete = ["superadmin", "company-admin"].includes(role);
-  containerEl.innerHTML = `<ul class="document-list">` + docs.map((doc) => `
-    <li class="document-list-item">
-      <span>📄 ${escapeHtml(docTypeLabelForValue(doc.doc_type))} — ${escapeHtml(doc.original_filename || doc.filename)}</span>
-      <span class="muted" style="font-size:0.8em">${escapeHtml(doc.uploaded_at ? formatTimestamp(doc.uploaded_at) : "")}</span>
-      ${doc.notes ? `<span class="muted" style="font-size:0.8em">${escapeHtml(doc.notes)}</span>` : ""}
-      <div class="button-row" style="margin-top:4px">
-        <a class="ghost-button small-button" href="${API_BASE}/api/workers/${workerId}/documents/${doc.id}/download" target="_blank" rel="noopener">
-          ${escapeHtml(uiT("btnDownloadDoc"))}
-        </a>
-        ${canDelete ? `<button class="ghost-button small-button danger" data-delete-doc-id="${escapeHtml(String(doc.id))}">${escapeHtml(uiT("btnDeleteDoc"))}</button>` : ""}
-      </div>
-    </li>`).join("") + `</ul>`;
+  const canUpload = ["superadmin", "company-admin", "turnstile"].includes(role);
+
+  const docTypeOptions = DOC_TYPES.map((d) =>
+    `<option value="${escapeHtml(d.value)}">${escapeHtml(uiT(d.key))}</option>`
+  ).join("");
+
+  const uploadForm = canUpload ? `
+    <details style="margin-top:12px;">
+      <summary style="cursor:pointer; font-weight:600; padding:6px 0;">${escapeHtml(uiT("btnUploadWorkerDoc"))}</summary>
+      <form class="worker-doc-upload-form" style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+        <input type="file" class="doc-upload-file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx" required />
+        <select class="doc-upload-type" required>${docTypeOptions}</select>
+        <input type="text" class="doc-upload-notes" placeholder="${escapeHtml(uiT("docAssignNotesLabel"))}" />
+        <div class="button-row">
+          <button type="submit" class="primary-button small-button">${escapeHtml(uiT("btnConfirmUpload"))}</button>
+        </div>
+        <p class="doc-upload-msg helper-text" style="display:none;"></p>
+      </form>
+    </details>` : "";
+
+  const listHtml = docs.length
+    ? `<ul class="document-list">` + docs.map((doc) => `
+      <li class="document-list-item">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+          <div>
+            <span style="font-weight:600;">📄 ${escapeHtml(docTypeLabelForValue(doc.doc_type))}</span>
+            <span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.filename)}</span>
+            ${doc.notes ? `<span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.notes)}</span>` : ""}
+            <span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.created_at ? formatTimestamp(doc.created_at) : "")}</span>
+          </div>
+          <div class="button-row" style="flex-shrink:0;">
+            <a class="ghost-button small-button" href="${API_BASE}/api/workers/${workerId}/documents/${doc.id}/download" target="_blank" rel="noopener noreferrer">${escapeHtml(uiT("btnDownloadDoc"))}</a>
+            ${canDelete ? `<button class="ghost-button small-button danger" data-delete-doc-id="${escapeHtml(String(doc.id))}">${escapeHtml(uiT("btnDeleteDoc"))}</button>` : ""}
+          </div>
+        </div>
+      </li>`).join("") + `</ul>`
+    : `<p class="muted">${escapeHtml(uiT("workerDocsEmpty"))}</p>`;
+
+  containerEl.innerHTML = listHtml + uploadForm;
 
   containerEl.querySelectorAll("[data-delete-doc-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      if (!window.confirm("Dokument wirklich löschen?")) return;
+      if (!window.confirm(uiT("confirmDeleteDoc"))) return;
       try {
         await apiRequest(API_BASE + `/api/workers/${workerId}/documents/${btn.dataset.deleteDocId}`, { method: "DELETE" });
         const updatedDocs = await loadWorkerDocuments(workerId);
@@ -8778,6 +8830,36 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       }
     });
   });
+
+  const uploadFormEl = containerEl.querySelector(".worker-doc-upload-form");
+  if (uploadFormEl) {
+    uploadFormEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fileInput = uploadFormEl.querySelector(".doc-upload-file");
+      const typeSelect = uploadFormEl.querySelector(".doc-upload-type");
+      const notesInput = uploadFormEl.querySelector(".doc-upload-notes");
+      const msgEl = uploadFormEl.querySelector(".doc-upload-msg");
+      const submitBtn = uploadFormEl.querySelector("[type='submit']");
+      const file = fileInput?.files?.[0];
+      if (!file) return;
+      submitBtn.disabled = true;
+      msgEl.style.display = "none";
+      try {
+        await uploadWorkerDocument(workerId, file, typeSelect.value, notesInput.value.trim());
+        msgEl.textContent = uiT("docUploadSuccess");
+        msgEl.style.color = "var(--color-success, green)";
+        msgEl.style.display = "";
+        uploadFormEl.reset();
+        const updatedDocs = await loadWorkerDocuments(workerId);
+        renderWorkerDocuments(updatedDocs, workerId, containerEl);
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.style.color = "var(--color-danger, red)";
+        msgEl.style.display = "";
+        submitBtn.disabled = false;
+      }
+    });
+  }
 }
 
 // Dokument-Inbox beim Wechsel zur documents-View laden
