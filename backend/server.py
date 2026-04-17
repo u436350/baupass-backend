@@ -1028,6 +1028,46 @@ def init_db():
             FOREIGN KEY(company_id) REFERENCES companies(id),
             FOREIGN KEY(created_by_user_id) REFERENCES users(id)
         );
+
+        CREATE TABLE IF NOT EXISTS email_inbox (
+            id TEXT PRIMARY KEY,
+            message_id TEXT NOT NULL DEFAULT '',
+            from_addr TEXT NOT NULL DEFAULT '',
+            subject TEXT NOT NULL DEFAULT '',
+            body_text TEXT NOT NULL DEFAULT '',
+            received_at TEXT NOT NULL,
+            processed INTEGER NOT NULL DEFAULT 0,
+            dismissed INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS email_attachments (
+            id TEXT PRIMARY KEY,
+            inbox_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            content_type TEXT NOT NULL DEFAULT '',
+            file_size INTEGER NOT NULL DEFAULT 0,
+            file_data BLOB,
+            assigned_worker_id TEXT,
+            assigned_doc_type TEXT,
+            saved_path TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(inbox_id) REFERENCES email_inbox(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS worker_documents (
+            id TEXT PRIMARY KEY,
+            worker_id TEXT NOT NULL,
+            company_id TEXT NOT NULL,
+            doc_type TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER NOT NULL DEFAULT 0,
+            source_email_from TEXT NOT NULL DEFAULT '',
+            source_inbox_id TEXT,
+            uploaded_by_user_id TEXT,
+            created_at TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(worker_id) REFERENCES workers(id)
+        );
         """
     )
 
@@ -1139,6 +1179,20 @@ def init_db():
 
     if "worker_app_enabled" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN worker_app_enabled INTEGER NOT NULL DEFAULT 1")
+
+    # IMAP-Einstellungen fuer Dokumenten-Postfach
+    if "imap_host" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_host TEXT NOT NULL DEFAULT ''")
+    if "imap_port" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_port INTEGER NOT NULL DEFAULT 993")
+    if "imap_username" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_username TEXT NOT NULL DEFAULT ''")
+    if "imap_password" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_password TEXT NOT NULL DEFAULT ''")
+    if "imap_folder" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_folder TEXT NOT NULL DEFAULT 'INBOX'")
+    if "imap_use_ssl" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN imap_use_ssl INTEGER NOT NULL DEFAULT 1")
 
     session_columns = [row[1] for row in cur.execute("PRAGMA table_info(sessions)").fetchall()]
     if "last_seen" not in session_columns:
@@ -2659,6 +2713,12 @@ def get_settings():
             "adminIpWhitelist": row["admin_ip_whitelist"],
             "enforceTenantDomain": int(row["enforce_tenant_domain"]) == 1,
             "workerAppEnabled": int(row["worker_app_enabled"]) == 1,
+            "imapHost": row["imap_host"],
+            "imapPort": int(row["imap_port"] or 993),
+            "imapUsername": row["imap_username"],
+            "imapPassword": row["imap_password"],
+            "imapFolder": row["imap_folder"] or "INBOX",
+            "imapUseSsl": int(row["imap_use_ssl"]) == 1,
         }
     )
 
@@ -2698,6 +2758,17 @@ def update_settings():
             1 if payload.get("workerAppEnabled", True) else 0,
         ),
     )
+    # IMAP-Felder separat aktualisieren (immer optional)
+    imap_fields = {
+        "imap_host": clean_text_input(payload.get("imapHost", ""), max_len=255),
+        "imap_port": int(payload.get("imapPort") or 993),
+        "imap_username": clean_text_input(payload.get("imapUsername", ""), max_len=255),
+        "imap_password": str(payload.get("imapPassword") or ""),
+        "imap_folder": clean_text_input(payload.get("imapFolder", "INBOX"), max_len=100) or "INBOX",
+        "imap_use_ssl": 1 if payload.get("imapUseSsl", True) else 0,
+    }
+    for col, val in imap_fields.items():
+        get_db().execute(f"UPDATE settings SET {col} = ? WHERE id = 1", (val,))
     get_db().commit()
     log_audit("settings.updated", "Systemeinstellungen wurden aktualisiert", actor=g.current_user)
     return get_settings()
@@ -5413,6 +5484,446 @@ def list_system_alerts():
     return jsonify([row_to_dict(row) for row in rows])
 
 
+# ─────────────────────────────────────────────────────────────────
+# DOKUMENTE-POSTFACH: IMAP-Polling + API
+# ─────────────────────────────────────────────────────────────────
+
+ALLOWED_DOC_TYPES = {
+    "mindestlohnnachweis",
+    "personalausweis",
+    "sozialversicherungsnachweis",
+    "arbeitserlaubnis",
+    "gesundheitszeugnis",
+    "sonstiges",
+}
+
+DOCS_UPLOAD_DIR = BASE_DIR / "backend" / "uploads" / "documents"
+
+
+def get_imap_settings(db):
+    row = db.execute(
+        "SELECT imap_host, imap_port, imap_username, imap_password, imap_folder, imap_use_ssl FROM settings WHERE id = 1"
+    ).fetchone()
+    if not row:
+        return None
+    return dict(row)
+
+
+def poll_imap_inbox():
+    """Pollt das konfigurierte IMAP-Postfach und speichert neue Mails in email_inbox."""
+    import imaplib
+    import email as _email
+    import email.policy as _email_policy
+
+    try:
+        with app.app_context():
+            db = get_db()
+            cfg = get_imap_settings(db)
+            if not cfg or not cfg.get("imap_host") or not cfg.get("imap_username"):
+                return  # IMAP nicht konfiguriert
+
+            host = cfg["imap_host"]
+            port = int(cfg.get("imap_port") or 993)
+            username = cfg["imap_username"]
+            password = cfg["imap_password"] or ""
+            folder = cfg.get("imap_folder") or "INBOX"
+            use_ssl = bool(cfg.get("imap_use_ssl", 1))
+
+            try:
+                if use_ssl:
+                    conn = imaplib.IMAP4_SSL(host, port)
+                else:
+                    conn = imaplib.IMAP4(host, port)
+                    conn.starttls()
+                conn.login(username, password)
+            except Exception as exc:
+                with app.app_context():
+                    inner_db = get_db()
+                    create_system_alert(
+                        inner_db,
+                        code="imap_connect_failed",
+                        severity="warning",
+                        message="IMAP-Verbindung fehlgeschlagen.",
+                        details={"error": str(exc)},
+                    )
+                    inner_db.commit()
+                return
+
+            conn.select(folder, readonly=False)
+            status, data = conn.search(None, "UNSEEN")
+            if status != "OK":
+                conn.logout()
+                return
+
+            msg_ids = (data[0] or b"").split()
+            for num in msg_ids:
+                status, msg_data = conn.fetch(num, "(RFC822)")
+                if status != "OK":
+                    continue
+                raw = msg_data[0][1] if msg_data and msg_data[0] else None
+                if not raw:
+                    continue
+
+                msg = _email.message_from_bytes(raw, policy=_email_policy.compat32)
+                message_id = str(msg.get("Message-ID") or "").strip()
+                from_addr = str(msg.get("From") or "").strip()
+                subject = str(msg.get("Subject") or "").strip()
+                received_at = now_iso()
+
+                # Doppelten Einlese-Schutz via message_id
+                if message_id:
+                    existing = db.execute(
+                        "SELECT id FROM email_inbox WHERE message_id = ?", (message_id,)
+                    ).fetchone()
+                    if existing:
+                        continue
+
+                body_text = ""
+                attachments_data = []
+
+                for part in msg.walk():
+                    ctype = part.get_content_type()
+                    disp = str(part.get("Content-Disposition") or "")
+                    if ctype == "text/plain" and "attachment" not in disp:
+                        try:
+                            body_text = part.get_payload(decode=True).decode("utf-8", errors="replace")
+                        except Exception:
+                            body_text = ""
+                    elif part.get_filename():
+                        filename = part.get_filename() or "anhang"
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            attachments_data.append({
+                                "filename": filename,
+                                "content_type": ctype,
+                                "file_size": len(payload),
+                                "file_data": payload,
+                            })
+
+                inbox_id = f"inb-{secrets.token_hex(8)}"
+                db.execute(
+                    "INSERT INTO email_inbox (id, message_id, from_addr, subject, body_text, received_at) VALUES (?,?,?,?,?,?)",
+                    (inbox_id, message_id, from_addr, subject, body_text[:2000], received_at),
+                )
+
+                for att in attachments_data:
+                    att_id = f"att-{secrets.token_hex(8)}"
+                    db.execute(
+                        "INSERT INTO email_attachments (id, inbox_id, filename, content_type, file_size, file_data) VALUES (?,?,?,?,?,?)",
+                        (att_id, inbox_id, att["filename"], att["content_type"], att["file_size"], att["file_data"]),
+                    )
+
+                # Mail als gelesen markieren
+                conn.store(num, "+FLAGS", "\\Seen")
+
+            db.commit()
+            conn.logout()
+    except Exception as exc:
+        try:
+            with app.app_context():
+                inner_db = get_db()
+                create_system_alert(
+                    inner_db,
+                    code="imap_poll_error",
+                    severity="warning",
+                    message="IMAP-Postfach-Abruf fehlgeschlagen.",
+                    details={"error": str(exc)},
+                )
+                inner_db.commit()
+        except Exception:
+            pass
+
+
+# IMAP-Polling in Background-Jobs einhängen
+_orig_start_background_jobs = start_background_jobs
+
+
+def start_background_jobs_with_imap():
+    _orig_start_background_jobs()
+    imap_poll_interval = max(60, int(os.getenv("BAUPASS_IMAP_POLL_SECONDS", "180")))
+
+    def imap_loop():
+        time.sleep(10)  # kurz nach Start warten
+        while True:
+            try:
+                poll_imap_inbox()
+            except Exception:
+                pass
+            time.sleep(imap_poll_interval)
+
+    threading.Thread(target=imap_loop, name="baupass-imap-poller", daemon=True).start()
+
+
+# start_background_jobs wurde oben bereits aufgerufen – IMAP-Thread separat starten
+_imap_poll_interval = max(60, int(os.getenv("BAUPASS_IMAP_POLL_SECONDS", "180")))
+
+def _start_imap_thread():
+    def imap_loop():
+        time.sleep(10)
+        while True:
+            try:
+                poll_imap_inbox()
+            except Exception:
+                pass
+            time.sleep(_imap_poll_interval)
+    threading.Thread(target=imap_loop, name="baupass-imap-poller", daemon=True).start()
+
+
+# ── Dokumente-Inbox API ──────────────────────────────────────────
+
+@app.post("/api/documents/imap/trigger")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def trigger_imap_poll():
+    """Manueller IMAP-Abruf auf Anforderung."""
+    try:
+        poll_imap_inbox()
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.get("/api/documents/inbox")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def list_document_inbox():
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM email_inbox WHERE dismissed = 0 ORDER BY received_at DESC LIMIT 100"
+    ).fetchall()
+
+    result = []
+    for row in rows:
+        inbox_id = row["id"]
+        attachments = db.execute(
+            "SELECT id, filename, content_type, file_size, assigned_worker_id, assigned_doc_type, saved_path FROM email_attachments WHERE inbox_id = ?",
+            (inbox_id,),
+        ).fetchall()
+        entry = dict(row)
+        entry["attachments"] = [dict(a) for a in attachments]
+        result.append(entry)
+
+    return jsonify(result)
+
+
+@app.post("/api/documents/inbox/<inbox_id>/dismiss")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def dismiss_inbox_email(inbox_id):
+    db = get_db()
+    db.execute("UPDATE email_inbox SET dismissed = 1 WHERE id = ?", (inbox_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.post("/api/documents/inbox/<inbox_id>/attachments/<attachment_id>/assign")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def assign_attachment_to_worker(inbox_id, attachment_id):
+    """Hängt einen E-Mail-Anhang an einen Mitarbeiter und speichert die Datei."""
+    payload = request.get_json(silent=True) or {}
+    worker_id = clean_text_input(payload.get("workerId", ""), max_len=64)
+    doc_type = clean_text_input(payload.get("docType", ""), max_len=64).lower()
+    notes = clean_text_input(payload.get("notes", ""), max_len=500)
+
+    if not worker_id:
+        return jsonify({"error": "missing_worker_id"}), 400
+    if doc_type not in ALLOWED_DOC_TYPES:
+        return jsonify({"error": "invalid_doc_type", "allowed": sorted(ALLOWED_DOC_TYPES)}), 400
+
+    db = get_db()
+    inbox_row = db.execute("SELECT * FROM email_inbox WHERE id = ?", (inbox_id,)).fetchone()
+    if not inbox_row:
+        return jsonify({"error": "inbox_not_found"}), 404
+
+    att = db.execute(
+        "SELECT * FROM email_attachments WHERE id = ? AND inbox_id = ?", (attachment_id, inbox_id)
+    ).fetchone()
+    if not att:
+        return jsonify({"error": "attachment_not_found"}), 404
+
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+
+    # Datei auf Filesystem speichern
+    worker_doc_dir = DOCS_UPLOAD_DIR / worker_id
+    try:
+        worker_doc_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        return jsonify({"error": "storage_error", "detail": str(exc)}), 500
+
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    safe_name = re.sub(r"[^\w.\-]", "_", att["filename"])[:80]
+    file_path = worker_doc_dir / f"{doc_type}_{ts}_{safe_name}"
+
+    file_data = att["file_data"]
+    if not file_data:
+        return jsonify({"error": "attachment_no_data"}), 400
+
+    try:
+        file_path.write_bytes(bytes(file_data))
+    except Exception as exc:
+        return jsonify({"error": "write_error", "detail": str(exc)}), 500
+
+    doc_id = f"doc-{secrets.token_hex(8)}"
+    db.execute(
+        """INSERT INTO worker_documents
+           (id, worker_id, company_id, doc_type, filename, file_path, file_size, source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            doc_id,
+            worker_id,
+            worker["company_id"],
+            doc_type,
+            att["filename"],
+            str(file_path.relative_to(BASE_DIR)),
+            att["file_size"],
+            inbox_row["from_addr"],
+            inbox_id,
+            g.current_user["id"],
+            now_iso(),
+            notes,
+        ),
+    )
+
+    # Anhang als zugewiesen markieren
+    db.execute(
+        "UPDATE email_attachments SET assigned_worker_id = ?, assigned_doc_type = ?, saved_path = ? WHERE id = ?",
+        (worker_id, doc_type, str(file_path.relative_to(BASE_DIR)), attachment_id),
+    )
+
+    # Wenn alle Anhänge dieser Mail zugewiesen sind → Mail als processed markieren
+    unassigned = db.execute(
+        "SELECT id FROM email_attachments WHERE inbox_id = ? AND assigned_worker_id IS NULL",
+        (inbox_id,),
+    ).fetchone()
+    if not unassigned:
+        db.execute("UPDATE email_inbox SET processed = 1 WHERE id = ?", (inbox_id,))
+
+    db.commit()
+
+    log_audit(
+        "worker.document_added",
+        f"Dokument '{doc_type}' ({att['filename']}) von {inbox_row['from_addr']} wurde Mitarbeiter {worker['badge_id']} zugewiesen",
+        target_type="worker",
+        target_id=worker_id,
+        company_id=worker["company_id"],
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "documentId": doc_id})
+
+
+# ── Mitarbeiter-Dokumente API ────────────────────────────────────
+
+@app.get("/api/workers/<worker_id>/documents")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def list_worker_documents(worker_id):
+    db = get_db()
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+
+    rows = db.execute(
+        "SELECT id, doc_type, filename, file_size, source_email_from, created_at, notes FROM worker_documents WHERE worker_id = ? ORDER BY created_at DESC",
+        (worker_id,),
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.get("/api/workers/<worker_id>/documents/<doc_id>/download")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def download_worker_document(worker_id, doc_id):
+    db = get_db()
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+
+    doc = db.execute(
+        "SELECT * FROM worker_documents WHERE id = ? AND worker_id = ?", (doc_id, worker_id)
+    ).fetchone()
+    if not doc:
+        return jsonify({"error": "document_not_found"}), 404
+
+    file_path = BASE_DIR / doc["file_path"]
+    if not file_path.exists():
+        return jsonify({"error": "file_not_found"}), 404
+
+    from flask import send_file
+    return send_file(str(file_path), as_attachment=True, download_name=doc["filename"])
+
+
+@app.delete("/api/workers/<worker_id>/documents/<doc_id>")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def delete_worker_document(worker_id, doc_id):
+    db = get_db()
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+
+    doc = db.execute(
+        "SELECT * FROM worker_documents WHERE id = ? AND worker_id = ?", (doc_id, worker_id)
+    ).fetchone()
+    if not doc:
+        return jsonify({"error": "document_not_found"}), 404
+
+    file_path = BASE_DIR / doc["file_path"]
+    try:
+        if file_path.exists():
+            file_path.unlink()
+    except Exception:
+        pass
+
+    db.execute("DELETE FROM worker_documents WHERE id = ?", (doc_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+# IMAP-Settings GET/PATCH (in allgemeine Settings integriert)
+# Wird über /api/settings mit den übrigen Feldern gespeichert.
+# Zusätzliches Endpoint um IMAP zu testen:
+@app.post("/api/settings/imap/test")
+@require_auth
+@require_roles("superadmin")
+def test_imap_connection():
+    import imaplib
+    payload = request.get_json(silent=True) or {}
+    host = clean_text_input(payload.get("imapHost", ""), max_len=255)
+    port = int(payload.get("imapPort") or 993)
+    username = clean_text_input(payload.get("imapUsername", ""), max_len=255)
+    password = str(payload.get("imapPassword") or "")
+    use_ssl = bool(payload.get("imapUseSsl", True))
+    folder = clean_text_input(payload.get("imapFolder", "INBOX"), max_len=100) or "INBOX"
+
+    if not host or not username:
+        return jsonify({"error": "missing_fields"}), 400
+    try:
+        if use_ssl:
+            conn = imaplib.IMAP4_SSL(host, port)
+        else:
+            conn = imaplib.IMAP4(host, port)
+            conn.starttls()
+        conn.login(username, password)
+        status, _ = conn.select(folder, readonly=True)
+        conn.logout()
+        if status != "OK":
+            return jsonify({"ok": False, "error": f"Ordner '{folder}' nicht gefunden."}), 200
+        return jsonify({"ok": True, "message": f"Verbindung zu {host} erfolgreich."})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 200
+
+
 @app.get("/")
 def root():
     return send_from_directory(BASE_DIR, "index.html")
@@ -5444,6 +5955,7 @@ def static_proxy(path):
 
 
 start_background_jobs()
+_start_imap_thread()
 
 
 if __name__ == "__main__":

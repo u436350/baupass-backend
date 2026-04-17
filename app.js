@@ -129,6 +129,48 @@ const UI_TRANSLATIONS = {
     reportingNoAccessDataLast7Days: "Keine Zutrittsdaten fuer die letzten 7 Tage.",
     reportingCheckin: "Check-in",
     reportingCheckout: "Check-out",
+    navDocuments: "Dokumente",
+    docInboxEyebrow: "Posteingang",
+    docInboxH3: "Eingehende Dokumente per Mail",
+    btnDocInboxRefresh: "Aktualisieren",
+    btnDocInboxPoll: "Postfach jetzt abrufen",
+    docInboxHint: "Mitarbeiter schicken ihre Nachweise an die konfigurierte Dokuments-E-Mail. Der Pf\u00f6rtner ordnet die Anh\u00e4nge hier einem Mitarbeiter zu.",
+    docAssignEyebrow: "Zuweisen",
+    docAssignH3: "Anhang einem Mitarbeiter zuordnen",
+    docInboxEmpty: "Kein unverarbeiteter Posteingang.",
+    docInboxEmailFrom: "Von",
+    docInboxEmailSubject: "Betreff",
+    docInboxEmailDate: "Datum",
+    docInboxAttachments: "Anh\u00e4nge",
+    btnAssignDoc: "Zuweisen",
+    btnDismissEmail: "Verwerfen",
+    docAssignWorkerLabel: "Mitarbeiter w\u00e4hlen",
+    docAssignTypeLabel: "Dokumenttyp",
+    docAssignNotesLabel: "Anmerkungen (optional)",
+    btnConfirmAssign: "Dokument zuweisen",
+    docAssignSuccess: "Dokument erfolgreich zugewiesen.",
+    docTypeMindestlohnnachweis: "Mindestlohnnachweis",
+    docTypePersonalausweis: "Personalausweis / Reisepass",
+    docTypeSozialversicherungsnachweis: "Sozialversicherungsnachweis",
+    docTypeArbeitserlaubnis: "Arbeitserlaubnis",
+    docTypeGesundheitszeugnis: "Gesundheitszeugnis",
+    docTypeSonstiges: "Sonstiges",
+    workerDocsHeading: "Gespeicherte Dokumente",
+    workerDocsEmpty: "Keine Dokumente hinterlegt.",
+    btnDownloadDoc: "Download",
+    btnDeleteDoc: "L\u00f6schen",
+    imapSectionEyebrow: "Dokument-Eingang",
+    imapSectionH4: "IMAP-Postfach f\u00fcr Nachweise",
+    labelImapHint: "Mitarbeiter schicken Nachweise an diese Adresse. Das System ruft das Postfach alle paar Minuten ab.",
+    labelImapHost: "IMAP Host",
+    labelImapPort: "IMAP Port",
+    labelImapUser: "IMAP Benutzername",
+    labelImapPass: "IMAP Passwort",
+    labelImapFolder: "IMAP Ordner",
+    labelImapSsl: "SSL/TLS",
+    btnImapTest: "IMAP-Verbindung testen",
+    imapTestOk: "Verbindung erfolgreich!",
+    imapTestFail: "Verbindung fehlgeschlagen",
     accessWeekEyebrow: "7 Tage",
     accessWeekH3: "Zutritte pro Tag",
     recentEyebrow: "Letzte Aktivit\u00e4ten",
@@ -398,6 +440,48 @@ const UI_TRANSLATIONS = {
     reportingNoAccessDataLast7Days: "No access data for the last 7 days.",
     reportingCheckin: "Check-in",
     reportingCheckout: "Check-out",
+    navDocuments: "Documents",
+    docInboxEyebrow: "Inbox",
+    docInboxH3: "Incoming Documents by Email",
+    btnDocInboxRefresh: "Refresh",
+    btnDocInboxPoll: "Fetch mailbox now",
+    docInboxHint: "Workers send their proof documents to the configured document email. The porter assigns attachments to a worker here.",
+    docAssignEyebrow: "Assign",
+    docAssignH3: "Assign attachment to a worker",
+    docInboxEmpty: "No unprocessed emails in inbox.",
+    docInboxEmailFrom: "From",
+    docInboxEmailSubject: "Subject",
+    docInboxEmailDate: "Date",
+    docInboxAttachments: "Attachments",
+    btnAssignDoc: "Assign",
+    btnDismissEmail: "Dismiss",
+    docAssignWorkerLabel: "Select worker",
+    docAssignTypeLabel: "Document type",
+    docAssignNotesLabel: "Notes (optional)",
+    btnConfirmAssign: "Assign document",
+    docAssignSuccess: "Document assigned successfully.",
+    docTypeMindestlohnnachweis: "Minimum wage proof",
+    docTypePersonalausweis: "ID / Passport",
+    docTypeSozialversicherungsnachweis: "Social security certificate",
+    docTypeArbeitserlaubnis: "Work permit",
+    docTypeGesundheitszeugnis: "Health certificate",
+    docTypeSonstiges: "Other",
+    workerDocsHeading: "Stored Documents",
+    workerDocsEmpty: "No documents on file.",
+    btnDownloadDoc: "Download",
+    btnDeleteDoc: "Delete",
+    imapSectionEyebrow: "Document Inbox",
+    imapSectionH4: "IMAP mailbox for proof documents",
+    labelImapHint: "Workers send their proof documents to this address. The system polls the mailbox every few minutes.",
+    labelImapHost: "IMAP Host",
+    labelImapPort: "IMAP Port",
+    labelImapUser: "IMAP Username",
+    labelImapPass: "IMAP Password",
+    labelImapFolder: "IMAP Folder",
+    labelImapSsl: "SSL/TLS",
+    btnImapTest: "Test IMAP connection",
+    imapTestOk: "Connection successful!",
+    imapTestFail: "Connection failed",
     accessWeekEyebrow: "7 Days",
     accessWeekH3: "Access per Day",
     recentEyebrow: "Recent Activity",
@@ -3447,13 +3531,13 @@ function getDefaultViewForRole(role) {
 function getAllowedViewsForRole(role) {
   const normalized = String(role || "").toLowerCase();
   if (normalized === "superadmin") {
-    return ["dashboard", "workers", "badge", "access", "invoices", "admin"];
+    return ["dashboard", "workers", "badge", "access", "documents", "invoices", "admin"];
   }
   if (normalized === "company-admin") {
-    return ["dashboard", "workers", "badge", "access"];
+    return ["dashboard", "workers", "badge", "access", "documents"];
   }
   if (normalized === "turnstile") {
-    return ["access", "dashboard"];
+    return ["access", "documents", "dashboard"];
   }
   return ["dashboard"];
 }
@@ -4397,6 +4481,19 @@ function renderAdminSettingsForm() {
   if (elements.invoiceLogoData && !elements.invoiceLogoData.value) {
     elements.invoiceLogoData.value = state.settings.invoiceLogoData || "";
   }
+  // IMAP-Felder
+  const imapHost = document.querySelector("#imapHost");
+  const imapPort = document.querySelector("#imapPort");
+  const imapUsername = document.querySelector("#imapUsername");
+  const imapPassword = document.querySelector("#imapPassword");
+  const imapFolder = document.querySelector("#imapFolder");
+  const imapUseSsl = document.querySelector("#imapUseSsl");
+  if (imapHost) imapHost.value = state.settings.imapHost || "";
+  if (imapPort) imapPort.value = String(state.settings.imapPort || 993);
+  if (imapUsername) imapUsername.value = state.settings.imapUsername || "";
+  if (imapPassword) imapPassword.value = "";
+  if (imapFolder) imapFolder.value = state.settings.imapFolder || "INBOX";
+  if (imapUseSsl) imapUseSsl.value = state.settings.imapUseSsl === false ? "0" : "1";
 }
 
 function showWorkerDetailOverlay(worker) {
@@ -4427,6 +4524,11 @@ function showWorkerDetailOverlay(worker) {
         <button type="button" class="ghost-button" id="workerCheckOutBtn">${uiT("detailCheckoutBtn")}</button>
         ${canResetPin ? `<button type="button" class="ghost-button" id="workerResetPinBtn">${uiT("btnResetPin")}</button>` : ""}
       </div>
+      ${!isVisitorWorker(worker) ? `
+      <div class="worker-docs-section">
+        <h4 style="margin:16px 0 8px">${escapeHtml(uiT("workerDocsHeading"))}</h4>
+        <div id="workerDocsList">…</div>
+      </div>` : ""}
     </div>
   `;
   overlay.classList.remove("hidden");
@@ -4463,6 +4565,16 @@ function showWorkerDetailOverlay(worker) {
         window.alert(uiT("alertPinResetFailed").replace("{error}", error.message));
       }
     };
+  }
+
+  // Worker-Dokumente laden und rendern
+  if (!isVisitorWorker(worker)) {
+    const docsContainer = overlay.querySelector("#workerDocsList");
+    if (docsContainer) {
+      loadWorkerDocuments(worker.id).then((docs) => {
+        renderWorkerDocuments(docs, worker.id, docsContainer);
+      });
+    }
   }
 }
 
@@ -5670,7 +5782,13 @@ async function handleSettingsSubmit(event) {
         smtpUseTls: document.querySelector("#smtpUseTls").value === "1",
         adminIpWhitelist: document.querySelector("#adminIpWhitelist").value.trim(),
         enforceTenantDomain: document.querySelector("#enforceTenantDomain").value === "1",
-        workerAppEnabled: document.querySelector("#workerAppEnabled").value !== "0"
+        workerAppEnabled: document.querySelector("#workerAppEnabled").value !== "0",
+        imapHost: (document.querySelector("#imapHost")?.value || "").trim(),
+        imapPort: Number(document.querySelector("#imapPort")?.value || 993),
+        imapUsername: (document.querySelector("#imapUsername")?.value || "").trim(),
+        imapPassword: document.querySelector("#imapPassword")?.value || "",
+        imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
+        imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
       }
     });
     state.settings = updated;
@@ -8446,3 +8564,254 @@ async function bulkSetStatus(status) {
 
   refreshAll();
 })();
+
+// ─────────────────────────────────────────────────────────────────────
+// Dokument-Inbox (IMAP) & Worker-Dokumente
+// ─────────────────────────────────────────────────────────────────────
+
+// Dokumenttypen für die Auswahlfelder
+const DOC_TYPES = [
+  { value: "mindestlohnnachweis", key: "docTypeMindestlohnnachweis" },
+  { value: "personalausweis", key: "docTypePersonalausweis" },
+  { value: "sozialversicherungsnachweis", key: "docTypeSozialversicherungsnachweis" },
+  { value: "arbeitserlaubnis", key: "docTypeArbeitserlaubnis" },
+  { value: "gesundheitszeugnis", key: "docTypeGesundheitszeugnis" },
+  { value: "sonstiges", key: "docTypeSonstiges" },
+];
+
+function docTypeLabelForValue(value) {
+  const found = DOC_TYPES.find((d) => d.value === value);
+  return found ? uiT(found.key) : value;
+}
+
+async function loadDocumentInbox() {
+  const listEl = document.querySelector("#docInboxList");
+  if (!listEl) return;
+  try {
+    const data = await apiRequest(API_BASE + "/api/documents/inbox");
+    renderDocumentInbox(data.emails || []);
+  } catch (e) {
+    if (listEl) listEl.innerHTML = `<div class="empty-state">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderDocumentInbox(emails) {
+  const listEl = document.querySelector("#docInboxList");
+  if (!listEl) return;
+  if (!emails.length) {
+    listEl.innerHTML = `<div class="empty-state">${escapeHtml(uiT("docInboxEmpty"))}</div>`;
+    return;
+  }
+  listEl.innerHTML = emails.map((email) => {
+    const attachments = (email.attachments || []).map((att) => `
+      <span class="attachment-chip">
+        📎 ${escapeHtml(att.filename)}
+        <button class="link-button" data-inbox-id="${escapeHtml(String(email.id))}" data-attachment-id="${escapeHtml(String(att.id))}" data-filename="${escapeHtml(att.filename)}" data-assign-btn>
+          ${escapeHtml(uiT("btnAssignDoc"))}
+        </button>
+      </span>`).join("");
+    return `
+      <div class="list-item" data-email-id="${escapeHtml(String(email.id))}">
+        <div class="list-item-meta">
+          <strong>${escapeHtml(email.from_addr || "-")}</strong>
+          <span class="muted">${escapeHtml(email.received_at ? formatTimestamp(email.received_at) : "")}</span>
+        </div>
+        <div class="list-item-subject">${escapeHtml(email.subject || "(kein Betreff)")}</div>
+        ${attachments ? `<div class="attachment-list">${attachments}</div>` : ""}
+        <div class="button-row" style="margin-top:8px">
+          <button class="ghost-button small-button" data-dismiss-email-id="${escapeHtml(String(email.id))}">
+            ${escapeHtml(uiT("btnDismissEmail"))}
+          </button>
+        </div>
+      </div>`;
+  }).join("");
+
+  // Assign-Buttons
+  listEl.querySelectorAll("[data-assign-btn]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openDocAssignPanel(btn.dataset.inboxId, btn.dataset.attachmentId, btn.dataset.filename);
+    });
+  });
+
+  // Dismiss-Buttons
+  listEl.querySelectorAll("[data-dismiss-email-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const emailId = btn.dataset.dismissEmailId;
+      try {
+        await apiRequest(API_BASE + `/api/documents/inbox/${emailId}/dismiss`, { method: "POST" });
+        loadDocumentInbox();
+      } catch (e) {
+        window.alert(e.message);
+      }
+    });
+  });
+}
+
+function openDocAssignPanel(inboxId, attachmentId, filename) {
+  const panel = document.querySelector("#docAssignPanel");
+  const content = document.querySelector("#docAssignContent");
+  if (!panel || !content) return;
+  panel.style.display = "";
+
+  // Mitarbeiter-Liste aus state.workers (aktive Nicht-Besucher)
+  const workers = (state.workers || []).filter((w) => !isVisitorWorker(w) && w.status !== "inaktiv");
+  const workerOptions = workers.map((w) =>
+    `<option value="${escapeHtml(String(w.id))}">${escapeHtml(w.firstName + " " + w.lastName)} — ${escapeHtml(w.badgeId)}</option>`
+  ).join("");
+
+  const docTypeOptions = DOC_TYPES.map((d) =>
+    `<option value="${escapeHtml(d.value)}">${escapeHtml(uiT(d.key))}</option>`
+  ).join("");
+
+  content.innerHTML = `
+    <form id="docAssignForm" class="settings-form">
+      <p class="muted">📎 ${escapeHtml(filename)}</p>
+      <label>
+        <span>${escapeHtml(uiT("docAssignWorkerLabel"))}</span>
+        <select id="docAssignWorkerId" required>
+          <option value="">— bitte wählen —</option>
+          ${workerOptions}
+        </select>
+      </label>
+      <label>
+        <span>${escapeHtml(uiT("docAssignTypeLabel"))}</span>
+        <select id="docAssignType" required>
+          ${docTypeOptions}
+        </select>
+      </label>
+      <label>
+        <span>${escapeHtml(uiT("docAssignNotesLabel"))}</span>
+        <input id="docAssignNotes" type="text" />
+      </label>
+      <div class="button-row">
+        <button type="submit" class="primary-button">${escapeHtml(uiT("btnConfirmAssign"))}</button>
+        <button type="button" class="ghost-button" id="docAssignCancelBtn">Abbrechen</button>
+      </div>
+      <p id="docAssignMsg" class="helper-text"></p>
+    </form>`;
+
+  document.querySelector("#docAssignCancelBtn").addEventListener("click", () => {
+    panel.style.display = "none";
+  });
+
+  document.querySelector("#docAssignForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const workerId = document.querySelector("#docAssignWorkerId").value;
+    const docType = document.querySelector("#docAssignType").value;
+    const notes = document.querySelector("#docAssignNotes").value.trim();
+    const msgEl = document.querySelector("#docAssignMsg");
+    if (!workerId) return;
+    try {
+      await apiRequest(API_BASE + `/api/documents/inbox/${inboxId}/attachments/${attachmentId}/assign`, {
+        method: "POST",
+        body: { workerId: Number(workerId), docType, notes },
+      });
+      msgEl.textContent = uiT("docAssignSuccess");
+      msgEl.style.color = "var(--color-success, green)";
+      panel.style.display = "none";
+      loadDocumentInbox();
+    } catch (err) {
+      msgEl.textContent = err.message;
+      msgEl.style.color = "var(--color-danger, red)";
+    }
+  });
+}
+
+async function loadWorkerDocuments(workerId) {
+  try {
+    const data = await apiRequest(API_BASE + `/api/workers/${workerId}/documents`);
+    return data.documents || [];
+  } catch {
+    return [];
+  }
+}
+
+function renderWorkerDocuments(docs, workerId, containerEl) {
+  if (!containerEl) return;
+  if (!docs.length) {
+    containerEl.innerHTML = `<p class="muted">${escapeHtml(uiT("workerDocsEmpty"))}</p>`;
+    return;
+  }
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  const canDelete = ["superadmin", "company-admin"].includes(role);
+  containerEl.innerHTML = `<ul class="document-list">` + docs.map((doc) => `
+    <li class="document-list-item">
+      <span>📄 ${escapeHtml(docTypeLabelForValue(doc.doc_type))} — ${escapeHtml(doc.original_filename || doc.filename)}</span>
+      <span class="muted" style="font-size:0.8em">${escapeHtml(doc.uploaded_at ? formatTimestamp(doc.uploaded_at) : "")}</span>
+      ${doc.notes ? `<span class="muted" style="font-size:0.8em">${escapeHtml(doc.notes)}</span>` : ""}
+      <div class="button-row" style="margin-top:4px">
+        <a class="ghost-button small-button" href="${API_BASE}/api/workers/${workerId}/documents/${doc.id}/download" target="_blank" rel="noopener">
+          ${escapeHtml(uiT("btnDownloadDoc"))}
+        </a>
+        ${canDelete ? `<button class="ghost-button small-button danger" data-delete-doc-id="${escapeHtml(String(doc.id))}">${escapeHtml(uiT("btnDeleteDoc"))}</button>` : ""}
+      </div>
+    </li>`).join("") + `</ul>`;
+
+  containerEl.querySelectorAll("[data-delete-doc-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!window.confirm("Dokument wirklich löschen?")) return;
+      try {
+        await apiRequest(API_BASE + `/api/workers/${workerId}/documents/${btn.dataset.deleteDocId}`, { method: "DELETE" });
+        const updatedDocs = await loadWorkerDocuments(workerId);
+        renderWorkerDocuments(updatedDocs, workerId, containerEl);
+      } catch (e) {
+        window.alert(e.message);
+      }
+    });
+  });
+}
+
+// Dokument-Inbox beim Wechsel zur documents-View laden
+document.addEventListener("DOMContentLoaded", () => {
+  // Documents Nav-Link
+  const docNavLink = document.querySelector("[data-view='documents']");
+  if (docNavLink) {
+    docNavLink.addEventListener("click", () => {
+      loadDocumentInbox();
+    });
+  }
+
+  const refreshBtn = document.querySelector("#docInboxRefreshBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", loadDocumentInbox);
+  }
+
+  const pollBtn = document.querySelector("#docInboxPollBtn");
+  if (pollBtn) {
+    pollBtn.addEventListener("click", async () => {
+      pollBtn.disabled = true;
+      try {
+        await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
+        await loadDocumentInbox();
+      } catch (e) {
+        window.alert(e.message);
+      } finally {
+        pollBtn.disabled = false;
+      }
+    });
+  }
+
+  // IMAP-Test-Button
+  const imapTestBtn = document.querySelector("#imapTestBtn");
+  if (imapTestBtn) {
+    imapTestBtn.addEventListener("click", async () => {
+      const resultEl = document.querySelector("#imapTestResult");
+      imapTestBtn.disabled = true;
+      if (resultEl) resultEl.textContent = "…";
+      try {
+        const res = await apiRequest(API_BASE + "/api/settings/imap/test", { method: "POST" });
+        if (resultEl) {
+          resultEl.textContent = uiT("imapTestOk") + (res.message ? ` (${res.message})` : "");
+          resultEl.style.color = "var(--color-success, green)";
+        }
+      } catch (e) {
+        if (resultEl) {
+          resultEl.textContent = `${uiT("imapTestFail")}: ${e.message}`;
+          resultEl.style.color = "var(--color-danger, red)";
+        }
+      } finally {
+        imapTestBtn.disabled = false;
+      }
+    });
+  }
+});

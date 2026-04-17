@@ -155,6 +155,7 @@
         <button class="nav-link" data-view="workers" data-ui-i18n="navWorkers">Mitarbeiter</button>
         <button class="nav-link" data-view="badge" data-ui-i18n="navBadge">Ausweis</button>
         <button class="nav-link" data-view="access" data-ui-i18n="navAccess">Zutritt</button>
+        <button class="nav-link" data-view="documents" data-ui-i18n="navDocuments">Dokumente</button>
         <button class="nav-link" data-view="invoices" data-ui-i18n="navInvoices">Rechnungen</button>
         <button class="nav-link" data-view="admin" data-ui-i18n="navAdmin">Admin</button>
       </nav>
@@ -657,6 +658,39 @@
         </div>
       </section>
 
+      <section class="view" data-view="documents">
+        <div class="panel-grid two-columns">
+          <!-- Linke Spalte: E-Mail-Eingang -->
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-ui-i18n="docInboxEyebrow">Posteingang</p>
+                <h3 data-ui-i18n="docInboxH3">Eingehende Dokumente per Mail</h3>
+              </div>
+              <div class="button-row">
+                <button id="docInboxRefreshBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxRefresh">Aktualisieren</button>
+                <button id="docInboxPollBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxPoll">Postfach jetzt abrufen</button>
+              </div>
+            </div>
+            <div class="meta-box">
+              <p data-ui-i18n="docInboxHint">Mitarbeiter und Firmen schicken ihre Nachweise (Mindestlohnnachweis, Personalausweis, …) an die konfigurierte Dokuments-E-Mail-Adresse. Der Pförtner kann die Anhänge hier direkt einem Mitarbeiter zuordnen.</p>
+            </div>
+            <div id="docInboxList" class="list"></div>
+          </article>
+
+          <!-- Rechte Spalte: Dokument zuweisen -->
+          <article class="panel" id="docAssignPanel" style="display:none;">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-ui-i18n="docAssignEyebrow">Dokument zuweisen</p>
+                <h3 data-ui-i18n="docAssignH3">Anhang einem Mitarbeiter zuordnen</h3>
+              </div>
+            </div>
+            <div id="docAssignContent"></div>
+          </article>
+        </div>
+      </section>
+
       <section class="view" data-view="admin">
         <div class="panel-grid two-columns">
           <article class="panel">
@@ -792,7 +826,48 @@
                 </select>
               </label>
 
-              <!-- ── Sicherheit ── -->
+              <!-- ── Dokument-Postfach (IMAP) ── -->
+              <div class="form-section">
+                <div class="form-section-icon">📥</div>
+                <div class="form-section-label">
+                  <p class="eyebrow" data-ui-i18n="imapSectionEyebrow">Dokument-Eingang</p>
+                  <h4 data-ui-i18n="imapSectionH4">IMAP-Postfach für Nachweise</h4>
+                </div>
+              </div>
+              <label class="full-width">
+                <span data-ui-i18n="labelImapHint">Mitarbeiter schicken Mindestlohnnachweis, Personalausweis usw. an diese Adresse. Das System ruft das Postfach alle paar Minuten ab.</span>
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapHost">IMAP Host</span>
+                <input id="imapHost" type="text" placeholder="imap.dein-provider.de" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapPort">IMAP Port</span>
+                <input id="imapPort" type="number" placeholder="993" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapUser">IMAP Benutzername</span>
+                <input id="imapUsername" type="text" placeholder="dokumente@deinefirma.de" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapPass">IMAP Passwort</span>
+                <input id="imapPassword" type="password" placeholder="App-Passwort" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapFolder">IMAP Ordner</span>
+                <input id="imapFolder" type="text" placeholder="INBOX" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelImapSsl">SSL/TLS</span>
+                <select id="imapUseSsl">
+                  <option value="1" data-ui-i18n="optTlsYes">Ja (Port 993)</option>
+                  <option value="0" data-ui-i18n="optTlsNo">Nein / STARTTLS</option>
+                </select>
+              </label>
+              <label class="full-width">
+                <button id="imapTestBtn" type="button" class="ghost-button" data-ui-i18n="btnImapTest">IMAP-Verbindung testen</button>
+                <span id="imapTestResult" class="helper-text"></span>
+              </label>
               <div class="form-section">
                 <div class="form-section-icon">🔒</div>
                 <div class="form-section-label">
