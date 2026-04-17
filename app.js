@@ -8807,13 +8807,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const pollBtn = document.querySelector("#docInboxPollBtn");
   if (pollBtn) {
     pollBtn.addEventListener("click", () => {
-      const win = window.open("https://mail.google.com/mail/u/0/#inbox", "_blank", "noopener");
+      const imapHostVal = (state.settings?.imapHost || "").toLowerCase();
+      let webmailUrl;
+      if (imapHostVal.includes("gmail") || imapHostVal.includes("google")) {
+        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
+      } else if (imapHostVal.includes("outlook") || imapHostVal.includes("hotmail") || imapHostVal.includes("live.com") || imapHostVal.includes("office365")) {
+        webmailUrl = "https://outlook.live.com/mail/0/inbox";
+      } else if (imapHostVal.includes("yahoo")) {
+        webmailUrl = "https://mail.yahoo.com/";
+      } else if (imapHostVal) {
+        // Versuche Webmail aus dem Domain-Teil des IMAP-Hosts abzuleiten
+        const domain = imapHostVal.replace(/^imap\./, "");
+        webmailUrl = "https://mail." + domain;
+      } else {
+        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
+      }
+
+      const win = window.open(webmailUrl, "_blank", "noopener");
       if (!win) {
         window.alert(runtimeText("popupBlockedAllow"));
         return;
       }
 
-      // Nach dem Öffnen von Gmail direkt den Import starten.
+      // Nach dem Öffnen des Postfachs direkt den Import starten.
       window.setTimeout(() => {
         runDocumentInboxSync(syncBtn || undefined);
       }, 700);
