@@ -26,17 +26,22 @@
     <div class="auth-panel">
       <label class="auth-lang-field auth-lang-field-compact">
         <span data-ui-i18n="uiLanguageLabel">Sprache</span>
-        <div class="auth-lang-select-wrap">
-          <select id="uiLangAuthSelect" class="auth-lang-select" aria-label="Sprache wählen">
-            <option value="de">DE 🇩🇪</option>
-            <option value="en">EN 🇬🇧</option>
-            <option value="tr">TR 🇹🇷</option>
-            <option value="ar">AR 🇸🇦</option>
-            <option value="fr">FR 🇫🇷</option>
-            <option value="es">ES 🇪🇸</option>
-            <option value="it">IT 🇮🇹</option>
-            <option value="pl">PL 🇵🇱</option>
-          </select>
+        <div class="auth-lang-dropdown" id="uiLangAuthDropdown">
+          <button id="uiLangAuthButton" class="auth-lang-button" type="button" aria-label="Sprache wählen" aria-haspopup="listbox" aria-expanded="false">
+            <span id="uiLangAuthCode">DE</span>
+            <span id="uiLangAuthFlag" class="flag-chip flag-de" aria-hidden="true"></span>
+            <span class="auth-lang-caret" aria-hidden="true">▾</span>
+          </button>
+          <div id="uiLangAuthMenu" class="auth-lang-menu" role="listbox" hidden>
+            <button type="button" class="auth-lang-option" data-ui-lang="de" role="option"><span>DE</span><span class="flag-chip flag-de" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="en" role="option"><span>EN</span><span class="flag-chip flag-gb" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="tr" role="option"><span>TR</span><span class="flag-chip flag-tr" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="ar" role="option"><span>AR</span><span class="flag-chip flag-sa" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="fr" role="option"><span>FR</span><span class="flag-chip flag-fr" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="es" role="option"><span>ES</span><span class="flag-chip flag-es" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="it" role="option"><span>IT</span><span class="flag-chip flag-it" aria-hidden="true"></span></button>
+            <button type="button" class="auth-lang-option" data-ui-lang="pl" role="option"><span>PL</span><span class="flag-chip flag-pl" aria-hidden="true"></span></button>
+          </div>
         </div>
       </label>
       <div>
