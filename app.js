@@ -3701,29 +3701,42 @@ function normalizeWorkerAppLink(rawLink) {
 }
 
 async function loadAllData() {
-  let bootstrap;
-  try {
-    bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, {
-      auth: false,
-      // Bei Cross-Site-Cookies (z. B. Railway) kann der Cookie fehlen.
-      // Wenn bereits ein Token im Speicher ist, sende es explizit mit.
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-  } catch (error) {
-    // Nicht eingeloggt ist beim ersten Laden ein normaler Zustand.
-    if (["unauthorized", "invalid_session", "session_expired"].includes(String(error?.message || ""))) {
-      clearSession();
-      sessionExpiryNoticeShown = false;
-      return;
+  // Bootstrap nur dann erzwingen, wenn noch keine aktive Session im Speicher ist.
+  if (!token || !state.currentUser) {
+    let bootstrap;
+    try {
+      bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, {
+        auth: false,
+        // Bei Cross-Site-Cookies (z. B. Railway) kann der Cookie fehlen.
+        // Wenn bereits ein Token im Speicher ist, sende es explizit mit.
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+    } catch (error) {
+      const msg = String(error?.message || "");
+      // Nicht eingeloggt ist beim ersten Laden ein normaler Zustand.
+      if (["unauthorized", "invalid_session", "session_expired"].includes(msg)) {
+        // Wenn bereits ein Token da ist, behalten wir die aktive Session bei.
+        if (!token) {
+          clearSession();
+        }
+        sessionExpiryNoticeShown = false;
+        return;
+      }
+      throw error;
     }
-    throw error;
+    if (bootstrap?.token) {
+      token = bootstrap.token;
+    }
+    if (bootstrap?.user) {
+      state.currentUser = bootstrap.user;
+    }
   }
-  if (bootstrap?.token) {
-    token = bootstrap.token;
+
+  if (!token) {
+    sessionExpiryNoticeShown = false;
+    return;
   }
-  if (bootstrap?.user) {
-    state.currentUser = bootstrap.user;
-  }
+
   sessionExpiryNoticeShown = false;
 
   const reportUrl = `${API_BASE}/api/reporting/summary`;
