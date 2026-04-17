@@ -5748,12 +5748,17 @@ async function handleLoginSubmit(event) {
     token = payload.token;
     state.currentUser = payload.user;
     elements.loginForm.reset();
-
-    await loadAllData();
     startHeartbeat();
     startBackendStatusMonitor();
-    setView(getDefaultViewForRole(getCurrentUser()?.role));
+    setView(getDefaultViewForRole(payload.user?.role));
     refreshAll();
+
+    try {
+      await loadAllData();
+      refreshAll();
+    } catch (loadError) {
+      console.warn("Post-login data load failed (session stays active):", loadError);
+    }
   } catch (error) {
     if (error.message === "backend_unreachable") {
       window.alert("Backend nicht erreichbar. Bitte prüfe, ob der Server läuft und lade die Seite neu.");

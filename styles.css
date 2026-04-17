@@ -636,6 +636,10 @@ select {
   gap: 2px;
 }
 
+.auth-lang-menu[hidden] {
+  display: none;
+}
+
 .auth-lang-option {
   min-height: 28px;
   border: none;
