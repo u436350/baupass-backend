@@ -2032,6 +2032,11 @@ function applyUiTranslations() {
 
   const authSelect = document.querySelector("#uiLangAuthSelect");
   if (authSelect) authSelect.value = lang;
+  document.querySelectorAll("[data-ui-lang-option]").forEach((button) => {
+    const isActive = button.getAttribute("data-ui-lang-option") === lang;
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    button.classList.toggle("is-active", isActive);
+  });
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) topbarSelect.value = lang;
 }
@@ -2051,6 +2056,15 @@ function initUiLanguageControl() {
     authSelect.value = initial;
     authSelect.addEventListener("change", () => setUiLang(authSelect.value || UI_FALLBACK_LANG));
   }
+  document.querySelectorAll("[data-ui-lang-option]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextLang = button.getAttribute("data-ui-lang-option") || UI_FALLBACK_LANG;
+      if (authSelect) {
+        authSelect.value = nextLang;
+      }
+      setUiLang(nextLang);
+    });
+  });
   const topbarSelect = document.querySelector("#uiLangTopbarSelect");
   if (topbarSelect) {
     topbarSelect.value = initial;

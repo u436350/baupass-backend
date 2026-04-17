@@ -15,7 +15,7 @@
   <title>BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260417c";
+        const buildTag = "20260417d";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -39,14 +39,48 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=20260417a" />
+  <link rel="stylesheet" href="./styles.css?v=20260417d" />
 </head>
 <body class="auth-locked">
   <div id="authOverlay" class="auth-overlay" style="display:grid;">
     <div class="auth-panel">
       <label class="auth-lang-field auth-lang-field-compact">
         <span data-ui-i18n="uiLanguageLabel">Sprache</span>
-        <select id="uiLangAuthSelect" class="auth-lang-select" aria-label="Sprache wählen">
+        <div class="auth-lang-chips" role="group" aria-label="Sprache wählen">
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="de" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇩🇪</span>
+            <span class="auth-lang-chip-code">DE</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="en" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇬🇧</span>
+            <span class="auth-lang-chip-code">EN</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="tr" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇹🇷</span>
+            <span class="auth-lang-chip-code">TR</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="ar" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇸🇦</span>
+            <span class="auth-lang-chip-code">AR</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="fr" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇫🇷</span>
+            <span class="auth-lang-chip-code">FR</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="es" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇪🇸</span>
+            <span class="auth-lang-chip-code">ES</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="it" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇮🇹</span>
+            <span class="auth-lang-chip-code">IT</span>
+          </button>
+          <button type="button" class="auth-lang-chip" data-ui-lang-option="pl" aria-pressed="false">
+            <span class="auth-lang-chip-flag" aria-hidden="true">🇵🇱</span>
+            <span class="auth-lang-chip-code">PL</span>
+          </button>
+        </div>
+        <select id="uiLangAuthSelect" class="auth-lang-select auth-lang-select-hidden" aria-label="Sprache wählen" tabindex="-1">
           <option value="de">DE 🇩🇪</option>
           <option value="en">EN 🇬🇧</option>
           <option value="tr">TR 🇹🇷</option>
@@ -1028,6 +1062,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260417c"></script>
+  <script src="./app.js?v=20260417d"></script>
 </body>
 </html>
