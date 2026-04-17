@@ -64,7 +64,7 @@ const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
 const WORKER_SESSION_IP_KEY = "baupass-worker-session-ip";
 const WORKER_CACHED_PAYLOAD_KEY = "baupass-worker-cached-payload";
 const WORKER_LANG_KEY = "baupass-worker-lang";
-const WORKER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+const WORKER_INACTIVITY_TIMEOUT_MS = 60 * 1000;
 const WORKER_PASS_LOCK_TIMEOUT_MS = 2 * 60 * 1000;
 
 // ── i18n ──────────────────────────────────────────────────────────────
@@ -1380,7 +1380,7 @@ function hideWorkerNotice() {
 
 // ═════════════════════════════════════════════════════════════════════
 // ── SESSION PROTECTION: Aggressive Inactivity Timeout ──
-// Schützt gegen Telefon-Weitergabe durch autom. Logout nach 5min ohne Interaktion
+// Schützt gegen Telefon-Weitergabe durch autom. Logout nach 60s ohne Interaktion
 // ═════════════════════════════════════════════════════════════════════
 
 function initializeSessionInactivityProtection() {
@@ -1391,7 +1391,7 @@ function initializeSessionInactivityProtection() {
 
   lastUserInteractionAt = Date.now();
 
-  // Prüfe alle 30 Sekunden auf Inaktivität
+  // Prüfe alle 5 Sekunden auf Inaktivität, damit Logout nah an 60s erfolgt
   inactivityCheckInterval = setInterval(() => {
     const timeSinceLastInteraction = Date.now() - lastUserInteractionAt;
     if (timeSinceLastInteraction > WORKER_INACTIVITY_TIMEOUT_MS) {
@@ -1399,9 +1399,9 @@ function initializeSessionInactivityProtection() {
       showWorkerNotice(t("inactiveReLogin"));
       workerLogout();
     }
-  }, 30 * 1000);
+  }, 5 * 1000);
 
-  console.log("✓ Session protection: 5min Inaktivitäts-Monitor gestartet");
+  console.log("✓ Session protection: 60s Inaktivitäts-Monitor gestartet");
 }
 
 // ═════════════════════════════════════════════════════════════════════
