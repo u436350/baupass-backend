@@ -1,5 +1,5 @@
-const SHELL_CACHE = "baupass-control-shell-v4";
-const RUNTIME_CACHE = "baupass-control-runtime-v4";
+const SHELL_CACHE = "baupass-control-shell-v5";
+const RUNTIME_CACHE = "baupass-control-runtime-v5";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
