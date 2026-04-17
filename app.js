@@ -138,6 +138,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Besuchszweck",
     labelHostName: "Ansprechpartner vor Ort",
     labelVisitEndAt: "Besuchsende",
+    visitorHint: "Besucher sind f\u00fcr ein paar Stunden oder bis Tagesende g\u00fcltig. Offene Zutritte werden sp\u00e4testens um 00:00 automatisch abgemeldet, die Karte bleibt aber f\u00fcr Auswertungen erhalten.",
     labelWorkerStatus: "Status",
     optStatusActive: "Aktiv",
     optStatusLocked: "Gesperrt",
@@ -166,6 +167,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Scan-Hilfe",
     badgeScanH3: "Badge-Code",
     badgeScanEmpty: "Kein Badge ausgew\u00e4hlt.",
+    badgeTitleVisitor: "Digitale Besucherkarte",
+    badgeTitleDayPass: "Digitaler Baustellen-Tagesausweis",
+    badgeTitleRegular: "Digitaler Baustellen-Ausweis",
+    badgeUnknownCompany: "Unbekannte Firma",
+    badgeQrHint: "QR scannen, App installieren und Ausweis direkt oeffnen.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "QR-Funktion",
+    badgeMetaQrFuncVal: "Mitarbeiter-App Installation",
+    badgeMetaRoleLabel: "Rolle im System",
+    badgePhotoUploadHint: "Foto aufnehmen oder hochladen",
     accessFormEyebrow: "Drehkreuz",
     accessFormH3: "Check-in und Check-out",
     labelAccessBadge: "Badge-ID oder Mitarbeiter",
@@ -356,6 +367,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Visit purpose",
     labelHostName: "On-site contact person",
     labelVisitEndAt: "Visit end",
+    visitorHint: "Visitors are valid for a few hours or until end of day. Open check-ins are automatically checked out at 00:00 at the latest, but the card is retained for reporting.",
     labelWorkerStatus: "Status",
     optStatusActive: "Active",
     optStatusLocked: "Blocked",
@@ -384,6 +396,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Scan Help",
     badgeScanH3: "Badge Code",
     badgeScanEmpty: "No badge selected.",
+    badgeTitleVisitor: "Digital Visitor Card",
+    badgeTitleDayPass: "Digital Site Day Pass",
+    badgeTitleRegular: "Digital Site Badge",
+    badgeUnknownCompany: "Unknown Company",
+    badgeQrHint: "Scan QR, install app and open badge directly.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "QR Function",
+    badgeMetaQrFuncVal: "Worker App Installation",
+    badgeMetaRoleLabel: "Role in System",
+    badgePhotoUploadHint: "Take or upload photo",
     accessFormEyebrow: "Turnstile",
     accessFormH3: "Check-in and Check-out",
     labelAccessBadge: "Badge ID or Worker",
@@ -574,6 +596,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Ziyaret amac\u0131",
     labelHostName: "Sahada ileti\u015fim ki\u015fisi",
     labelVisitEndAt: "Ziyaret biti\u015fi",
+    visitorHint: "Ziyaretçiler birkaç saat veya gün sonuna kadar geçerlidir. Açık girişler en geç 00:00'da otomatik olarak çıkış yapar, kart raporlama için saklanır.",
     labelWorkerStatus: "Durum",
     optStatusActive: "Aktif",
     optStatusLocked: "Engelli",
@@ -764,6 +787,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Ziyaret amac\u0131",
     labelHostName: "Sahada ileti\u015fim ki\u015fisi",
     labelVisitEndAt: "Ziyaret biti\u015fi",
+    visitorHint: "Ziyaretçiler birkaç saat veya gün sonuna kadar geçerlidir. Açık girişler en geç 00:00'da otomatik olarak çıkış yapar, kart raporlama için saklanır.",
     labelWorkerStatus: "Durum",
     optStatusActive: "Aktif",
     optStatusLocked: "Engelli",
@@ -792,6 +816,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Tarama Yard\u0131m\u0131",
     badgeScanH3: "Rozet Kodu",
     badgeScanEmpty: "Rozet se\u00e7ilmedi.",
+    badgeTitleVisitor: "Dijital Ziyaret\u00e7i Kart\u0131",
+    badgeTitleDayPass: "Dijital \u015eantiye G\u00fcnl\u00fck Kart\u0131",
+    badgeTitleRegular: "Dijital \u015eantiye Rozeti",
+    badgeUnknownCompany: "Bilinmeyen Firma",
+    badgeQrHint: "QR kodu tara, uygulamas\u0131 y\u00fckle ve rozeti do\u011frudan a\u00e7.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "QR Fonksiyonu",
+    badgeMetaQrFuncVal: "\u00c7al\u0131\u015fan Uygulamas\u0131 Kurulumu",
+    badgeMetaRoleLabel: "Sistemdeki Rol",
+    badgePhotoUploadHint: "Foto\u011fraf \u00e7ek veya y\u00fckle",
     accessFormEyebrow: "Turnike",
     accessFormH3: "Check-in ve Check-out",
     labelAccessBadge: "Badge ID veya \u00c7al\u0131\u015fan",
@@ -982,6 +1016,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "غرض الزيارة",
     labelHostName: "جهة الاتصال في الموقع",
     labelVisitEndAt: "نهاية الزيارة",
+    visitorHint: "الزوار صالحون لبضع ساعات أو حتى نهاية اليوم. يتم تسجيل خروج الدخلات المفتوحة تلقائيًا في منتصف الليل على أبعد تقدير، لكن البطاقة تُحفظ لأغراض التقارير.",
     labelWorkerStatus: "الحالة",
     optStatusActive: "نشط",
     optStatusLocked: "محظور",
@@ -1010,6 +1045,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "مساعدة المسح",
     badgeScanH3: "رمز البطاقة",
     badgeScanEmpty: "لم يتم اختيار بطاقة.",
+    badgeTitleVisitor: "بطاقة زائر رقمية",
+    badgeTitleDayPass: "تصريح يومي رقمي للموقع",
+    badgeTitleRegular: "بطاقة هوية رقمية للموقع",
+    badgeUnknownCompany: "شركة غير معروفة",
+    badgeQrHint: "امسح الرمز، ثبّت التطبيق وافتح البطاقة مباشرةً.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "وظيفة QR",
+    badgeMetaQrFuncVal: "تثبيت تطبيق العمال",
+    badgeMetaRoleLabel: "الدور في النظام",
+    badgePhotoUploadHint: "التقط أو ارفع صورة",
     accessFormEyebrow: "البوابة الدوارة",
     accessFormH3: "تسجيل دخول وخروج",
     labelAccessBadge: "Badge ID أو عامل",
@@ -1200,6 +1245,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Objet de la visite",
     labelHostName: "Contact sur site",
     labelVisitEndAt: "Fin de visite",
+    visitorHint: "Les visiteurs sont valides quelques heures ou jusqu'\u00e0 la fin de la journ\u00e9e. Les entr\u00e9es ouvertes sont automatiquement cl\u00f4tur\u00e9es \u00e0 00h00 au plus tard, la carte est conserv\u00e9e pour les rapports.",
     labelWorkerStatus: "Statut",
     optStatusActive: "Actif",
     optStatusLocked: "Bloqué",
@@ -1228,6 +1274,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Aide scan",
     badgeScanH3: "Code badge",
     badgeScanEmpty: "Aucun badge sélectionné.",
+    badgeTitleVisitor: "Carte visiteur numérique",
+    badgeTitleDayPass: "Laissez-passer journalier numérique chantier",
+    badgeTitleRegular: "Badge numérique chantier",
+    badgeUnknownCompany: "Entreprise inconnue",
+    badgeQrHint: "Scanner le QR, installer l'app et ouvrir le badge directement.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "Fonction QR",
+    badgeMetaQrFuncVal: "Installation app travailleurs",
+    badgeMetaRoleLabel: "Rôle dans le système",
+    badgePhotoUploadHint: "Prendre ou télécharger une photo",
     accessFormEyebrow: "Tourniquet",
     accessFormH3: "Check-in et check-out",
     labelAccessBadge: "Badge ID ou travailleur",
@@ -1418,6 +1474,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Propósito de la visita",
     labelHostName: "Contacto en obra",
     labelVisitEndAt: "Fin de visita",
+    visitorHint: "Los visitantes son válidos por unas horas o hasta el final del día. Los registros abiertos se cierran automáticamente a las 00:00 como máximo, la tarjeta se conserva para informes.",
     labelWorkerStatus: "Estado",
     optStatusActive: "Activo",
     optStatusLocked: "Bloqueado",
@@ -1446,6 +1503,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Ayuda escaneo",
     badgeScanH3: "Código de credencial",
     badgeScanEmpty: "Ninguna credencial seleccionada.",
+    badgeTitleVisitor: "Tarjeta de visitante digital",
+    badgeTitleDayPass: "Pase diario de obra digital",
+    badgeTitleRegular: "Insignia de obra digital",
+    badgeUnknownCompany: "Empresa desconocida",
+    badgeQrHint: "Escanear QR, instalar la app y abrir la insignia directamente.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "Funci\u00f3n QR",
+    badgeMetaQrFuncVal: "Instalaci\u00f3n de app de trabajadores",
+    badgeMetaRoleLabel: "Rol en el sistema",
+    badgePhotoUploadHint: "Tomar o subir foto",
     accessFormEyebrow: "Torniquete",
     accessFormH3: "Check-in y check-out",
     labelAccessBadge: "Badge ID o trabajador",
@@ -1636,6 +1703,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Scopo della visita",
     labelHostName: "Contatto in cantiere",
     labelVisitEndAt: "Fine visita",
+    visitorHint: "I visitatori sono validi per alcune ore o fino a fine giornata. Gli accessi aperti vengono chiusi automaticamente alle 00:00 al pi\u00f9 tardi, la tessera rimane conservata per i report.",
     labelWorkerStatus: "Stato",
     optStatusActive: "Attivo",
     optStatusLocked: "Bloccato",
@@ -1664,6 +1732,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Aiuto scansione",
     badgeScanH3: "Codice badge",
     badgeScanEmpty: "Nessun badge selezionato.",
+    badgeTitleVisitor: "Tessera visitatore digitale",
+    badgeTitleDayPass: "Pass giornaliero cantiere digitale",
+    badgeTitleRegular: "Badge cantiere digitale",
+    badgeUnknownCompany: "Azienda sconosciuta",
+    badgeQrHint: "Scansiona il QR, installa l'app e apri il badge direttamente.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "Funzione QR",
+    badgeMetaQrFuncVal: "Installazione app lavoratori",
+    badgeMetaRoleLabel: "Ruolo nel sistema",
+    badgePhotoUploadHint: "Scatta o carica una foto",
     accessFormEyebrow: "Tornello",
     accessFormH3: "Check-in e check-out",
     labelAccessBadge: "Badge ID o lavoratore",
@@ -1854,6 +1932,7 @@ const UI_TRANSLATIONS = {
     labelVisitPurpose: "Cel wizyty",
     labelHostName: "Kontakt na budowie",
     labelVisitEndAt: "Koniec wizyty",
+    visitorHint: "Goście są ważni przez kilka godzin lub do końca dnia. Otwarte wejścia są automatycznie wyrejestrowane najpóźniej o 00:00, karta jest zachowana do celów raportowania.",
     labelWorkerStatus: "Status",
     optStatusActive: "Aktywny",
     optStatusLocked: "Zablokowany",
@@ -1882,6 +1961,16 @@ const UI_TRANSLATIONS = {
     badgeScanEyebrow: "Pomoc skanowania",
     badgeScanH3: "Kod identyfikatora",
     badgeScanEmpty: "Nie wybrano identyfikatora.",
+    badgeTitleVisitor: "Cyfrowa karta go\u015bcia",
+    badgeTitleDayPass: "Cyfrowa dzienna przepustka budowy",
+    badgeTitleRegular: "Cyfrowa odznaka budowy",
+    badgeUnknownCompany: "Nieznana firma",
+    badgeQrHint: "Zeskanuj QR, zainstaluj aplikacj\u0119 i otw\u00f3rz odznak\u0119 bezpo\u015brednio.",
+    badgeLabelBadgeId: "Badge-ID",
+    badgeMetaQrFunc: "Funkcja QR",
+    badgeMetaQrFuncVal: "Instalacja aplikacji pracownika",
+    badgeMetaRoleLabel: "Rola w systemie",
+    badgePhotoUploadHint: "Zr\u00f3b lub prze\u015blij zdj\u0119cie",
     accessFormEyebrow: "Bramka",
     accessFormH3: "Check-in i check-out",
     labelAccessBadge: "Badge ID lub pracownik",
@@ -2484,6 +2573,7 @@ function getRuntimeUiTexts() {
     badgePinHintWorker: "Badge login in the worker app now works only with badge ID and this PIN. While editing, you can set a new PIN here.",
     workerListEmpty: "No workers created yet.",
     workerListNoResults: "No results for \"{term}\".",
+    recentAccessEmpty: "No access bookings yet.",
     badgeEmptyStateShort: "Please create a worker first.",
     badgeNoneSelected: "No badge selected.",
     dayReportEmpty: "No data available for the daily report yet.",
@@ -2519,6 +2609,52 @@ function getRuntimeUiTexts() {
     photoZoomCropLabel: "Zoom / Crop",
     photoSharpenLabel: "Sharpness:",
     bulkSelectAllLabel: "Select all",
+    noSubcompanyOption: "No subcompany",
+    selectPersonOption: "Please select a person",
+    visitorTagShort: "Visitor",
+    dashboardLastAccessPlaceholder: "Latest access is shown once a check-in or check-out exists.",
+    dashboardLastAccessHeading: "Latest access",
+    dashboardDirectionCheckin: "Check-in",
+    dashboardDirectionCheckout: "Check-out",
+    unknownPerson: "Unknown",
+    unknownCompany: "Unknown company",
+    unknownTurnstile: "Unknown turnstile",
+    accessFilterEmpty: "No access bookings for the selected filter.",
+    dayCloseAutoClosedAfterMidnight: "Automatically checked out after 00:00:",
+    dayCloseAckTitle: "Day-close already acknowledged",
+    dayCloseAckByOn: "By {user} on {when}",
+    dayCloseCommentLabel: "Comment: {comment}",
+    dayCloseCheckActive: "Day-close check active",
+    dayCloseOpenEntriesNoExit: "{count} open check-ins without check-out.",
+    dayCloseNoOpenEntries: "No open check-ins.",
+    dayCloseAlertAt18: "Day-close 18:00: {count} open check-ins without check-out found.",
+    dayCloseCommentMin: "Please enter a meaningful comment with at least 4 characters.",
+    dayCloseAckSuccess: "Day-close acknowledged successfully.",
+    turnstileSelectWorkerFirst: "Please select a worker first.",
+    workerPhotoRequired: "Please take a photo first. The badge can only be saved with photo.",
+    subcompanyNameRequired: "Please select company and subcompany name first.",
+    cameraPermissionRetry: "Camera access was blocked. Please allow camera access in the browser and click Start camera again.",
+    photoReadFailed: "Photo could not be read.",
+    photoLoadFailed: "Photo could not be loaded.",
+    cameraStartFirst: "Please start the camera first.",
+    photoProcessingUnavailable: "Photo processing unavailable.",
+    workerBadgePinMissing: "Please set a badge PIN for the worker.",
+    visitorPurposeMissing: "Please provide a visit purpose.",
+    visitorCompanyMissing: "Please provide the visitor company.",
+    visitorHostMissing: "Please provide an on-site contact person.",
+    visitorEndMissing: "Please provide a visit end date and time.",
+    popupBlockedAllow: "Popup blocked. Please allow popups.",
+    logoImageFileRequired: "Please select an image file for the logo.",
+    invoiceSentEmail: "Invoice sent by email.",
+    invoiceSavedEmailNotConfigured: "Invoice saved, but email is not configured. Please configure SMTP in Admin settings.",
+    invoiceSelectCompany: "Please select a company.",
+    invoiceRecipientInvalid: "Please enter a valid recipient email.",
+    invoiceFormRequiredFields: "Please fill in invoice date, due date, service period, and service description.",
+    invoiceMarkedPaid: "Invoice marked as paid.",
+    backendUnreachableReload: "Backend unreachable. Please check server/network and reload.",
+    loginResponseIncomplete: "Login response from server is incomplete. Please reload and try again.",
+    demoAdminOnly: "Only admin roles can load demo data.",
+    loginFirst: "Please sign in first.",
   };
   const map = {
     de: {
@@ -2537,6 +2673,7 @@ function getRuntimeUiTexts() {
       badgePinHintWorker: "Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.",
       workerListEmpty: "Noch keine Mitarbeiter angelegt.",
       workerListNoResults: "Keine Treffer fuer \"{term}\".",
+      recentAccessEmpty: "Noch keine Zutrittsbuchungen vorhanden.",
       badgeEmptyStateShort: "Bitte zuerst einen Mitarbeiter anlegen.",
       badgeNoneSelected: "Kein Badge ausgewaehlt.",
       dayReportEmpty: "Noch keine Daten fuer den Tagesbericht.",
@@ -2572,19 +2709,66 @@ function getRuntimeUiTexts() {
       photoZoomCropLabel: "Zoom / Zuschneiden",
       photoSharpenLabel: "Schaerfe:",
       bulkSelectAllLabel: "Alle auswaehlen",
+      noSubcompanyOption: "Kein Subunternehmen",
+      selectPersonOption: "Bitte Person waehlen",
+      visitorTagShort: "Besucher",
+      dashboardLastAccessPlaceholder: "Letzter Zutritt wird angezeigt, sobald eine An- oder Abmeldung vorliegt.",
+      dashboardLastAccessHeading: "Letzter Zutritt",
+      dashboardDirectionCheckin: "Anmeldung",
+      dashboardDirectionCheckout: "Abmeldung",
+      unknownPerson: "Unbekannt",
+      unknownCompany: "Unbekannte Firma",
+      unknownTurnstile: "Unbekanntes Drehkreuz",
+      accessFilterEmpty: "Keine Zutrittsbuchungen fuer den gewaelten Filter.",
+      dayCloseAutoClosedAfterMidnight: "Nach 00:00 automatisch abgemeldet:",
+      dayCloseAckTitle: "Tagesabschluss bereits quittiert",
+      dayCloseAckByOn: "Von {user} am {when}",
+      dayCloseCommentLabel: "Kommentar: {comment}",
+      dayCloseCheckActive: "Tagesabschluss-Pruefung aktiv",
+      dayCloseOpenEntriesNoExit: "{count} offene Eintritte ohne Austritt.",
+      dayCloseNoOpenEntries: "Keine offenen Eintritte.",
+      dayCloseAlertAt18: "Tagesabschluss 18:00: {count} offene Eintritte ohne Austritt gefunden.",
+      dayCloseCommentMin: "Bitte einen aussagekraeftigen Kommentar mit mindestens 4 Zeichen eingeben.",
+      dayCloseAckSuccess: "Tagesabschluss wurde erfolgreich quittiert.",
+      turnstileSelectWorkerFirst: "Bitte zuerst einen Mitarbeiter auswaehlen.",
+      workerPhotoRequired: "Bitte zuerst ein Foto aufnehmen. Der Ausweis wird nur mit Foto gespeichert.",
+      subcompanyNameRequired: "Bitte zuerst Firma und Subunternehmensname angeben.",
+      cameraPermissionRetry: "Kamera-Zugriff wurde blockiert. Bitte Browser-Zugriff auf die Kamera erlauben und erneut auf Kamera starten klicken.",
+      photoReadFailed: "Foto konnte nicht gelesen werden.",
+      photoLoadFailed: "Foto konnte nicht geladen werden.",
+      cameraStartFirst: "Bitte zuerst die Kamera starten.",
+      photoProcessingUnavailable: "Fotoverarbeitung nicht verfuegbar.",
+      workerBadgePinMissing: "Bitte eine Badge-PIN fuer den Mitarbeiter setzen.",
+      visitorPurposeMissing: "Bitte einen Besuchszweck angeben.",
+      visitorCompanyMissing: "Bitte die Besucherfirma angeben.",
+      visitorHostMissing: "Bitte einen Ansprechpartner vor Ort angeben.",
+      visitorEndMissing: "Bitte ein Besuchsende mit Datum und Uhrzeit angeben.",
+      popupBlockedAllow: "Popup blockiert. Bitte Popups erlauben.",
+      logoImageFileRequired: "Bitte eine Bilddatei fuer das Logo auswaehlen.",
+      invoiceSentEmail: "Rechnung wurde per E-Mail versendet.",
+      invoiceSavedEmailNotConfigured: "Rechnung wurde gespeichert, aber E-Mail ist nicht eingerichtet. Bitte SMTP im Superadmin-Bereich unter Admin-Einstellungen konfigurieren.",
+      invoiceSelectCompany: "Bitte eine Firma auswaehlen.",
+      invoiceRecipientInvalid: "Bitte eine gueltige Empfaenger-E-Mail eingeben.",
+      invoiceFormRequiredFields: "Bitte Rechnungsdatum, Faelligkeitsdatum, Leistungszeitraum und Leistungsbeschreibung ausfuellen.",
+      invoiceMarkedPaid: "Rechnung als bezahlt markiert",
+      backendUnreachableReload: "Backend nicht erreichbar. Bitte pruefe, ob der Server laeuft und lade die Seite neu.",
+      loginResponseIncomplete: "Login-Antwort vom Server ist unvollstaendig. Bitte Seite neu laden und erneut versuchen.",
+      demoAdminOnly: "Nur Admin-Rollen duerfen Demo-Daten laden.",
+      loginFirst: "Bitte zuerst anmelden.",
     },
     tr: {
       sessionLoggedIn: "Giris yapan",
       sessionRole: "Rol",
       roleUnknown: "Bilinmiyor",
       roleSuperadmin: "Superadmin",
-      roleCompanyAdmin: "Firma yoneticisi",
+      roleCompanyAdmin: "Firma Y\u00f6neticisi",
       roleTurnstile: "Turnike",
-      statsWorkersTotal: "Toplam calisan",
-      statsWorkersActive: "Aktif calisan",
-      statsVisitorsTotal: "Toplam ziyaretci",
+      statsWorkersTotal: "Toplam \u00e7al\u0131\u015fan",
+      statsWorkersActive: "Aktif \u00e7al\u0131\u015fan",
+      statsVisitorsTotal: "Toplam ziyaret\u00e7i",
       statsCompanies: "Firmalar",
-      statsAccessToday: "Bugunku giris",
+      statsAccessToday: "Bug\u00fcnk\u00fc giri\u015f",
+      recentAccessEmpty: "Hen\u00fcz eri\u015fim kayd\u0131 yok.",
     },
     ar: {
       sessionLoggedIn: "تسجيل الدخول",
@@ -2598,6 +2782,7 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "إجمالي الزوار",
       statsCompanies: "الشركات",
       statsAccessToday: "دخول اليوم",
+      recentAccessEmpty: "\u0644\u0627 \u062a\u0648\u062c\u062f \u062d\u062c\u0648\u0632\u0627\u062a \u0648\u0635\u0648\u0644 \u0628\u0639\u062f.",
     },
     fr: {
       sessionLoggedIn: "Connecte",
@@ -2611,6 +2796,7 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "Visiteurs total",
       statsCompanies: "Entreprises",
       statsAccessToday: "Acces aujourd'hui",
+      recentAccessEmpty: "Aucune r\u00e9servation d'acc\u00e8s encore.",
     },
     es: {
       sessionLoggedIn: "Conectado",
@@ -2624,6 +2810,7 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "Visitantes total",
       statsCompanies: "Empresas",
       statsAccessToday: "Accesos hoy",
+      recentAccessEmpty: "A\u00fan no hay registros de acceso.",
     },
     it: {
       sessionLoggedIn: "Accesso",
@@ -2637,6 +2824,7 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "Visitatori totali",
       statsCompanies: "Aziende",
       statsAccessToday: "Accessi oggi",
+      recentAccessEmpty: "Nessuna prenotazione di accesso ancora.",
     },
     pl: {
       sessionLoggedIn: "Zalogowany",
@@ -2650,6 +2838,7 @@ function getRuntimeUiTexts() {
       statsVisitorsTotal: "Goscie lacznie",
       statsCompanies: "Firmy",
       statsAccessToday: "Wejscia dzis",
+      recentAccessEmpty: "Brak jeszcze rezerwacji dost\u0119pu.",
     },
   };
   return {
@@ -2959,7 +3148,7 @@ function populateSubcompanySelects() {
     .join("");
 
   const current = select.value || "";
-  select.innerHTML = `<option value="">Kein Subunternehmen</option>${options}`;
+  select.innerHTML = `<option value="">${uiT("optNoSubcompany")}</option>${options}`;
   if (current && Array.from(select.options).some((opt) => opt.value === current)) {
     select.value = current;
   }
@@ -3905,9 +4094,9 @@ function populateWorkerSelectOptions() {
   const current = select.value;
   const options = state.workers
     .filter((w) => !w.deletedAt)
-    .map((w) => `<option value="${escapeHtml(w.id)}">${escapeHtml(`${w.firstName} ${w.lastName}`)}${isVisitorWorker(w) ? " [Besucher]" : ""} (${escapeHtml(w.badgeId || "-")})</option>`)
+    .map((w) => `<option value="${escapeHtml(w.id)}">${escapeHtml(`${w.firstName} ${w.lastName}`)}${isVisitorWorker(w) ? ` [${runtimeText("visitorTagShort")}]` : ""} (${escapeHtml(w.badgeId || "-")})</option>`)
     .join("");
-  select.innerHTML = `<option value="">Bitte Person waehlen</option>${options}`;
+  select.innerHTML = `<option value="">${runtimeText("selectPersonOption")}</option>${options}`;
   if (current && Array.from(select.options).some((o) => o.value === current)) {
     select.value = current;
   }
@@ -4250,8 +4439,8 @@ function renderBadge() {
   const isDayPass = normalizedPlan === "tageskarte";
   const visitor = isVisitorWorker(worker);
   const badgeTitle = visitor
-    ? "Digitale Besucherkarte"
-    : (isDayPass ? "Digitaler Baustellen-Tagesausweis" : "Digitaler Baustellen-Ausweis");
+    ? uiT("badgeTitleVisitor")
+    : (isDayPass ? uiT("badgeTitleDayPass") : uiT("badgeTitleRegular"));
   const badgeClass = isDayPass ? "badge-card badge-card-daypass" : "badge-card";
   const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
@@ -4265,7 +4454,7 @@ function renderBadge() {
         <div>
           <p class="eyebrow">${escapeHtml(state.settings.platformName)}</p>
           <h3>${escapeHtml(badgeTitle)}</h3>
-          <p>${escapeHtml(company?.name || "Unbekannte Firma")}</p>
+          <p>${escapeHtml(company?.name || uiT("badgeUnknownCompany"))}</p>
         </div>
         <span class="badge-chip">${escapeHtml(worker.status)}</span>
       </div>
@@ -4274,21 +4463,21 @@ function renderBadge() {
         <div class="badge-copy">
           <img class="badge-photo${!worker.photoData ? ' badge-photo-placeholder' : ''}" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" style="${!worker.photoData ? 'cursor:pointer;outline:2px dashed #b07d00;' : ''}" />
           <p><strong>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</strong></p>
-          <p>${escapeHtml(visitor ? "Besucher" : worker.role)}</p>
-          ${subcompanyLabel ? `<p>Subunternehmen: ${escapeHtml(subcompanyLabel)}</p>` : ""}
-          ${visitor ? `<p>Besucherfirma: ${escapeHtml(worker.visitorCompany || "-")}</p><p>Zweck: ${escapeHtml(worker.visitPurpose || "-")}</p><p>Ansprechpartner: ${escapeHtml(worker.hostName || "-")}</p><p>Besuchsende: ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : ""}
-          <p>Tarif: ${escapeHtml(planLabel)}</p>
-          <p>Baustelle: ${escapeHtml(worker.site)}</p>
-          <p>Gueltig bis: ${formatDate(worker.validUntil)}</p>
+          <p>${escapeHtml(visitor ? uiT("optVisitor") : worker.role)}</p>
+          ${subcompanyLabel ? `<p>${uiT("labelSubcompany")}: ${escapeHtml(subcompanyLabel)}</p>` : ""}
+          ${visitor ? `<p>${uiT("labelVisitorCompany")}: ${escapeHtml(worker.visitorCompany || "-")}</p><p>${uiT("labelVisitPurpose")}: ${escapeHtml(worker.visitPurpose || "-")}</p><p>${uiT("labelHostName")}: ${escapeHtml(worker.hostName || "-")}</p><p>${uiT("labelVisitEndAt")}: ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : ""}
+          <p>${uiT("labelPlan")}: ${escapeHtml(planLabel)}</p>
+          <p>${uiT("labelSite")}: ${escapeHtml(worker.site)}</p>
+          <p>${uiT("labelValidUntil")}: ${formatDate(worker.validUntil)}</p>
         </div>
         <div class="qr-block">
           <img id="${qrId}" alt="Mitarbeiter-App QR fuer ${escapeHtml(worker.badgeId)}" style="width:100%; border-radius:12px;" />
-          <p class="helper-text" style="margin-top:10px; text-align:center;">QR scannen, App installieren und Ausweis direkt oeffnen.</p>
+          <p class="helper-text" style="margin-top:10px; text-align:center;">${uiT("badgeQrHint")}</p>
         </div>
       </div>
 
       <div class="badge-footer">
-        <p>Badge-ID: ${escapeHtml(worker.badgeId)}</p>
+        <p>${uiT("badgeLabelBadgeId")}: ${escapeHtml(worker.badgeId)}</p>
         <p>${escapeHtml(state.settings.operatorName)}</p>
       </div>
     </article>
@@ -4298,7 +4487,7 @@ function renderBadge() {
   setTimeout(() => {
     const badgePhoto = elements.badgePreview.querySelector('.badge-photo-placeholder');
     if (badgePhoto) {
-      badgePhoto.title = 'Foto aufnehmen oder hochladen';
+      badgePhoto.title = uiT('badgePhotoUploadHint');
       badgePhoto.addEventListener('click', () => {
         // Switch to workers view and open editor for this exact worker.
         setView('workers');
@@ -4331,15 +4520,15 @@ function renderBadge() {
   elements.badgeMeta.className = "badge-meta";
   elements.badgeMeta.innerHTML = `
     <div class="meta-box">
-      <p>Badge-ID</p>
+      <p>${uiT("badgeLabelBadgeId")}</p>
       <code>${escapeHtml(worker.badgeId)}</code>
     </div>
     <div class="meta-box">
-      <p>QR-Funktion</p>
-      <code>Mitarbeiter-App Installation</code>
+      <p>${uiT("badgeMetaQrFunc")}</p>
+      <code>${uiT("badgeMetaQrFuncVal")}</code>
     </div>
     <div class="meta-box">
-      <p>Rolle im System</p>
+      <p>${uiT("badgeMetaRoleLabel")}</p>
       <p>${escapeHtml(getRoleLabel(getCurrentUser()?.role || "unbekannt"))}</p>
     </div>
   `;
@@ -4389,7 +4578,7 @@ function renderRecentAccess() {
   const recent = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp)).slice(0, 5);
 
   if (!recent.length) {
-    elements.recentAccessList.innerHTML = '<div class="empty-state">Noch keine Zutrittsbuchungen vorhanden.</div>';
+    elements.recentAccessList.innerHTML = `<div class="empty-state">${runtimeText("recentAccessEmpty")}</div>`;
     return;
   }
 
@@ -4415,33 +4604,35 @@ function renderDashboardPorterLivePanel() {
   const latest = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp))[0] || null;
   if (!latest) {
     panel.className = "porter-live-card empty-state";
-    panel.innerHTML = "Letzter Zutritt wird angezeigt, sobald eine An- oder Abmeldung vorliegt.";
+    panel.innerHTML = runtimeText("dashboardLastAccessPlaceholder");
     return;
   }
 
   const worker = state.workers.find((entry) => entry.id === latest.workerId) || null;
   const company = worker ? state.companies.find((entry) => entry.id === worker.companyId) : null;
   const subcompanyLabel = getSubcompanyLabel(worker);
-  const directionLabel = latest.direction === "check-in" ? "Anmeldung" : "Abmeldung";
+  const directionLabel = latest.direction === "check-in"
+    ? runtimeText("dashboardDirectionCheckin")
+    : runtimeText("dashboardDirectionCheckout");
   const photoSrc = worker
     ? sanitizeImageSrc(worker.photoData, createAvatar(worker))
     : createAvatar({ firstName: "?", lastName: "?" });
-  const workerName = worker ? `${worker.firstName} ${worker.lastName}` : "Unbekannt";
+  const workerName = worker ? `${worker.firstName} ${worker.lastName}` : runtimeText("unknownPerson");
   const eventClass = latest.direction === "check-in" ? "porter-event" : "porter-event muted";
 
   panel.className = "porter-live-card";
   panel.innerHTML = `
     <div class="porter-live-topline">
-      <strong>Letzter Zutritt</strong>
+      <strong>${runtimeText("dashboardLastAccessHeading")}</strong>
       <span>${escapeHtml(formatTimestamp(latest.timestamp))}</span>
     </div>
     <div class="porter-head">
       <img class="porter-photo" src="${photoSrc}" alt="${escapeHtml(workerName)}" />
       <div>
         <strong>${escapeHtml(workerName)}</strong>
-        <span>${escapeHtml(company?.name || "Unbekannte Firma")}</span>
+        <span>${escapeHtml(company?.name || runtimeText("unknownCompany"))}</span>
         ${subcompanyLabel ? `<span>${escapeHtml(subcompanyLabel)}</span>` : ""}
-        <span>${escapeHtml(latest.gate || "Unbekanntes Drehkreuz")}</span>
+        <span>${escapeHtml(latest.gate || runtimeText("unknownTurnstile"))}</span>
       </div>
     </div>
     <div class="${eventClass}">${escapeHtml(directionLabel)}${latest.note ? ` | ${escapeHtml(latest.note)}` : ""}</div>
@@ -4501,7 +4692,7 @@ function renderAccessLog() {
   const entries = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
 
   if (!entries.length) {
-    elements.accessLogList.innerHTML = '<div class="empty-state">Keine Zutrittsbuchungen fuer den gewaelten Filter.</div>';
+    elements.accessLogList.innerHTML = `<div class="empty-state">${runtimeText("accessFilterEmpty")}</div>`;
     return;
   }
 
@@ -4643,7 +4834,7 @@ function renderDayCloseBanner() {
   const autoClosedMarkup = autoClosedCount > 0
     ? `
       <div class="summary-visitor-block">
-        <span class="summary-visitor-title">Nach 00:00 automatisch abgemeldet:</span>
+        <span class="summary-visitor-title">${runtimeText("dayCloseAutoClosedAfterMidnight")}</span>
         <div class="summary-visitor-list">${autoClosedEntries.map((entry) => `<span class="summary-visitor-pill">${escapeHtml(entry.name)}</span>`).join("")}</div>
       </div>
     `
@@ -4651,11 +4842,11 @@ function renderDayCloseBanner() {
 
   if (acknowledgement) {
     const when = formatTimestamp(acknowledgement.createdAt);
-    elements.dayCloseBanner.innerHTML = `<strong>Tagesabschluss bereits quittiert</strong><span>Von ${escapeHtml(acknowledgement.acknowledgedBy)} am ${escapeHtml(when)}</span><span>Kommentar: ${escapeHtml(acknowledgement.comment)}</span>${autoClosedMarkup}`;
+    elements.dayCloseBanner.innerHTML = `<strong>${runtimeText("dayCloseAckTitle")}</strong><span>${runtimeTextTemplate("dayCloseAckByOn", { user: escapeHtml(acknowledgement.acknowledgedBy), when: escapeHtml(when) })}</span><span>${runtimeTextTemplate("dayCloseCommentLabel", { comment: escapeHtml(acknowledgement.comment) })}</span>${autoClosedMarkup}`;
   } else if (count > 0) {
-    elements.dayCloseBanner.innerHTML = `<strong>Tagesabschluss-Pruefung aktiv</strong><span>${count} offene Eintritte ohne Austritt.</span>${autoClosedMarkup}`;
+    elements.dayCloseBanner.innerHTML = `<strong>${runtimeText("dayCloseCheckActive")}</strong><span>${runtimeTextTemplate("dayCloseOpenEntriesNoExit", { count })}</span>${autoClosedMarkup}`;
   } else {
-    elements.dayCloseBanner.innerHTML = `<strong>Tagesabschluss-Pruefung aktiv</strong><span>Keine offenen Eintritte.</span>${autoClosedMarkup}`;
+    elements.dayCloseBanner.innerHTML = `<strong>${runtimeText("dayCloseCheckActive")}</strong><span>${runtimeText("dayCloseNoOpenEntries")}</span>${autoClosedMarkup}`;
   }
 
   const showForm = canAcknowledge && count > 0 && !acknowledgement;
@@ -4681,14 +4872,14 @@ function triggerAutoDayCloseAlert() {
   }
 
   localStorage.setItem(key, "1");
-  window.alert(`Tagesabschluss 18:00: ${count} offene Eintritte ohne Austritt gefunden.`);
+  window.alert(runtimeTextTemplate("dayCloseAlertAt18", { count }));
 }
 
 async function handleDayCloseAcknowledge(event) {
   event.preventDefault();
   const comment = elements.dayCloseComment.value.trim();
   if (comment.length < 4) {
-    window.alert("Bitte einen aussagekräftigen Kommentar mit mindestens 4 Zeichen eingeben.");
+    window.alert(runtimeText("dayCloseCommentMin"));
     return;
   }
 
@@ -4704,7 +4895,7 @@ async function handleDayCloseAcknowledge(event) {
     elements.dayCloseComment.value = "";
     await loadAllData();
     refreshAll();
-    window.alert("Tagesabschluss wurde erfolgreich quittiert.");
+    window.alert(runtimeText("dayCloseAckSuccess"));
   } catch (error) {
     window.alert(`Tagesabschluss konnte nicht quittiert werden: ${error.message}`);
   } finally {
@@ -4804,7 +4995,7 @@ function renderTurnstileQuickPanel() {
     button.addEventListener("click", () => {
       const workerId = elements.accessWorkerSelect.value;
       if (!workerId) {
-        window.alert("Bitte zuerst einen Mitarbeiter auswählen.");
+        window.alert(runtimeText("turnstileSelectWorkerFirst"));
         return;
       }
       bookAccess(workerId, button.dataset.quickDirection, "Drehkreuz Schnellmodus", "Terminalbuchung");
@@ -4823,7 +5014,7 @@ async function handleWorkerSubmit(event) {
 
   const photoDataValue = document.querySelector("#photoData").value;
   if (!photoDataValue) {
-    window.alert("Bitte zuerst ein Foto aufnehmen. Der Ausweis wird nur mit Foto gespeichert.");
+    window.alert(runtimeText("workerPhotoRequired"));
     setView("workers");
     const cameraBlock = document.querySelector(".camera-block");
     if (cameraBlock) {
@@ -4874,7 +5065,7 @@ async function handleWorkerSubmit(event) {
       return;
     }
     if (error.message === "badge_pin_required") {
-      window.alert("Bitte eine Badge-PIN für den Mitarbeiter setzen.");
+      window.alert(runtimeText("workerBadgePinMissing"));
       return;
     }
     if (error.message === "duplicate_physical_card_id") {
@@ -4882,19 +5073,19 @@ async function handleWorkerSubmit(event) {
       return;
     }
     if (error.message === "visit_purpose_required") {
-      window.alert("Bitte einen Besuchszweck angeben.");
+      window.alert(runtimeText("visitorPurposeMissing"));
       return;
     }
     if (error.message === "visitor_company_required") {
-      window.alert("Bitte die Besucherfirma angeben.");
+      window.alert(runtimeText("visitorCompanyMissing"));
       return;
     }
     if (error.message === "host_name_required") {
-      window.alert("Bitte einen Ansprechpartner vor Ort angeben.");
+      window.alert(runtimeText("visitorHostMissing"));
       return;
     }
     if (error.message === "visit_end_required") {
-      window.alert("Bitte ein Besuchsende mit Datum und Uhrzeit angeben.");
+      window.alert(runtimeText("visitorEndMissing"));
       return;
     }
     window.alert(`Mitarbeiter konnte nicht gespeichert werden: ${error.message}`);
@@ -5156,7 +5347,7 @@ function printDailyReport() {
 
   const reportWindow = window.open("", "_blank", "width=960,height=800");
   if (!reportWindow) {
-    window.alert("Popup blockiert. Bitte Popups erlauben.");
+    window.alert(runtimeText("popupBlockedAllow"));
     return;
   }
   reportWindow.document.open();
@@ -5198,7 +5389,7 @@ function printVisitorWeeklyReport() {
   const htmlRows = rows.map((entry) => `<tr><td>${escapeHtml(entry.name)}</td><td>${escapeHtml(entry.visitorCompany || "-")}</td><td>${escapeHtml(entry.purpose || "-")}</td><td>${escapeHtml(entry.hostName || "-")}</td><td>${escapeHtml(entry.site || "-")}</td><td>${escapeHtml(entry.lastSeen || "-")}</td></tr>`).join("");
   const reportWindow = window.open("", "_blank", "width=1100,height=800");
   if (!reportWindow) {
-    window.alert("Popup blockiert. Bitte Popups erlauben.");
+    window.alert(runtimeText("popupBlockedAllow"));
     return;
   }
   reportWindow.document.open();
@@ -5307,7 +5498,7 @@ async function handleInvoiceLogoUpload(event) {
   }
 
   if (!file.type.startsWith("image/")) {
-    window.alert("Bitte eine Bilddatei für das Logo auswählen.");
+    window.alert(runtimeText("logoImageFileRequired"));
     return;
   }
 
@@ -5384,7 +5575,7 @@ async function handleInvoicePrint(event) {
 
   const invoiceWindow = window.open("", "_blank", "width=980,height=860");
   if (!invoiceWindow) {
-    window.alert("Popup blockiert. Bitte Popups erlauben.");
+    window.alert(runtimeText("popupBlockedAllow"));
     return;
   }
   invoiceWindow.document.open();
@@ -5421,11 +5612,11 @@ async function handleInvoiceSend() {
     await loadAllData();
     refreshAll();
     if (payload.sent) {
-      window.alert("Rechnung wurde per E-Mail versendet.");
+      window.alert(runtimeText("invoiceSentEmail"));
     } else {
       const errorText = String(payload.error || "");
       if (errorText.toLowerCase().includes("smtp ist nicht konfiguriert")) {
-        window.alert("Rechnung wurde gespeichert, aber E-Mail ist nicht eingerichtet. Bitte SMTP im Superadmin-Bereich unter Admin-Einstellungen konfigurieren.");
+        window.alert(runtimeText("invoiceSavedEmailNotConfigured"));
       } else {
         window.alert(`Rechnung gespeichert, Versand fehlgeschlagen: ${payload.error}`);
       }
@@ -5445,7 +5636,7 @@ function buildInvoiceDraft(options = {}) {
   const company = state.companies.find((entry) => entry.id === companyId);
   if (!company) {
     if (!silent) {
-      window.alert("Bitte eine Firma auswählen.");
+      window.alert(runtimeText("invoiceSelectCompany"));
     }
     return null;
   }
@@ -5453,7 +5644,7 @@ function buildInvoiceDraft(options = {}) {
   const recipientEmail = elements.invoiceRecipientEmail.value.trim();
   if (!recipientEmail.includes("@")) {
     if (!silent) {
-      window.alert("Bitte eine gültige Empfänger-E-Mail eingeben.");
+      window.alert(runtimeText("invoiceRecipientInvalid"));
     }
     return null;
   }
@@ -5480,7 +5671,7 @@ function buildInvoiceDraft(options = {}) {
 
   if (!invoiceDate || !invoiceDueDate || !invoicePeriod || !invoiceDescription) {
     if (!silent) {
-      window.alert("Bitte Rechnungsdatum, Fälligkeitsdatum, Leistungszeitraum und Leistungsbeschreibung ausfüllen.");
+      window.alert(runtimeText("invoiceFormRequiredFields"));
     }
     return null;
   }
@@ -5915,7 +6106,7 @@ function renderInvoiceManagementList() {
           method: "PUT",
           body: { paymentDate: new Date().toISOString().split("T")[0] }
         });
-        window.alert("Rechnung als bezahlt markiert");
+        window.alert(runtimeText("invoiceMarkedPaid"));
         await loadAndRenderInvoices();
         await loadAllData();
         refreshAll();
@@ -6173,7 +6364,7 @@ async function handleLoginSubmit(event) {
     }
   } catch (error) {
     if (error.message === "backend_unreachable") {
-      window.alert("Backend nicht erreichbar. Bitte prüfe, ob der Server läuft und lade die Seite neu.");
+      window.alert(runtimeText("backendUnreachableReload"));
       return;
     }
     if (error.message === "otp_required") {
@@ -6214,7 +6405,7 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "invalid_login_response") {
-      window.alert("Login-Antwort vom Server ist unvollständig. Bitte Seite neu laden und erneut versuchen.");
+      window.alert(runtimeText("loginResponseIncomplete"));
       return;
     }
     window.alert(`Login fehlgeschlagen: ${error.message}`);
@@ -6420,7 +6611,7 @@ async function startCamera() {
       elements.photoDebugText.style.color = "#8a5a00";
     }
     if (isMobile && (error?.name === "NotAllowedError" || error?.name === "SecurityError")) {
-      window.alert("Kamera-Zugriff wurde blockiert. Bitte Browser-Zugriff auf die Kamera erlauben und erneut auf Kamera starten klicken.");
+      window.alert(runtimeText("cameraPermissionRetry"));
       return;
     }
   }
@@ -6448,14 +6639,14 @@ function handlePhotoFileSelected(event) {
   reader.onload = async (loadEvent) => {
     const dataUrl = typeof loadEvent.target?.result === "string" ? loadEvent.target.result : "";
     if (!dataUrl) {
-      window.alert("Foto konnte nicht gelesen werden.");
+      window.alert(runtimeText("photoReadFailed"));
       return;
     }
     const cleaned = await processStillImageBackground(dataUrl);
     setPhotoEditorSource(cleaned || dataUrl, { resetOffset: true });
   };
   reader.onerror = () => {
-    window.alert("Foto konnte nicht geladen werden.");
+    window.alert(runtimeText("photoLoadFailed"));
   };
   reader.readAsDataURL(file);
 }
@@ -6465,12 +6656,12 @@ async function capturePhoto() {
   const video = elements.cameraPreview;
 
   if (!video.videoWidth || !video.videoHeight) {
-    window.alert("Bitte zuerst die Kamera starten.");
+    window.alert(runtimeText("cameraStartFirst"));
     return;
   }
 
   if (!context) {
-    window.alert("Fotoverarbeitung nicht verfuegbar.");
+    window.alert(runtimeText("photoProcessingUnavailable"));
     return;
   }
 
@@ -7006,7 +7197,7 @@ function applyPhotoEditorTransform() {
     renderPhotoEditorImage(image);
   };
   image.onerror = () => {
-    window.alert("Foto konnte nicht geladen werden.");
+    window.alert(runtimeText("photoLoadFailed"));
     resetPhotoEditor();
   };
   image.src = photoEditorSourceData;
@@ -7238,7 +7429,7 @@ async function exportState(options = {}) {
 
 async function loadDemoData() {
   if (!userCanManageWorkers()) {
-    window.alert("Nur Admin-Rollen duerfen Demo-Daten laden.");
+    window.alert(runtimeText("demoAdminOnly"));
     return;
   }
 
@@ -7304,7 +7495,7 @@ async function loadDemoData() {
 
 async function handleTopbarExport() {
   if (!token || !state.currentUser) {
-    window.alert("Bitte zuerst anmelden.");
+    window.alert(runtimeText("loginFirst"));
     return;
   }
   const exportCompanyId = state.currentUser?.company_id || state.currentUser?.companyId || "";
@@ -7474,7 +7665,7 @@ function showImportDryRunDialog(summary) {
 
 async function handleTopbarImport() {
   if (!token || !state.currentUser) {
-    window.alert("Bitte zuerst anmelden.");
+    window.alert(runtimeText("loginFirst"));
     return;
   }
 
@@ -7886,7 +8077,7 @@ if (addSubcompanyButton) {
     const companyId = document.querySelector("#companySelect")?.value || "";
     const name = (document.querySelector("#subcompanyName")?.value || "").trim();
     if (!companyId || !name) {
-      window.alert("Bitte zuerst Firma und Subunternehmensname angeben.");
+      window.alert(runtimeText("subcompanyNameRequired"));
       return;
     }
     try {
