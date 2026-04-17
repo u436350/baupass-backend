@@ -3501,7 +3501,7 @@ def restore_worker(worker_id):
 
 @app.post("/api/workers/<worker_id>/reset-pin")
 @require_auth
-@require_roles("superadmin", "company-admin")
+@require_roles("superadmin", "company-admin", "turnstile")
 def reset_worker_pin(worker_id):
     payload = request.get_json(silent=True) or {}
     db = get_db()

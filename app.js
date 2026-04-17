@@ -177,6 +177,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Mitarbeiter-App Installation",
     badgeMetaRoleLabel: "Rolle im System",
     badgePhotoUploadHint: "Foto aufnehmen oder hochladen",
+    appPinLabel: "App-PIN",
+    pinNotRequired: "nicht noetig",
+    pinSet: "gesetzt",
+    pinMissing: "fehlt",
+    cardLabel: "Karte",
+    cardUnassigned: "nicht zugewiesen",
+    btnEdit: "Bearbeiten",
+    btnDelete: "Loeschen",
+    btnRestore: "Wiederherstellen",
+    btnAppLink: "App-Link",
+    btnResetPin: "PIN zuruecksetzen",
+    confirmDeleteWorker: "Mitarbeiter wirklich loeschen?",
+    alertDeleteWorkerFailed: "Mitarbeiter konnte nicht geloescht werden: {error}",
+    alertRestoreWorkerFailed: "Mitarbeiter konnte nicht wiederhergestellt werden: {error}",
+    alertAppLinkCreateFailed: "App-Link konnte nicht erzeugt werden: {error}",
+    promptResetPinFor: "Neue Badge-PIN fuer {name} (4-8 Ziffern):",
+    alertPinMustDigits: "PIN muss aus 4 bis 8 Ziffern bestehen.",
+    alertPinResetSuccessFor: "PIN fuer {name} wurde erfolgreich zurueckgesetzt.",
+    alertPinResetFailed: "PIN konnte nicht zurueckgesetzt werden: {error}",
+    detailCloseTitle: "Schliessen",
+    detailPhotoAlt: "Mitarbeiterfoto",
+    detailCheckinBtn: "Anmelden (Check-in)",
+    detailCheckoutBtn: "Abmelden (Check-out)",
     accessFormEyebrow: "Drehkreuz",
     accessFormH3: "Check-in und Check-out",
     labelAccessBadge: "Badge-ID oder Mitarbeiter",
@@ -406,6 +429,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Worker App Installation",
     badgeMetaRoleLabel: "Role in System",
     badgePhotoUploadHint: "Take or upload photo",
+    appPinLabel: "App PIN",
+    pinNotRequired: "not required",
+    pinSet: "set",
+    pinMissing: "missing",
+    cardLabel: "Card",
+    cardUnassigned: "not assigned",
+    btnEdit: "Edit",
+    btnDelete: "Delete",
+    btnRestore: "Restore",
+    btnAppLink: "App link",
+    btnResetPin: "Reset PIN",
+    confirmDeleteWorker: "Delete worker now?",
+    alertDeleteWorkerFailed: "Worker could not be deleted: {error}",
+    alertRestoreWorkerFailed: "Worker could not be restored: {error}",
+    alertAppLinkCreateFailed: "App link could not be created: {error}",
+    promptResetPinFor: "New badge PIN for {name} (4-8 digits):",
+    alertPinMustDigits: "PIN must contain 4 to 8 digits.",
+    alertPinResetSuccessFor: "PIN for {name} was reset successfully.",
+    alertPinResetFailed: "PIN could not be reset: {error}",
+    detailCloseTitle: "Close",
+    detailPhotoAlt: "Worker photo",
+    detailCheckinBtn: "Check in",
+    detailCheckoutBtn: "Check out",
     accessFormEyebrow: "Turnstile",
     accessFormH3: "Check-in and Check-out",
     labelAccessBadge: "Badge ID or Worker",
@@ -826,6 +872,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "\u00c7al\u0131\u015fan Uygulamas\u0131 Kurulumu",
     badgeMetaRoleLabel: "Sistemdeki Rol",
     badgePhotoUploadHint: "Foto\u011fraf \u00e7ek veya y\u00fckle",
+    appPinLabel: "Uygulama PIN",
+    pinNotRequired: "gerekli degil",
+    pinSet: "ayarli",
+    pinMissing: "eksik",
+    cardLabel: "Kart",
+    cardUnassigned: "atanmamis",
+    btnEdit: "Duzenle",
+    btnDelete: "Sil",
+    btnRestore: "Geri yukle",
+    btnAppLink: "Uygulama linki",
+    btnResetPin: "PIN sifirla",
+    confirmDeleteWorker: "Calisan silinsin mi?",
+    alertDeleteWorkerFailed: "Calisan silinemedi: {error}",
+    alertRestoreWorkerFailed: "Calisan geri yuklenemedi: {error}",
+    alertAppLinkCreateFailed: "Uygulama linki olusturulamadi: {error}",
+    promptResetPinFor: "{name} icin yeni rozet PIN'i (4-8 hane):",
+    alertPinMustDigits: "PIN 4 ila 8 hane olmali.",
+    alertPinResetSuccessFor: "{name} icin PIN basariyla sifirlandi.",
+    alertPinResetFailed: "PIN sifirlanamadi: {error}",
+    detailCloseTitle: "Kapat",
+    detailPhotoAlt: "Calisan fotografi",
+    detailCheckinBtn: "Giris (Check-in)",
+    detailCheckoutBtn: "Cikis (Check-out)",
     accessFormEyebrow: "Turnike",
     accessFormH3: "Check-in ve Check-out",
     labelAccessBadge: "Badge ID veya \u00c7al\u0131\u015fan",
@@ -1055,6 +1124,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "تثبيت تطبيق العمال",
     badgeMetaRoleLabel: "الدور في النظام",
     badgePhotoUploadHint: "التقط أو ارفع صورة",
+    appPinLabel: "PIN التطبيق",
+    pinNotRequired: "غير مطلوب",
+    pinSet: "مضبوط",
+    pinMissing: "مفقود",
+    cardLabel: "البطاقة",
+    cardUnassigned: "غير مخصصة",
+    btnEdit: "تعديل",
+    btnDelete: "حذف",
+    btnRestore: "استعادة",
+    btnAppLink: "رابط التطبيق",
+    btnResetPin: "إعادة تعيين PIN",
+    confirmDeleteWorker: "حذف العامل الآن؟",
+    alertDeleteWorkerFailed: "تعذر حذف العامل: {error}",
+    alertRestoreWorkerFailed: "تعذر استعادة العامل: {error}",
+    alertAppLinkCreateFailed: "تعذر إنشاء رابط التطبيق: {error}",
+    promptResetPinFor: "PIN جديد للشارة لـ {name} (4-8 أرقام):",
+    alertPinMustDigits: "يجب أن يكون PIN من 4 إلى 8 أرقام.",
+    alertPinResetSuccessFor: "تمت إعادة تعيين PIN لـ {name} بنجاح.",
+    alertPinResetFailed: "تعذر إعادة تعيين PIN: {error}",
+    detailCloseTitle: "إغلاق",
+    detailPhotoAlt: "صورة العامل",
+    detailCheckinBtn: "تسجيل دخول",
+    detailCheckoutBtn: "تسجيل خروج",
     accessFormEyebrow: "البوابة الدوارة",
     accessFormH3: "تسجيل دخول وخروج",
     labelAccessBadge: "Badge ID أو عامل",
@@ -1284,6 +1376,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Installation app travailleurs",
     badgeMetaRoleLabel: "Rôle dans le système",
     badgePhotoUploadHint: "Prendre ou télécharger une photo",
+    appPinLabel: "PIN app",
+    pinNotRequired: "non requis",
+    pinSet: "defini",
+    pinMissing: "manquant",
+    cardLabel: "Carte",
+    cardUnassigned: "non attribuee",
+    btnEdit: "Modifier",
+    btnDelete: "Supprimer",
+    btnRestore: "Restaurer",
+    btnAppLink: "Lien app",
+    btnResetPin: "Reinitialiser PIN",
+    confirmDeleteWorker: "Supprimer ce travailleur ?",
+    alertDeleteWorkerFailed: "Le travailleur n'a pas pu etre supprime: {error}",
+    alertRestoreWorkerFailed: "Le travailleur n'a pas pu etre restaure: {error}",
+    alertAppLinkCreateFailed: "Le lien app n'a pas pu etre cree: {error}",
+    promptResetPinFor: "Nouveau PIN badge pour {name} (4-8 chiffres):",
+    alertPinMustDigits: "Le PIN doit contenir 4 a 8 chiffres.",
+    alertPinResetSuccessFor: "Le PIN pour {name} a ete reinitialise.",
+    alertPinResetFailed: "Le PIN n'a pas pu etre reinitialise: {error}",
+    detailCloseTitle: "Fermer",
+    detailPhotoAlt: "Photo du travailleur",
+    detailCheckinBtn: "Entree (Check-in)",
+    detailCheckoutBtn: "Sortie (Check-out)",
     accessFormEyebrow: "Tourniquet",
     accessFormH3: "Check-in et check-out",
     labelAccessBadge: "Badge ID ou travailleur",
@@ -1513,6 +1628,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Instalaci\u00f3n de app de trabajadores",
     badgeMetaRoleLabel: "Rol en el sistema",
     badgePhotoUploadHint: "Tomar o subir foto",
+    appPinLabel: "PIN de app",
+    pinNotRequired: "no necesario",
+    pinSet: "configurado",
+    pinMissing: "faltante",
+    cardLabel: "Tarjeta",
+    cardUnassigned: "no asignada",
+    btnEdit: "Editar",
+    btnDelete: "Eliminar",
+    btnRestore: "Restaurar",
+    btnAppLink: "Enlace app",
+    btnResetPin: "Restablecer PIN",
+    confirmDeleteWorker: "\u00bfEliminar al trabajador ahora?",
+    alertDeleteWorkerFailed: "No se pudo eliminar al trabajador: {error}",
+    alertRestoreWorkerFailed: "No se pudo restaurar al trabajador: {error}",
+    alertAppLinkCreateFailed: "No se pudo crear el enlace de la app: {error}",
+    promptResetPinFor: "Nuevo PIN de badge para {name} (4-8 digitos):",
+    alertPinMustDigits: "El PIN debe tener de 4 a 8 digitos.",
+    alertPinResetSuccessFor: "El PIN de {name} se restablecio correctamente.",
+    alertPinResetFailed: "No se pudo restablecer el PIN: {error}",
+    detailCloseTitle: "Cerrar",
+    detailPhotoAlt: "Foto del trabajador",
+    detailCheckinBtn: "Entrada (Check-in)",
+    detailCheckoutBtn: "Salida (Check-out)",
     accessFormEyebrow: "Torniquete",
     accessFormH3: "Check-in y check-out",
     labelAccessBadge: "Badge ID o trabajador",
@@ -1742,6 +1880,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Installazione app lavoratori",
     badgeMetaRoleLabel: "Ruolo nel sistema",
     badgePhotoUploadHint: "Scatta o carica una foto",
+    appPinLabel: "PIN app",
+    pinNotRequired: "non necessario",
+    pinSet: "impostato",
+    pinMissing: "mancante",
+    cardLabel: "Carta",
+    cardUnassigned: "non assegnata",
+    btnEdit: "Modifica",
+    btnDelete: "Elimina",
+    btnRestore: "Ripristina",
+    btnAppLink: "Link app",
+    btnResetPin: "Reimposta PIN",
+    confirmDeleteWorker: "Eliminare il lavoratore ora?",
+    alertDeleteWorkerFailed: "Impossibile eliminare il lavoratore: {error}",
+    alertRestoreWorkerFailed: "Impossibile ripristinare il lavoratore: {error}",
+    alertAppLinkCreateFailed: "Impossibile creare il link app: {error}",
+    promptResetPinFor: "Nuovo PIN badge per {name} (4-8 cifre):",
+    alertPinMustDigits: "Il PIN deve contenere da 4 a 8 cifre.",
+    alertPinResetSuccessFor: "PIN di {name} reimpostato con successo.",
+    alertPinResetFailed: "Impossibile reimpostare il PIN: {error}",
+    detailCloseTitle: "Chiudi",
+    detailPhotoAlt: "Foto lavoratore",
+    detailCheckinBtn: "Entrata (Check-in)",
+    detailCheckoutBtn: "Uscita (Check-out)",
     accessFormEyebrow: "Tornello",
     accessFormH3: "Check-in e check-out",
     labelAccessBadge: "Badge ID o lavoratore",
@@ -1971,6 +2132,29 @@ const UI_TRANSLATIONS = {
     badgeMetaQrFuncVal: "Instalacja aplikacji pracownika",
     badgeMetaRoleLabel: "Rola w systemie",
     badgePhotoUploadHint: "Zr\u00f3b lub prze\u015blij zdj\u0119cie",
+    appPinLabel: "PIN aplikacji",
+    pinNotRequired: "nie wymagany",
+    pinSet: "ustawiony",
+    pinMissing: "brak",
+    cardLabel: "Karta",
+    cardUnassigned: "nieprzypisana",
+    btnEdit: "Edytuj",
+    btnDelete: "Usun",
+    btnRestore: "Przywroc",
+    btnAppLink: "Link aplikacji",
+    btnResetPin: "Resetuj PIN",
+    confirmDeleteWorker: "Usunac pracownika teraz?",
+    alertDeleteWorkerFailed: "Nie udalo sie usunac pracownika: {error}",
+    alertRestoreWorkerFailed: "Nie udalo sie przywrocic pracownika: {error}",
+    alertAppLinkCreateFailed: "Nie udalo sie utworzyc linku aplikacji: {error}",
+    promptResetPinFor: "Nowy PIN odznaki dla {name} (4-8 cyfr):",
+    alertPinMustDigits: "PIN musi zawierac od 4 do 8 cyfr.",
+    alertPinResetSuccessFor: "PIN dla {name} zostal pomyslnie zresetowany.",
+    alertPinResetFailed: "Nie udalo sie zresetowac PIN: {error}",
+    detailCloseTitle: "Zamknij",
+    detailPhotoAlt: "Zdjecie pracownika",
+    detailCheckinBtn: "Wejscie (Check-in)",
+    detailCheckoutBtn: "Wyjscie (Check-out)",
     accessFormEyebrow: "Bramka",
     accessFormH3: "Check-in i check-out",
     labelAccessBadge: "Badge ID lub pracownik",
@@ -3689,8 +3873,8 @@ function renderWorkerList() {
       const sub = getSubcompanyLabel(worker);
       const visitor = isVisitorWorker(worker);
       const visitorMeta = visitor
-        ? `<p>Besucherfirma: <strong>${escapeHtml(worker.visitorCompany || "-")}</strong> | Zweck: <strong>${escapeHtml(worker.visitPurpose || "-")}</strong></p>
-           <p>Ansprechpartner: <strong>${escapeHtml(worker.hostName || "-")}</strong> | Besuchsende: <strong>${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</strong></p>`
+        ? `<p>${uiT("labelVisitorCompany")}: <strong>${escapeHtml(worker.visitorCompany || "-")}</strong> | ${uiT("labelVisitPurpose")}: <strong>${escapeHtml(worker.visitPurpose || "-")}</strong></p>
+          <p>${uiT("labelHostName")}: <strong>${escapeHtml(worker.hostName || "-")}</strong> | ${uiT("labelVisitEndAt")}: <strong>${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</strong></p>`
         : "";
       return `
         <article class="card-item ${deleted ? "is-deleted" : ""}">
@@ -3702,16 +3886,16 @@ function renderWorkerList() {
             </div>
             <span class="status-pill">${escapeHtml(worker.status || "-")}</span>
           </header>
-          <p>${escapeHtml(visitor ? "Besucher" : (worker.role || "-"))} | ${escapeHtml(worker.site || "-")}</p>
-          <p>App-PIN: <strong>${visitor ? "nicht nötig" : (worker.badgePinConfigured ? "gesetzt" : "fehlt")}</strong> | Karte: <strong>${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</strong></p>
+          <p>${escapeHtml(visitor ? uiT("optVisitor") : (worker.role || "-"))} | ${escapeHtml(worker.site || "-")}</p>
+          <p>${uiT("appPinLabel")}: <strong>${visitor ? uiT("pinNotRequired") : (worker.badgePinConfigured ? uiT("pinSet") : uiT("pinMissing"))}</strong> | ${uiT("cardLabel")}: <strong>${escapeHtml(worker.physicalCardId || uiT("cardUnassigned"))}</strong></p>
           ${sub ? `<p>Subunternehmen: ${escapeHtml(sub)}</p>` : ""}
           ${visitorMeta}
           <div class="button-row">
-            <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Bearbeiten</button>
-            <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>Löschen</button>
-            <button type="button" class="ghost-button" data-worker-restore="${escapeHtml(worker.id)}" ${deleted ? "" : "disabled"}>Wiederherstellen</button>
-            <button type="button" class="ghost-button" data-worker-app-link="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>App-Link</button>
-            ${!visitor && !deleted ? `<button type="button" class="ghost-button" data-worker-reset-pin="${escapeHtml(worker.id)}">PIN zurücksetzen</button>` : ""}
+            <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>${uiT("btnEdit")}</button>
+            <button type="button" class="ghost-button" data-worker-delete="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>${uiT("btnDelete")}</button>
+            <button type="button" class="ghost-button" data-worker-restore="${escapeHtml(worker.id)}" ${deleted ? "" : "disabled"}>${uiT("btnRestore")}</button>
+            <button type="button" class="ghost-button" data-worker-app-link="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>${uiT("btnAppLink")}</button>
+            ${!visitor && !deleted ? `<button type="button" class="ghost-button" data-worker-reset-pin="${escapeHtml(worker.id)}">${uiT("btnResetPin")}</button>` : ""}
           </div>
         </article>
       `;
@@ -3767,13 +3951,13 @@ function bindWorkerRowActions() {
 
   elements.workerList.querySelectorAll("[data-worker-delete]").forEach((button) => {
     button.onclick = async () => {
-      if (!window.confirm("Mitarbeiter wirklich löschen?")) return;
+      if (!window.confirm(uiT("confirmDeleteWorker"))) return;
       try {
         await apiRequest(`${API_BASE}/api/workers/${button.dataset.workerDelete}`, { method: "DELETE" });
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht gelöscht werden: ${error.message}`);
+        window.alert(uiT("alertDeleteWorkerFailed").replace("{error}", error.message));
       }
     };
   });
@@ -3785,7 +3969,7 @@ function bindWorkerRowActions() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht wiederhergestellt werden: ${error.message}`);
+        window.alert(uiT("alertRestoreWorkerFailed").replace("{error}", error.message));
       }
     };
   });
@@ -3798,7 +3982,7 @@ function bindWorkerRowActions() {
         const worker = state.workers.find((entry) => entry.id === button.dataset.workerAppLink) || null;
         showWorkerAppQrDialog(worker, absoluteLink, payload);
       } catch (error) {
-        window.alert(`App-Link konnte nicht erzeugt werden: ${error.message}`);
+        window.alert(uiT("alertAppLinkCreateFailed").replace("{error}", error.message));
       }
     };
   });
@@ -3808,17 +3992,17 @@ function bindWorkerRowActions() {
       const workerId = button.dataset.workerResetPin;
       const worker = state.workers.find((w) => w.id === workerId);
       const name = worker ? `${worker.firstName} ${worker.lastName}` : workerId;
-      const newPin = window.prompt(`Neue Badge-PIN für ${name} (4–8 Ziffern):`);
+      const newPin = window.prompt(uiT("promptResetPinFor").replace("{name}", name));
       if (newPin === null) return; // abgebrochen
       if (!/^\d{4,8}$/.test(newPin.trim())) {
-        window.alert("PIN muss aus 4 bis 8 Ziffern bestehen.");
+        window.alert(uiT("alertPinMustDigits"));
         return;
       }
       try {
         await apiRequest(`${API_BASE}/api/workers/${workerId}/reset-pin`, { method: "POST", body: { newPin: newPin.trim() } });
-        window.alert(`PIN für ${name} wurde erfolgreich zurückgesetzt.`);
+        window.alert(uiT("alertPinResetSuccessFor").replace("{name}", name));
       } catch (error) {
-        window.alert(`PIN konnte nicht zurückgesetzt werden: ${error.message}`);
+        window.alert(uiT("alertPinResetFailed").replace("{error}", error.message));
       }
     };
   });
@@ -4186,25 +4370,28 @@ function showWorkerDetailOverlay(worker) {
   if (!overlay) return;
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const subcompanyLabel = getSubcompanyLabel(worker);
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  const canResetPin = !isVisitorWorker(worker) && ["superadmin", "company-admin", "turnstile"].includes(role);
   const safePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
   overlay.innerHTML = `
     <div class="worker-detail-card">
-      <button class="close-btn" title="Schließen">&times;</button>
-      <img src="${safePhoto}" alt="Mitarbeiterfoto" />
+      <button class="close-btn" title="${uiT("detailCloseTitle")}">&times;</button>
+      <img src="${safePhoto}" alt="${uiT("detailPhotoAlt")}" />
       <h2>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</h2>
-      <p><strong>Typ:</strong> ${escapeHtml(isVisitorWorker(worker) ? "Besucher" : "Mitarbeiter")}</p>
-      <p><strong>Firma:</strong> ${escapeHtml(company?.name || "-")}</p>
-      ${subcompanyLabel ? `<p><strong>Subunternehmen:</strong> ${escapeHtml(subcompanyLabel)}</p>` : ""}
-      <p><strong>Badge-ID:</strong> ${escapeHtml(worker.badgeId)}</p>
-      ${isVisitorWorker(worker) ? `<p><strong>Besucherfirma:</strong> ${escapeHtml(worker.visitorCompany || "-")}</p><p><strong>Zweck:</strong> ${escapeHtml(worker.visitPurpose || "-")}</p><p><strong>Ansprechpartner:</strong> ${escapeHtml(worker.hostName || "-")}</p><p><strong>Besuchsende:</strong> ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : `<p><strong>Rentenversicherung:</strong> ${escapeHtml(worker.insuranceNumber)}</p><p><strong>Funktion:</strong> ${escapeHtml(worker.role)}</p>`}
-      <p><strong>Baustelle:</strong> ${escapeHtml(worker.site)}</p>
-      <p><strong>Gültig bis:</strong> ${formatDate(worker.validUntil)}</p>
-      <p><strong>Status:</strong> ${escapeHtml(worker.status)}</p>
-      <p><strong>Badge-PIN:</strong> ${isVisitorWorker(worker) ? "nicht nötig" : (worker.badgePinConfigured ? "gesetzt" : "nicht gesetzt")}</p>
-      <p><strong>Karten-ID:</strong> ${escapeHtml(worker.physicalCardId || "nicht zugewiesen")}</p>
+      <p><strong>${uiT("labelType")}:</strong> ${escapeHtml(isVisitorWorker(worker) ? uiT("optVisitor") : uiT("optWorker"))}</p>
+      <p><strong>${uiT("labelFirm")}:</strong> ${escapeHtml(company?.name || "-")}</p>
+      ${subcompanyLabel ? `<p><strong>${uiT("labelSubcompany")}:</strong> ${escapeHtml(subcompanyLabel)}</p>` : ""}
+      <p><strong>${uiT("badgeLabelBadgeId")}:</strong> ${escapeHtml(worker.badgeId)}</p>
+      ${isVisitorWorker(worker) ? `<p><strong>${uiT("labelVisitorCompany")}:</strong> ${escapeHtml(worker.visitorCompany || "-")}</p><p><strong>${uiT("labelVisitPurpose")}:</strong> ${escapeHtml(worker.visitPurpose || "-")}</p><p><strong>${uiT("labelHostName")}:</strong> ${escapeHtml(worker.hostName || "-")}</p><p><strong>${uiT("labelVisitEndAt")}:</strong> ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : `<p><strong>${uiT("labelInsuranceNumber")}:</strong> ${escapeHtml(worker.insuranceNumber)}</p><p><strong>${uiT("labelRoleField")}:</strong> ${escapeHtml(worker.role)}</p>`}
+      <p><strong>${uiT("labelSite")}:</strong> ${escapeHtml(worker.site)}</p>
+      <p><strong>${uiT("labelValidUntil")}:</strong> ${formatDate(worker.validUntil)}</p>
+      <p><strong>${uiT("labelWorkerStatus")}:</strong> ${escapeHtml(worker.status)}</p>
+      <p><strong>${uiT("appPinLabel")}:</strong> ${isVisitorWorker(worker) ? uiT("pinNotRequired") : (worker.badgePinConfigured ? uiT("pinSet") : uiT("pinMissing"))}</p>
+      <p><strong>${uiT("labelPhysicalCard")}:</strong> ${escapeHtml(worker.physicalCardId || uiT("cardUnassigned"))}</p>
       <div class="button-row">
-        <button type="button" class="primary-button" id="workerCheckInBtn">Anmelden (Check-in)</button>
-        <button type="button" class="ghost-button" id="workerCheckOutBtn">Abmelden (Check-out)</button>
+        <button type="button" class="primary-button" id="workerCheckInBtn">${uiT("detailCheckinBtn")}</button>
+        <button type="button" class="ghost-button" id="workerCheckOutBtn">${uiT("detailCheckoutBtn")}</button>
+        ${canResetPin ? `<button type="button" class="ghost-button" id="workerResetPinBtn">${uiT("btnResetPin")}</button>` : ""}
       </div>
     </div>
   `;
@@ -4219,6 +4406,30 @@ function showWorkerDetailOverlay(worker) {
     triggerWorkerAccess(worker, "check-out");
     overlay.classList.add("hidden");
   };
+
+  const resetButton = overlay.querySelector("#workerResetPinBtn");
+  if (resetButton) {
+    resetButton.onclick = async () => {
+      const name = `${worker.firstName} ${worker.lastName}`.trim() || worker.id;
+      const newPin = window.prompt(uiT("promptResetPinFor").replace("{name}", name));
+      if (newPin === null) return;
+      if (!/^\d{4,8}$/.test(String(newPin).trim())) {
+        window.alert(uiT("alertPinMustDigits"));
+        return;
+      }
+      try {
+        await apiRequest(`${API_BASE}/api/workers/${worker.id}/reset-pin`, {
+          method: "POST",
+          body: { newPin: String(newPin).trim() }
+        });
+        window.alert(uiT("alertPinResetSuccessFor").replace("{name}", name));
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(uiT("alertPinResetFailed").replace("{error}", error.message));
+      }
+    };
+  }
 }
 
 async function triggerWorkerAccess(worker, direction) {
