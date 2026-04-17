@@ -575,7 +575,7 @@ select {
 }
 
 .auth-lang-field-compact {
-  width: min(100%, 188px);
+  width: min(100%, 154px);
   justify-self: start;
   gap: 4px;
   margin-bottom: 2px;
@@ -600,33 +600,33 @@ select {
 .auth-lang-select-wrap::before {
   content: "🌐";
   position: absolute;
-  left: 9px;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .auth-lang-select-wrap::after {
   content: "▾";
   position: absolute;
-  right: 9px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
   color: #445064;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
 }
 
 .auth-lang-select {
   width: 100%;
-  min-height: 33px;
-  padding: 6px 28px 6px 31px;
+  min-height: 30px;
+  padding: 4px 24px 4px 27px;
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   color: #1b2430;
-  font-size: 0.78rem;
+  font-size: 0.73rem;
   font-weight: 700;
   appearance: none;
   -webkit-appearance: none;
