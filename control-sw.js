@@ -1,5 +1,5 @@
-const SHELL_CACHE = "baupass-control-shell-v11";
-const RUNTIME_CACHE = "baupass-control-runtime-v11";
+const SHELL_CACHE = "baupass-control-shell-v12";
+const RUNTIME_CACHE = "baupass-control-runtime-v12";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
@@ -70,6 +70,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   const isSameOrigin = url.origin === self.location.origin;
   const isNavigation = request.mode === "navigate";
+  const isCriticalShell = isSameOrigin && (
+    url.pathname === "/" ||
+    url.pathname.endsWith("/index.html") ||
+    url.pathname.endsWith("/app.js") ||
+    url.pathname.endsWith("/styles.css") ||
+    url.pathname.endsWith("/control-manifest.json")
+  );
   const isStaticShell = isSameOrigin && (
     url.pathname === "/" ||
     url.pathname.endsWith("/index.html") ||
@@ -85,6 +92,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       networkFirst(request).catch(() => caches.match("/index.html"))
     );
+    return;
+  }
+
+  if (isCriticalShell) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
