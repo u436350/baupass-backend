@@ -5612,7 +5612,9 @@ def poll_imap_inbox():
                 return
 
             conn.select(folder, readonly=False)
-            status, data = conn.search(None, "UNSEEN")
+            # Alle Mails im Ordner berücksichtigen. Deduplizierung passiert über
+            # message_id bzw. IMAP UID-Fallback in der DB.
+            status, data = conn.search(None, "ALL")
             if status != "OK":
                 conn.logout()
                 return
@@ -5627,7 +5629,23 @@ def poll_imap_inbox():
                     continue
 
                 msg = _email.message_from_bytes(raw, policy=_email_policy.compat32)
+
+                # Stabile Fallback-ID aus IMAP UID, falls Message-ID fehlt.
+                imap_uid = ""
+                try:
+                    uid_status, uid_data = conn.fetch(num, "(UID)")
+                    if uid_status == "OK" and uid_data and uid_data[0]:
+                        uid_chunk = uid_data[0][0] if isinstance(uid_data[0], tuple) else uid_data[0]
+                        uid_bytes = uid_chunk if isinstance(uid_chunk, (bytes, bytearray)) else str(uid_chunk).encode("utf-8", errors="ignore")
+                        uid_match = re.search(rb"UID\s+(\d+)", uid_bytes)
+                        if uid_match:
+                            imap_uid = uid_match.group(1).decode("ascii", errors="ignore")
+                except Exception:
+                    imap_uid = ""
+
                 message_id = str(msg.get("Message-ID") or "").strip()
+                if not message_id and imap_uid:
+                    message_id = f"imap-uid:{imap_uid}"
                 from_addr = _decode_mime_header(msg.get("From") or "")
                 subject = _decode_mime_header(msg.get("Subject") or "")
                 received_at = now_iso()

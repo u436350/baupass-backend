@@ -133,7 +133,9 @@ const UI_TRANSLATIONS = {
     docInboxEyebrow: "Posteingang",
     docInboxH3: "Eingehende Dokumente per Mail",
     btnDocInboxRefresh: "Aktualisieren",
+    btnDocInboxSync: "System-Eingang abrufen",
     btnDocInboxPoll: "Postfach jetzt abrufen",
+    btnDocInboxOpenGmail: "Gmail oeffnen",
     docInboxHint: "Mitarbeiter schicken ihre Nachweise an die konfigurierte Dokuments-E-Mail. Der Pf\u00f6rtner ordnet die Anh\u00e4nge hier einem Mitarbeiter zu.",
     docAssignEyebrow: "Zuweisen",
     docAssignH3: "Anhang einem Mitarbeiter zuordnen",
@@ -444,7 +446,9 @@ const UI_TRANSLATIONS = {
     docInboxEyebrow: "Inbox",
     docInboxH3: "Incoming Documents by Email",
     btnDocInboxRefresh: "Refresh",
+    btnDocInboxSync: "Sync system inbox",
     btnDocInboxPoll: "Fetch mailbox now",
+    btnDocInboxOpenGmail: "Open Gmail",
     docInboxHint: "Workers send their proof documents to the configured document email. The porter assigns attachments to a worker here.",
     docAssignEyebrow: "Assign",
     docAssignH3: "Assign attachment to a worker",
@@ -8781,18 +8785,38 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshBtn.addEventListener("click", loadDocumentInbox);
   }
 
+  const runDocumentInboxSync = async (buttonEl) => {
+    if (buttonEl) buttonEl.disabled = true;
+    try {
+      await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
+      await loadDocumentInbox();
+    } catch (e) {
+      window.alert(e.message);
+    } finally {
+      if (buttonEl) buttonEl.disabled = false;
+    }
+  };
+
+  const syncBtn = document.querySelector("#docInboxSyncBtn");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      await runDocumentInboxSync(syncBtn);
+    });
+  }
+
   const pollBtn = document.querySelector("#docInboxPollBtn");
   if (pollBtn) {
-    pollBtn.addEventListener("click", async () => {
-      pollBtn.disabled = true;
-      try {
-        await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
-        await loadDocumentInbox();
-      } catch (e) {
-        window.alert(e.message);
-      } finally {
-        pollBtn.disabled = false;
+    pollBtn.addEventListener("click", () => {
+      const win = window.open("https://mail.google.com/mail/u/0/#inbox", "_blank", "noopener");
+      if (!win) {
+        window.alert(runtimeText("popupBlockedAllow"));
+        return;
       }
+
+      // Nach dem Öffnen von Gmail direkt den Import starten.
+      window.setTimeout(() => {
+        runDocumentInboxSync(syncBtn || undefined);
+      }, 700);
     });
   }
 
