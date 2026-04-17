@@ -479,11 +479,40 @@ const TRANSLATIONS = {
   },
 };
 
+TRANSLATIONS.fr = {
+  ...TRANSLATIONS.en,
+  pageTitle: "BauPass App Ouvrier",
+  appEyebrow: "App Ouvrier",
+  languageLabel: "Langue"
+};
+TRANSLATIONS.es = {
+  ...TRANSLATIONS.en,
+  pageTitle: "BauPass App Trabajador",
+  appEyebrow: "App Trabajador",
+  languageLabel: "Idioma"
+};
+TRANSLATIONS.it = {
+  ...TRANSLATIONS.en,
+  pageTitle: "BauPass App Lavoratore",
+  appEyebrow: "App Lavoratore",
+  languageLabel: "Lingua"
+};
+TRANSLATIONS.pl = {
+  ...TRANSLATIONS.en,
+  pageTitle: "BauPass Aplikacja Pracownika",
+  appEyebrow: "Aplikacja Pracownika",
+  languageLabel: "Jezyk"
+};
+
 const LANG_META = {
   de: { label: "DE", flag: "🇩🇪", dir: "ltr" },
   en: { label: "EN", flag: "🇬🇧", dir: "ltr" },
   tr: { label: "TR", flag: "🇹🇷", dir: "ltr" },
   ar: { label: "AR", flag: "🇸🇦", dir: "rtl" },
+  fr: { label: "FR", flag: "🇫🇷", dir: "ltr" },
+  es: { label: "ES", flag: "🇪🇸", dir: "ltr" },
+  it: { label: "IT", flag: "🇮🇹", dir: "ltr" },
+  pl: { label: "PL", flag: "🇵🇱", dir: "ltr" },
 };
 
 let currentLang = localStorage.getItem(WORKER_LANG_KEY) || "de";
@@ -507,6 +536,10 @@ function getCurrentLocale() {
   if (currentLang === "ar") return "ar-SA";
   if (currentLang === "tr") return "tr-TR";
   if (currentLang === "en") return "en-GB";
+  if (currentLang === "fr") return "fr-FR";
+  if (currentLang === "es") return "es-ES";
+  if (currentLang === "it") return "it-IT";
+  if (currentLang === "pl") return "pl-PL";
   return "de-DE";
 }
 

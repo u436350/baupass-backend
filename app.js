@@ -2107,8 +2107,72 @@ function getStoredSystemTheme() {
   return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
 }
 
+function getSystemThemeTexts() {
+  const lang = getStoredUiLang();
+  const map = {
+    de: {
+      labelPrefix: "Fensterfarbe",
+      white: "Weiss",
+      dark: "Dunkel",
+      titleWhenDark: "Aktuell Dunkel. Klicken fuer Weiss.",
+      titleWhenWhite: "Aktuell Weiss. Klicken fuer Dunkel."
+    },
+    en: {
+      labelPrefix: "Window color",
+      white: "Light",
+      dark: "Dark",
+      titleWhenDark: "Currently dark. Click for light.",
+      titleWhenWhite: "Currently light. Click for dark."
+    },
+    tr: {
+      labelPrefix: "Pencere rengi",
+      white: "Aydinlik",
+      dark: "Koyu",
+      titleWhenDark: "Su an koyu. Aydinlik icin tiklayin.",
+      titleWhenWhite: "Su an aydinlik. Koyu icin tiklayin."
+    },
+    ar: {
+      labelPrefix: "لون النافذة",
+      white: "فاتح",
+      dark: "داكن",
+      titleWhenDark: "الوضع الحالي داكن. انقر للوضع الفاتح.",
+      titleWhenWhite: "الوضع الحالي فاتح. انقر للوضع الداكن."
+    },
+    fr: {
+      labelPrefix: "Couleur de fenetre",
+      white: "Clair",
+      dark: "Sombre",
+      titleWhenDark: "Mode sombre actif. Cliquer pour clair.",
+      titleWhenWhite: "Mode clair actif. Cliquer pour sombre."
+    },
+    es: {
+      labelPrefix: "Color de ventana",
+      white: "Claro",
+      dark: "Oscuro",
+      titleWhenDark: "Modo oscuro activo. Haz clic para claro.",
+      titleWhenWhite: "Modo claro activo. Haz clic para oscuro."
+    },
+    it: {
+      labelPrefix: "Colore finestra",
+      white: "Chiaro",
+      dark: "Scuro",
+      titleWhenDark: "Modalita scura attiva. Clicca per chiaro.",
+      titleWhenWhite: "Modalita chiara attiva. Clicca per scuro."
+    },
+    pl: {
+      labelPrefix: "Kolor okna",
+      white: "Jasny",
+      dark: "Ciemny",
+      titleWhenDark: "Aktualnie ciemny. Kliknij, aby ustawic jasny.",
+      titleWhenWhite: "Aktualnie jasny. Kliknij, aby ustawic ciemny."
+    }
+  };
+  return map[lang] || map.de;
+}
+
 function getThemeModeLabel(mode) {
-  return mode === SYSTEM_THEME_BLACK ? "Dunkel" : "Weiß";
+  const texts = getSystemThemeTexts();
+  return mode === SYSTEM_THEME_BLACK ? texts.dark : texts.white;
 }
 
 function applySystemTheme(mode, { persist = true } = {}) {
@@ -2123,10 +2187,11 @@ function applySystemTheme(mode, { persist = true } = {}) {
 
   const button = document.querySelector("#systemThemeToggleButton");
   if (button) {
-    button.textContent = `Fensterfarbe: ${getThemeModeLabel(selectedMode)}`;
+    const texts = getSystemThemeTexts();
+    button.textContent = `${texts.labelPrefix}: ${getThemeModeLabel(selectedMode)}`;
     button.title = selectedMode === SYSTEM_THEME_BLACK
-      ? "Aktuell Dunkel. Klicken für Weiß."
-      : "Aktuell Weiß. Klicken für Dunkel.";
+      ? texts.titleWhenDark
+      : texts.titleWhenWhite;
   }
 }
 
