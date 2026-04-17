@@ -7597,7 +7597,22 @@ async function bulkSetStatus(status) {
 
 (async () => {
   initSystemThemeControl();
-  clearSession();
   setView("dashboard");
+  refreshAll();
+
+  try {
+    await loadAllData();
+    if (token && state.currentUser) {
+      startHeartbeat();
+      startBackendStatusMonitor();
+      setView(getDefaultViewForRole(state.currentUser.role));
+    }
+  } catch (error) {
+    if (error.message !== "session_expired" && error.message !== "backend_unreachable") {
+      console.warn("Initial session bootstrap failed:", error);
+    }
+    clearSession();
+  }
+
   refreshAll();
 })();
