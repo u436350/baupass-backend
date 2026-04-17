@@ -13,6 +13,26 @@
   <meta name="apple-mobile-web-app-title" content="BauPass Control" />
   <meta name="application-name" content="BauPass Control" />
   <title>BauPass Control</title>
+    <script>
+      (function enforceLatestBuild() {
+        const buildTag = "20260417b";
+        const storageKey = "baupass-control-build";
+        try {
+          const url = new URL(window.location.href);
+          const hasCurrentVersion = url.searchParams.get("v") === buildTag;
+          const seenBuild = window.localStorage.getItem(storageKey);
+          if (!hasCurrentVersion && seenBuild !== buildTag) {
+            url.searchParams.set("v", buildTag);
+            window.localStorage.setItem(storageKey, buildTag);
+            window.location.replace(url.toString());
+            return;
+          }
+          window.localStorage.setItem(storageKey, buildTag);
+        } catch {
+          // no-op
+        }
+      })();
+    </script>
   <link rel="manifest" href="./control-manifest.json" />
   <link rel="apple-touch-icon" sizes="192x192" href="./worker-icon-192.png" />
   <link id="appFavicon" rel="icon" type="image/png" sizes="192x192" href="./worker-icon-192.png" />
