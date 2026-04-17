@@ -136,6 +136,9 @@ const UI_TRANSLATIONS = {
     btnDocInboxSync: "System-Eingang abrufen",
     btnDocInboxPoll: "Postfach jetzt abrufen",
     btnDocInboxOpenGmail: "Gmail oeffnen",
+    docEmailInfoLabel: "Dokument-E-Mail (Mitarbeiter schicken Nachweise hierhin):",
+    btnCopyEmail: "Kopieren",
+    btnCopyEmailDone: "Kopiert!",
     docInboxHint: "Mitarbeiter schicken ihre Nachweise an die konfigurierte Dokuments-E-Mail. Der Pf\u00f6rtner ordnet die Anh\u00e4nge hier einem Mitarbeiter zu.",
     docAssignEyebrow: "Zuweisen",
     docAssignH3: "Anhang einem Mitarbeiter zuordnen",
@@ -449,6 +452,9 @@ const UI_TRANSLATIONS = {
     btnDocInboxSync: "Sync system inbox",
     btnDocInboxPoll: "Fetch mailbox now",
     btnDocInboxOpenGmail: "Open Gmail",
+    docEmailInfoLabel: "Document email (workers send proofs here):",
+    btnCopyEmail: "Copy",
+    btnCopyEmailDone: "Copied!",
     docInboxHint: "Workers send their proof documents to the configured document email. The porter assigns attachments to a worker here.",
     docAssignEyebrow: "Assign",
     docAssignH3: "Assign attachment to a worker",
@@ -3709,7 +3715,10 @@ async function loadAllData() {
   ]);
 
   const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit, reporting] = requests;
-  if (settings.status === "fulfilled") state.settings = settings.value || state.settings;
+  if (settings.status === "fulfilled") {
+    state.settings = settings.value || state.settings;
+    document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
+  }
   if (companies.status === "fulfilled") state.companies = companies.value || [];
   if (subcompanies.status === "fulfilled") state.subcompanies = subcompanies.value || [];
   if (workers.status === "fulfilled") state.workers = workers.value || [];
@@ -5801,6 +5810,7 @@ async function handleSettingsSubmit(event) {
       body: settingsBody
     });
     state.settings = updated;
+    document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
     refreshAll();
   } catch (error) {
     window.alert(`Einstellungen konnten nicht gespeichert werden: ${error.message}`);
@@ -8784,6 +8794,41 @@ document.addEventListener("DOMContentLoaded", () => {
   if (refreshBtn) {
     refreshBtn.addEventListener("click", loadDocumentInbox);
   }
+
+  // Zeige die konfigurierte Dokument-E-Mail-Adresse für den Pförtner
+  function updateDocEmailInfoBar() {
+    const bar = document.querySelector("#docEmailInfoBar");
+    const addrEl = document.querySelector("#docEmailInfoAddr");
+    const copyBtn = document.querySelector("#docEmailCopyBtn");
+    if (!bar || !addrEl) return;
+    const email = (state.settings?.imapUsername || "").trim();
+    if (email) {
+      addrEl.textContent = email;
+      bar.style.display = "";
+    } else {
+      bar.style.display = "none";
+    }
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(email);
+          } else {
+            window.prompt(uiT("docEmailInfoLabel"), email);
+          }
+          const orig = copyBtn.textContent;
+          copyBtn.textContent = uiT("btnCopyEmailDone");
+          window.setTimeout(() => { copyBtn.textContent = orig; }, 1800);
+        } catch {
+          window.prompt(uiT("docEmailInfoLabel"), email);
+        }
+      };
+    }
+  }
+
+  updateDocEmailInfoBar();
+  // Auch aktualisieren wenn Einstellungen neu geladen werden
+  document.addEventListener("baupass:settingsLoaded", updateDocEmailInfoBar);
 
   const runDocumentInboxSync = async (buttonEl) => {
     if (buttonEl) buttonEl.disabled = true;

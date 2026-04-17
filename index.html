@@ -676,6 +676,10 @@
             <div class="meta-box">
               <p data-ui-i18n="docInboxHint">Mitarbeiter und Firmen schicken ihre Nachweise (Mindestlohnnachweis, Personalausweis, …) an die konfigurierte Dokuments-E-Mail-Adresse. Der Pförtner kann die Anhänge hier direkt einem Mitarbeiter zuordnen.</p>
             </div>
+            <div id="docEmailInfoBar" class="meta-box" style="display:none;">
+              <p style="margin:0;"><strong data-ui-i18n="docEmailInfoLabel">Dokument-E-Mail:</strong> <span id="docEmailInfoAddr" style="font-family:monospace;"></span>
+              <button type="button" class="ghost-button small-button" id="docEmailCopyBtn" style="margin-left:8px;" data-ui-i18n="btnCopyEmail">Kopieren</button></p>
+            </div>
             <div id="docInboxList" class="list"></div>
           </article>
 

@@ -5504,6 +5504,16 @@ ALLOWED_DOC_TYPES = {
     "sonstiges",
 }
 
+ALLOWED_UPLOAD_MIMETYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
 DOCS_UPLOAD_DIR = BASE_DIR / "backend" / "uploads" / "documents"
 
 
@@ -5953,6 +5963,80 @@ def list_worker_documents(worker_id):
         (worker_id,),
     ).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/workers/<worker_id>/documents/upload")
+@require_auth
+@require_roles("superadmin", "company-admin", "turnstile")
+def upload_worker_document(worker_id):
+    """Direkt-Upload eines Dokuments vom PC für einen Mitarbeiter."""
+    doc_type = clean_text_input(request.form.get("docType", ""), max_len=64).lower()
+    notes = clean_text_input(request.form.get("notes", ""), max_len=500)
+
+    if doc_type not in ALLOWED_DOC_TYPES:
+        return jsonify({"error": "invalid_doc_type", "allowed": sorted(ALLOWED_DOC_TYPES)}), 400
+
+    uploaded_file = request.files.get("file")
+    if not uploaded_file or not uploaded_file.filename:
+        return jsonify({"error": "missing_file"}), 400
+
+    mime = (uploaded_file.mimetype or "").lower().split(";")[0].strip()
+    if mime not in ALLOWED_UPLOAD_MIMETYPES:
+        return jsonify({"error": "invalid_file_type"}), 400
+
+    file_data = uploaded_file.read()
+    if len(file_data) > MAX_IMAP_ATTACHMENT_BYTES:
+        return jsonify({"error": "file_too_large", "maxBytes": MAX_IMAP_ATTACHMENT_BYTES}), 400
+
+    safe_name = _sanitize_attachment_filename(uploaded_file.filename)
+
+    db = get_db()
+    worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not worker:
+        return jsonify({"error": "worker_not_found"}), 404
+    if g.current_user["role"] != "superadmin" and worker["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden_worker"}), 403
+
+    base_upload_root = DOCS_UPLOAD_DIR.resolve()
+    worker_doc_dir = (DOCS_UPLOAD_DIR / worker_id).resolve()
+    if worker_doc_dir != base_upload_root and base_upload_root not in worker_doc_dir.parents:
+        return jsonify({"error": "invalid_storage_path"}), 400
+    try:
+        worker_doc_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        return jsonify({"error": "storage_error", "detail": str(exc)}), 500
+
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    file_path = (worker_doc_dir / f"{doc_type}_{ts}_{safe_name}").resolve()
+    if worker_doc_dir not in file_path.parents:
+        return jsonify({"error": "invalid_target_path"}), 400
+
+    try:
+        file_path.write_bytes(file_data)
+    except Exception as exc:
+        return jsonify({"error": "write_error", "detail": str(exc)}), 500
+
+    stored_path = _stored_file_path(file_path)
+    doc_id = f"doc-{secrets.token_hex(8)}"
+    db.execute(
+        """INSERT INTO worker_documents
+           (id, worker_id, company_id, doc_type, filename, file_path, file_size, source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            doc_id, worker_id, worker["company_id"], doc_type, safe_name,
+            stored_path, len(file_data), "", None,
+            g.current_user["id"], now_iso(), notes,
+        ),
+    )
+    db.commit()
+
+    log_audit(
+        "worker.document_uploaded",
+        f"Dokument '{doc_type}' ({safe_name}) direkt hochgeladen für Mitarbeiter {worker['badge_id']}",
+        target_type="worker", target_id=worker_id,
+        company_id=worker["company_id"], actor=g.current_user,
+    )
+    return jsonify({"ok": True, "documentId": doc_id})
 
 
 @app.get("/api/workers/<worker_id>/documents/<doc_id>/download")
