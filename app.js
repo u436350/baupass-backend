@@ -2010,14 +2010,14 @@ function uiT(key) {
 }
 
 const UI_LANGUAGE_META = {
-  de: { code: "DE", flag: "🇩🇪" },
-  en: { code: "EN", flag: "🇬🇧" },
-  tr: { code: "TR", flag: "🇹🇷" },
-  ar: { code: "AR", flag: "🇸🇦" },
-  fr: { code: "FR", flag: "🇫🇷" },
-  es: { code: "ES", flag: "🇪🇸" },
-  it: { code: "IT", flag: "🇮🇹" },
-  pl: { code: "PL", flag: "🇵🇱" },
+  de: { code: "DE", flag: "de" },
+  en: { code: "EN", flag: "en" },
+  tr: { code: "TR", flag: "tr" },
+  ar: { code: "AR", flag: "ar" },
+  fr: { code: "FR", flag: "fr" },
+  es: { code: "ES", flag: "es" },
+  it: { code: "IT", flag: "it" },
+  pl: { code: "PL", flag: "pl" },
 };
 
 function updateAuthLanguageControl(lang) {
@@ -2030,7 +2030,7 @@ function updateAuthLanguageControl(lang) {
 
   const triggerFlag = document.querySelector("#uiLangAuthTriggerFlag");
   const triggerCode = document.querySelector("#uiLangAuthTriggerCode");
-  if (triggerFlag) triggerFlag.textContent = meta.flag;
+  if (triggerFlag) triggerFlag.setAttribute("data-flag", meta.flag);
   if (triggerCode) triggerCode.textContent = meta.code;
 
   document.querySelectorAll(".auth-lang-option[data-ui-lang-option]").forEach((button) => {

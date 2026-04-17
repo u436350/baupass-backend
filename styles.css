@@ -641,8 +641,7 @@ select {
 }
 
 .auth-lang-trigger-flag {
-  font-size: 0.98rem;
-  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .auth-lang-trigger-code {
@@ -697,12 +696,64 @@ select {
 }
 
 .auth-lang-option-flag {
-  font-size: 0.94rem;
-  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .auth-lang-option-code {
   line-height: 1;
+}
+
+.auth-lang-flag {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(20, 27, 34, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.auth-lang-flag[data-flag="de"] {
+  background: linear-gradient(180deg, #111111 0 33.33%, #cf2027 33.33% 66.66%, #f3c216 66.66% 100%);
+}
+
+.auth-lang-flag[data-flag="fr"] {
+  background: linear-gradient(90deg, #1f4fb2 0 33.33%, #f8f8f8 33.33% 66.66%, #d53032 66.66% 100%);
+}
+
+.auth-lang-flag[data-flag="it"] {
+  background: linear-gradient(90deg, #229b5b 0 33.33%, #f8f8f8 33.33% 66.66%, #d53032 66.66% 100%);
+}
+
+.auth-lang-flag[data-flag="es"] {
+  background: linear-gradient(180deg, #c41f2b 0 24%, #f1c230 24% 76%, #c41f2b 76% 100%);
+}
+
+.auth-lang-flag[data-flag="pl"] {
+  background: linear-gradient(180deg, #fcfcfc 0 50%, #d83a4d 50% 100%);
+}
+
+.auth-lang-flag[data-flag="ar"] {
+  background:
+    linear-gradient(180deg, transparent 0 44%, rgba(255,255,255,0.9) 44% 56%, transparent 56% 100%),
+    #0b8a43;
+}
+
+.auth-lang-flag[data-flag="tr"] {
+  background:
+    radial-gradient(circle at 42% 50%, #ffffff 0 18%, transparent 19%),
+    radial-gradient(circle at 47% 50%, #d52331 0 14%, transparent 15%),
+    radial-gradient(circle at 61% 50%, #ffffff 0 6%, transparent 7%),
+    #d52331;
+}
+
+.auth-lang-flag[data-flag="en"] {
+  background:
+    linear-gradient(90deg, transparent 0 37%, #ffffff 37% 63%, transparent 63% 100%),
+    linear-gradient(180deg, transparent 0 37%, #ffffff 37% 63%, transparent 63% 100%),
+    linear-gradient(90deg, transparent 0 43%, #c8102e 43% 57%, transparent 57% 100%),
+    linear-gradient(180deg, transparent 0 43%, #c8102e 43% 57%, transparent 57% 100%),
+    #012169;
 }
 
 .auth-lang-select-hidden {
