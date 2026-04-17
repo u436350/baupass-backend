@@ -2465,12 +2465,124 @@ function normalizeLog(entry) {
   };
 }
 
+function getRuntimeUiTexts() {
+  const lang = getStoredUiLang();
+  const map = {
+    de: {
+      sessionLoggedIn: "Angemeldet",
+      sessionRole: "Rolle",
+      roleUnknown: "Unbekannt",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Firmen-Admin",
+      roleTurnstile: "Drehkreuz",
+      statsWorkersTotal: "Mitarbeiter gesamt",
+      statsWorkersActive: "Aktive Mitarbeiter",
+      statsVisitorsTotal: "Besucher gesamt",
+      statsCompanies: "Firmen",
+      statsAccessToday: "Zutritte heute",
+    },
+    en: {
+      sessionLoggedIn: "Signed in",
+      sessionRole: "Role",
+      roleUnknown: "Unknown",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Company admin",
+      roleTurnstile: "Turnstile",
+      statsWorkersTotal: "Workers total",
+      statsWorkersActive: "Active workers",
+      statsVisitorsTotal: "Visitors total",
+      statsCompanies: "Companies",
+      statsAccessToday: "Access today",
+    },
+    tr: {
+      sessionLoggedIn: "Giris yapan",
+      sessionRole: "Rol",
+      roleUnknown: "Bilinmiyor",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Firma yoneticisi",
+      roleTurnstile: "Turnike",
+      statsWorkersTotal: "Toplam calisan",
+      statsWorkersActive: "Aktif calisan",
+      statsVisitorsTotal: "Toplam ziyaretci",
+      statsCompanies: "Firmalar",
+      statsAccessToday: "Bugunku giris",
+    },
+    ar: {
+      sessionLoggedIn: "تسجيل الدخول",
+      sessionRole: "الدور",
+      roleUnknown: "غير معروف",
+      roleSuperadmin: "مشرف عام",
+      roleCompanyAdmin: "مسؤول الشركة",
+      roleTurnstile: "البوابة",
+      statsWorkersTotal: "إجمالي الموظفين",
+      statsWorkersActive: "الموظفون النشطون",
+      statsVisitorsTotal: "إجمالي الزوار",
+      statsCompanies: "الشركات",
+      statsAccessToday: "دخول اليوم",
+    },
+    fr: {
+      sessionLoggedIn: "Connecte",
+      sessionRole: "Role",
+      roleUnknown: "Inconnu",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Admin entreprise",
+      roleTurnstile: "Tourniquet",
+      statsWorkersTotal: "Employes total",
+      statsWorkersActive: "Employes actifs",
+      statsVisitorsTotal: "Visiteurs total",
+      statsCompanies: "Entreprises",
+      statsAccessToday: "Acces aujourd'hui",
+    },
+    es: {
+      sessionLoggedIn: "Conectado",
+      sessionRole: "Rol",
+      roleUnknown: "Desconocido",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Admin de empresa",
+      roleTurnstile: "Torno",
+      statsWorkersTotal: "Trabajadores total",
+      statsWorkersActive: "Trabajadores activos",
+      statsVisitorsTotal: "Visitantes total",
+      statsCompanies: "Empresas",
+      statsAccessToday: "Accesos hoy",
+    },
+    it: {
+      sessionLoggedIn: "Accesso",
+      sessionRole: "Ruolo",
+      roleUnknown: "Sconosciuto",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Admin azienda",
+      roleTurnstile: "Tornello",
+      statsWorkersTotal: "Lavoratori totali",
+      statsWorkersActive: "Lavoratori attivi",
+      statsVisitorsTotal: "Visitatori totali",
+      statsCompanies: "Aziende",
+      statsAccessToday: "Accessi oggi",
+    },
+    pl: {
+      sessionLoggedIn: "Zalogowany",
+      sessionRole: "Rola",
+      roleUnknown: "Nieznana",
+      roleSuperadmin: "Superadmin",
+      roleCompanyAdmin: "Admin firmy",
+      roleTurnstile: "Bramka",
+      statsWorkersTotal: "Pracownicy lacznie",
+      statsWorkersActive: "Aktywni pracownicy",
+      statsVisitorsTotal: "Goscie lacznie",
+      statsCompanies: "Firmy",
+      statsAccessToday: "Wejscia dzis",
+    },
+  };
+  return map[lang] || map.de;
+}
+
 function getRoleLabel(role) {
+  const texts = getRuntimeUiTexts();
   const normalized = String(role || "").toLowerCase();
-  if (normalized === "superadmin") return "Superadmin";
-  if (normalized === "company-admin") return "Firmen-Admin";
-  if (normalized === "turnstile") return "Drehkreuz";
-  return normalized || "unbekannt";
+  if (normalized === "superadmin") return texts.roleSuperadmin;
+  if (normalized === "company-admin") return texts.roleCompanyAdmin;
+  if (normalized === "turnstile") return texts.roleTurnstile;
+  return normalized || texts.roleUnknown;
 }
 
 function userCanManageSystem() {
@@ -3009,9 +3121,10 @@ function refreshAll() {
   updateTopbarActionsState(loggedIn);
 
   if (loggedIn && elements.sessionCard) {
-    const role = state.currentUser?.role || "-";
+    const texts = getRuntimeUiTexts();
+    const role = getRoleLabel(state.currentUser?.role || "");
     const user = state.currentUser?.username || "-";
-    elements.sessionCard.innerHTML = `<strong>Angemeldet:</strong> ${escapeHtml(user)} | <strong>Rolle:</strong> ${escapeHtml(role)}`;
+    elements.sessionCard.innerHTML = `<strong>${escapeHtml(texts.sessionLoggedIn)}:</strong> ${escapeHtml(user)} | <strong>${escapeHtml(texts.sessionRole)}:</strong> ${escapeHtml(role)}`;
   }
 
   if (!loggedIn) {
@@ -3096,6 +3209,7 @@ function updateTopbarActionsState(loggedIn) {
 
 function renderStats() {
   if (!elements.statsGrid) return;
+  const texts = getRuntimeUiTexts();
 
   const totalWorkers = state.workers.filter((w) => !w.deletedAt).length;
   const activeWorkers = state.workers.filter((w) => !w.deletedAt && w.status === "aktiv").length;
@@ -3107,11 +3221,11 @@ function renderStats() {
   }).length;
 
   const cards = [
-    ["Mitarbeiter gesamt", totalWorkers],
-    ["Aktive Mitarbeiter", activeWorkers],
-    ["Besucher gesamt", totalVisitors],
-    ["Firmen", totalCompanies],
-    ["Zutritte heute", accessToday]
+    [texts.statsWorkersTotal, totalWorkers],
+    [texts.statsWorkersActive, activeWorkers],
+    [texts.statsVisitorsTotal, totalVisitors],
+    [texts.statsCompanies, totalCompanies],
+    [texts.statsAccessToday, accessToday]
   ];
 
   elements.statsGrid.innerHTML = cards
