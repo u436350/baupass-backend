@@ -2728,7 +2728,13 @@ def get_settings():
 @require_roles("superadmin")
 def update_settings():
     payload = request.get_json(silent=True) or {}
-    get_db().execute(
+    db = get_db()
+
+    current_row = db.execute(
+        "SELECT imap_password FROM settings WHERE id = 1"
+    ).fetchone()
+    current_imap_password = str(current_row["imap_password"] or "") if current_row else ""
+    db.execute(
         """
         UPDATE settings
         SET platform_name = ?, operator_name = ?, turnstile_endpoint = ?, rental_model = ?,
@@ -2759,17 +2765,18 @@ def update_settings():
         ),
     )
     # IMAP-Felder separat aktualisieren (immer optional)
+    payload_imap_password = str(payload.get("imapPassword") or "")
     imap_fields = {
         "imap_host": clean_text_input(payload.get("imapHost", ""), max_len=255),
         "imap_port": int(payload.get("imapPort") or 993),
         "imap_username": clean_text_input(payload.get("imapUsername", ""), max_len=255),
-        "imap_password": str(payload.get("imapPassword") or ""),
+        "imap_password": payload_imap_password if payload_imap_password.strip() else current_imap_password,
         "imap_folder": clean_text_input(payload.get("imapFolder", "INBOX"), max_len=100) or "INBOX",
         "imap_use_ssl": 1 if payload.get("imapUseSsl", True) else 0,
     }
     for col, val in imap_fields.items():
-        get_db().execute(f"UPDATE settings SET {col} = ? WHERE id = 1", (val,))
-    get_db().commit()
+        db.execute(f"UPDATE settings SET {col} = ? WHERE id = 1", (val,))
+    db.commit()
     log_audit("settings.updated", "Systemeinstellungen wurden aktualisiert", actor=g.current_user)
     return get_settings()
 
@@ -5993,14 +6000,17 @@ def delete_worker_document(worker_id, doc_id):
 def test_imap_connection():
     import imaplib
     payload = request.get_json(silent=True) or {}
-    host = clean_text_input(payload.get("imapHost", ""), max_len=255)
-    port = int(payload.get("imapPort") or 993)
-    username = clean_text_input(payload.get("imapUsername", ""), max_len=255)
-    password = str(payload.get("imapPassword") or "")
-    use_ssl = bool(payload.get("imapUseSsl", True))
-    folder = clean_text_input(payload.get("imapFolder", "INBOX"), max_len=100) or "INBOX"
+    db = get_db()
+    stored = get_imap_settings(db) or {}
 
-    if not host or not username:
+    host = clean_text_input(payload.get("imapHost", stored.get("imap_host", "")), max_len=255)
+    port = int(payload.get("imapPort") or stored.get("imap_port") or 993)
+    username = clean_text_input(payload.get("imapUsername", stored.get("imap_username", "")), max_len=255)
+    password = str(payload.get("imapPassword") or stored.get("imap_password") or "")
+    use_ssl = bool(payload.get("imapUseSsl", stored.get("imap_use_ssl", 1)))
+    folder = clean_text_input(payload.get("imapFolder", stored.get("imap_folder", "INBOX")), max_len=100) or "INBOX"
+
+    if not host or not username or not password:
         return jsonify({"error": "missing_fields"}), 400
     try:
         if use_ssl:

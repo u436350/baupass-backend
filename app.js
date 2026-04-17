@@ -5763,33 +5763,38 @@ async function handleSettingsSubmit(event) {
   }
 
   try {
+    const settingsBody = {
+      platformName: document.querySelector("#platformName").value.trim(),
+      operatorName: document.querySelector("#operatorName").value.trim(),
+      turnstileEndpoint: document.querySelector("#turnstileEndpoint").value.trim(),
+      rentalModel: document.querySelector("#rentalModel").value,
+      invoiceLogoData: elements.invoiceLogoData.value,
+      invoicePrimaryColor: document.querySelector("#invoicePrimaryColor").value,
+      invoiceAccentColor: document.querySelector("#invoiceAccentColor").value,
+      smtpHost: document.querySelector("#smtpHost").value.trim(),
+      smtpPort: Number(document.querySelector("#smtpPort").value || 587),
+      smtpUsername: document.querySelector("#smtpUsername").value.trim(),
+      smtpPassword: document.querySelector("#smtpPassword").value,
+      smtpSenderEmail: document.querySelector("#smtpSenderEmail").value.trim(),
+      smtpSenderName: document.querySelector("#smtpSenderName").value.trim(),
+      smtpUseTls: document.querySelector("#smtpUseTls").value === "1",
+      adminIpWhitelist: document.querySelector("#adminIpWhitelist").value.trim(),
+      enforceTenantDomain: document.querySelector("#enforceTenantDomain").value === "1",
+      workerAppEnabled: document.querySelector("#workerAppEnabled").value !== "0",
+      imapHost: (document.querySelector("#imapHost")?.value || "").trim(),
+      imapPort: Number(document.querySelector("#imapPort")?.value || 993),
+      imapUsername: (document.querySelector("#imapUsername")?.value || "").trim(),
+      imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
+      imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
+    };
+    const imapPasswordValue = document.querySelector("#imapPassword")?.value || "";
+    if (imapPasswordValue.trim()) {
+      settingsBody.imapPassword = imapPasswordValue;
+    }
+
     const updated = await apiRequest(API_BASE + "/api/settings", {
       method: "PUT",
-      body: {
-        platformName: document.querySelector("#platformName").value.trim(),
-        operatorName: document.querySelector("#operatorName").value.trim(),
-        turnstileEndpoint: document.querySelector("#turnstileEndpoint").value.trim(),
-        rentalModel: document.querySelector("#rentalModel").value,
-        invoiceLogoData: elements.invoiceLogoData.value,
-        invoicePrimaryColor: document.querySelector("#invoicePrimaryColor").value,
-        invoiceAccentColor: document.querySelector("#invoiceAccentColor").value,
-        smtpHost: document.querySelector("#smtpHost").value.trim(),
-        smtpPort: Number(document.querySelector("#smtpPort").value || 587),
-        smtpUsername: document.querySelector("#smtpUsername").value.trim(),
-        smtpPassword: document.querySelector("#smtpPassword").value,
-        smtpSenderEmail: document.querySelector("#smtpSenderEmail").value.trim(),
-        smtpSenderName: document.querySelector("#smtpSenderName").value.trim(),
-        smtpUseTls: document.querySelector("#smtpUseTls").value === "1",
-        adminIpWhitelist: document.querySelector("#adminIpWhitelist").value.trim(),
-        enforceTenantDomain: document.querySelector("#enforceTenantDomain").value === "1",
-        workerAppEnabled: document.querySelector("#workerAppEnabled").value !== "0",
-        imapHost: (document.querySelector("#imapHost")?.value || "").trim(),
-        imapPort: Number(document.querySelector("#imapPort")?.value || 993),
-        imapUsername: (document.querySelector("#imapUsername")?.value || "").trim(),
-        imapPassword: document.querySelector("#imapPassword")?.value || "",
-        imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
-        imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
-      }
+      body: settingsBody
     });
     state.settings = updated;
     refreshAll();
@@ -8796,10 +8801,30 @@ document.addEventListener("DOMContentLoaded", () => {
   if (imapTestBtn) {
     imapTestBtn.addEventListener("click", async () => {
       const resultEl = document.querySelector("#imapTestResult");
+      const imapHost = (document.querySelector("#imapHost")?.value || "").trim();
+      const imapUsername = (document.querySelector("#imapUsername")?.value || "").trim();
+      const imapPassword = document.querySelector("#imapPassword")?.value || "";
+      if (!imapHost || !imapUsername || !imapPassword) {
+        if (resultEl) {
+          resultEl.textContent = "Bitte IMAP Host, Benutzername und Passwort ausfüllen und speichern.";
+          resultEl.style.color = "var(--color-danger, red)";
+        }
+        return;
+      }
       imapTestBtn.disabled = true;
       if (resultEl) resultEl.textContent = "…";
       try {
-        const res = await apiRequest(API_BASE + "/api/settings/imap/test", { method: "POST" });
+        const res = await apiRequest(API_BASE + "/api/settings/imap/test", {
+          method: "POST",
+          body: {
+            imapHost,
+            imapPort: Number(document.querySelector("#imapPort")?.value || 993),
+            imapUsername,
+            imapPassword,
+            imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
+            imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
+          },
+        });
         if (resultEl) {
           resultEl.textContent = uiT("imapTestOk") + (res.message ? ` (${res.message})` : "");
           resultEl.style.color = "var(--color-success, green)";
