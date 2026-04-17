@@ -587,6 +587,15 @@ select {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #47505c;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-lang-field > span::before {
+  content: "🌐";
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 .auth-lang-dropdown {
