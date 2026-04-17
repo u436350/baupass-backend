@@ -7522,17 +7522,7 @@ async function bulkSetStatus(status) {
 
 (async () => {
   initSystemThemeControl();
-  try {
-    await loadAllData();
-    if (getCurrentUser()?.role === "superadmin") {
-      await refreshSystemStatus();
-    }
-    startHeartbeat();
-    startBackendStatusMonitor();
-    setView("dashboard");
-  } catch {
-    clearSession();
-  } finally {
-    refreshAll();
-  }
+  clearSession();
+  setView("dashboard");
+  refreshAll();
 })();

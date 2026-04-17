@@ -537,13 +537,13 @@ select {
   z-index: 100;
   display: none;
   place-items: center;
-  align-items: flex-start;
+  align-items: center;
   padding: 24px;
   background:
     linear-gradient(180deg, rgba(18, 20, 23, 0.8), rgba(18, 20, 23, 0.84)),
     radial-gradient(circle at top left, rgba(217, 93, 57, 0.22), transparent 30%);
   backdrop-filter: blur(12px);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .auth-overlay.active {
@@ -557,8 +557,8 @@ select {
   position: relative;
   padding: 28px;
   max-height: calc(100vh - 48px);
-  overflow: auto;
-  margin: 8px 0;
+  overflow: hidden;
+  margin: 0;
   border-radius: 28px;
   background:
     radial-gradient(circle at top right, rgba(217, 93, 57, 0.16), transparent 38%),
