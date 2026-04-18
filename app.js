@@ -3727,8 +3727,16 @@ function normalizeWorkerAppLink(rawLink) {
 }
 
 async function loadAllData() {
-  // Bootstrap nur dann erzwingen, wenn noch keine aktive Session im Speicher ist.
-  if (!token || !state.currentUser) {
+  // Ohne gespeicherten Token gibt es keine Session zum Bootstrappen.
+  // So vermeiden wir unnoetige 401-Requests im ausgeloggten Zustand.
+  if (!token) {
+    sessionExpiryNoticeShown = false;
+    return;
+  }
+
+  // Bootstrap nur dann nutzen, wenn ein Token existiert, aber der User noch
+  // nicht in den lokalen State geladen wurde.
+  if (!state.currentUser) {
     let bootstrap;
     try {
       bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, {
@@ -3754,11 +3762,6 @@ async function loadAllData() {
     if (bootstrap?.user) {
       state.currentUser = bootstrap.user;
     }
-  }
-
-  if (!token) {
-    sessionExpiryNoticeShown = false;
-    return;
   }
 
   sessionExpiryNoticeShown = false;
