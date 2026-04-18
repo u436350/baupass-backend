@@ -4289,6 +4289,7 @@ function renderCompanyList() {
           ${repairStatus ? `<p class="${repairStatusClass}">${escapeHtml(repairStatus.message || "")}</p>` : ""}
           <div class="button-row">
             <button type="button" class="ghost-button" data-company-doc-email="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Dokument-Mail setzen</button>
+            <button type="button" class="ghost-button" data-company-add-turnstile="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Drehkreuz hinzufügen</button>
             <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Reparatur laeuft..." : "Firma reparieren"}</button>
             <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
             <button type="button" class="ghost-button" data-company-delete="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Firma löschen</button>
@@ -4475,6 +4476,33 @@ function bindCompanyRowActions() {
       } finally {
         delete state.companyLockBusy[companyId];
         renderCompanyList();
+      }
+      return;
+    }
+
+    const addTurnstileButton = event.target.closest("[data-company-add-turnstile]");
+    if (addTurnstileButton && !addTurnstileButton.disabled && elements.companyList.contains(addTurnstileButton)) {
+      const companyId = addTurnstileButton.dataset.companyAddTurnstile;
+      const company = state.companies.find((entry) => entry.id === companyId);
+      if (!companyId || !company) return;
+
+      const password = window.prompt(`Drehkreuz-Passwort für ${company.name} festlegen (min. 4 Zeichen):`, "");
+      if (password === null) return;
+      if (password.trim().length < 4) {
+        window.alert("Passwort muss mindestens 4 Zeichen haben.");
+        return;
+      }
+
+      try {
+        const result = await apiRequest(`${API_BASE}/api/companies/${companyId}/add-turnstile`, {
+          method: "POST",
+          body: { password: password.trim() },
+        });
+        await loadAllData();
+        refreshAll();
+        window.alert(`Drehkreuz-Zugang angelegt:\nBenutzername: ${result.username}\nPasswort: ${result.password}`);
+      } catch (error) {
+        window.alert(`Drehkreuz konnte nicht angelegt werden: ${error.message}`);
       }
       return;
     }

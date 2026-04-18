@@ -4265,6 +4265,53 @@ def delete_company(company_id):
     return jsonify({"ok": True, "force": force})
 
 
+@app.post("/api/companies/<company_id>/add-turnstile")
+@require_auth
+@require_roles("superadmin")
+def add_company_turnstile(company_id):
+    payload = request.get_json(silent=True) or {}
+    db = get_db()
+
+    company = db.execute("SELECT * FROM companies WHERE id = ? AND deleted_at IS NULL", (company_id,)).fetchone()
+    if not company:
+        return jsonify({"error": "company_not_found"}), 404
+
+    password = (payload.get("password") or "").strip()
+    if len(password) < 4:
+        return jsonify({"error": "password_too_short", "message": "Passwort muss mindestens 4 Zeichen haben."}), 400
+
+    # Zähle vorhandene Drehkreuze dieser Firma
+    existing_count = db.execute(
+        "SELECT COUNT(*) AS c FROM users WHERE company_id = ? AND role = 'turnstile'",
+        (company_id,),
+    ).fetchone()["c"]
+
+    username_base_raw = "".join(c for c in company["name"].lower() if c.isalnum())[:12] or "gate"
+    username_base = f"{username_base_raw}gate{existing_count + 1}"
+    username = username_base
+    suffix = 1
+    while db.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone():
+        username = f"{username_base}{suffix}"
+        suffix += 1
+
+    display_name = f"{company['name']} Drehkreuz {existing_count + 1}"
+    user_id = f"usr-{secrets.token_hex(6)}"
+    db.execute(
+        "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, username, generate_password_hash(password), display_name, "turnstile", company_id),
+    )
+    db.commit()
+    log_audit(
+        "company.turnstile_added",
+        f"Drehkreuz-Zugang '{username}' für Firma {company['name']} angelegt",
+        target_type="company",
+        target_id=company_id,
+        company_id=company_id,
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "username": username, "password": password}), 201
+
+
 @app.post("/api/companies/<company_id>/repair")
 @require_auth
 @require_roles("superadmin", "company-admin")
