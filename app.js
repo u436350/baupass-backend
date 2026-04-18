@@ -8608,6 +8608,113 @@ wireDesktopInstallPrompt();
   }
 })();
 
+// Robuster Fallback: delegierte Handler fuer Dokument-Aktionen.
+// So funktionieren die Buttons auch dann, wenn ein direkter Listener nicht gebunden wurde.
+(function wireDocumentActionFallbacks() {
+  if (window.__baupassDocActionFallbackBound) {
+    return;
+  }
+  window.__baupassDocActionFallbackBound = true;
+
+  document.addEventListener("click", (event) => {
+    const actionEl = event.target.closest("#docInboxRefreshBtn, #docInboxSyncBtn, #docInboxPollBtn, .nav-link[data-view='documents']");
+    if (!actionEl) {
+      return;
+    }
+
+    const ensureSession = () => {
+      if (!token) {
+        handleExpiredControlSession();
+        return false;
+      }
+      return true;
+    };
+
+    const openWebmailAndSync = () => {
+      const imapHostVal = (state.settings?.imapHost || "").toLowerCase();
+      let webmailUrl;
+      if (imapHostVal.includes("gmail") || imapHostVal.includes("google")) {
+        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
+      } else if (imapHostVal.includes("outlook") || imapHostVal.includes("hotmail") || imapHostVal.includes("live.com") || imapHostVal.includes("office365")) {
+        webmailUrl = "https://outlook.live.com/mail/0/inbox";
+      } else if (imapHostVal.includes("yahoo")) {
+        webmailUrl = "https://mail.yahoo.com/";
+      } else if (imapHostVal) {
+        const domain = imapHostVal.replace(/^imap\./, "");
+        webmailUrl = "https://mail." + domain;
+      } else {
+        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
+      }
+
+      const win = window.open(webmailUrl, "_blank");
+      if (!win) {
+        window.location.href = webmailUrl;
+        return;
+      }
+
+      window.setTimeout(async () => {
+        try {
+          await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
+          await loadDocumentInbox();
+        } catch (e) {
+          window.alert(e.message);
+        }
+      }, 700);
+    };
+
+    if (actionEl.matches(".nav-link[data-view='documents']")) {
+      if (!ensureSession()) {
+        return;
+      }
+      // setView laeuft ueber den normalen Nav-Handler; danach Inbox nachladen.
+      window.setTimeout(() => {
+        loadDocumentInbox().catch((e) => {
+          window.alert(e.message);
+        });
+      }, 0);
+      return;
+    }
+
+    if (actionEl.id === "docInboxRefreshBtn") {
+      event.preventDefault();
+      if (!ensureSession()) {
+        return;
+      }
+      loadDocumentInbox().catch((e) => {
+        window.alert(e.message);
+      });
+      return;
+    }
+
+    if (actionEl.id === "docInboxSyncBtn") {
+      event.preventDefault();
+      if (!ensureSession()) {
+        return;
+      }
+      (async () => {
+        actionEl.disabled = true;
+        try {
+          await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
+          await loadDocumentInbox();
+        } catch (e) {
+          window.alert(e.message);
+        } finally {
+          actionEl.disabled = false;
+        }
+      })();
+      return;
+    }
+
+    if (actionEl.id === "docInboxPollBtn") {
+      event.preventDefault();
+      if (!ensureSession()) {
+        return;
+      }
+      openWebmailAndSync();
+    }
+  });
+})();
+
 function getSelectedWorkerIds() {
   return [...(elements.workerList?.querySelectorAll(".bulk-checkbox:checked") || [])].map((cb) => cb.dataset.bulkId);
 }
