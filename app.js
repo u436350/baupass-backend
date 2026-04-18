@@ -3361,13 +3361,20 @@ function registerControlServiceWorker() {
   if (!("serviceWorker" in navigator)) {
     return;
   }
-  navigator.serviceWorker.register("./control-sw.js").then((registration) => {
-    registration.update().catch(() => {
-      // ignore update check failures
-    });
+  // Hard-disable SW to prevent stale cached app bundles from breaking runtime behavior.
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    return Promise.all(registrations.map((registration) => registration.unregister()));
   }).catch(() => {
-    // ignore install failures
+    // ignore SW access failures
   });
+
+  if (window.caches && typeof window.caches.keys === "function") {
+    window.caches.keys().then((cacheKeys) => {
+      return Promise.all(cacheKeys.map((key) => window.caches.delete(key)));
+    }).catch(() => {
+      // ignore cache delete failures
+    });
+  }
 }
 
 function wireDesktopInstallPrompt() {
