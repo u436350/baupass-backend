@@ -9155,18 +9155,17 @@ function openManualCompanyMatchPanel(inboxId) {
     return;
   }
 
-  const companyOptions = activeCompanies
-    .map((company) => `<option value="${escapeHtml(String(company.id))}">${escapeHtml(String(company.name || "Firma"))} (${escapeHtml(getCompanyDocumentEmail(company) || "keine Dokument-Mail")})</option>`)
-    .join("");
-
   content.innerHTML = `
     <form id="docCompanyMatchForm" class="settings-form">
       <p class="muted">Mail aus Prüfkorb manuell einer Firma zuordnen.</p>
       <label>
+        <span>Firma suchen</span>
+        <input id="docCompanyMatchFilter" type="text" placeholder="Name oder Mail eingeben" />
+      </label>
+      <label>
         <span>Firma</span>
         <select id="docCompanyMatchSelect" required>
           <option value="">— bitte wählen —</option>
-          ${companyOptions}
         </select>
       </label>
       <div class="button-row">
@@ -9175,6 +9174,35 @@ function openManualCompanyMatchPanel(inboxId) {
       </div>
       <p id="docCompanyMatchMsg" class="helper-text"></p>
     </form>`;
+
+  const filterInput = document.querySelector("#docCompanyMatchFilter");
+  const selectEl = document.querySelector("#docCompanyMatchSelect");
+  const renderCompanyOptions = (filterValue = "") => {
+    if (!selectEl) return;
+    const prev = String(selectEl.value || "");
+    const needle = String(filterValue || "").trim().toLowerCase();
+    const options = activeCompanies
+      .filter((company) => {
+        if (!needle) return true;
+        const name = String(company.name || "").toLowerCase();
+        const mail = String(getCompanyDocumentEmail(company) || "").toLowerCase();
+        return name.includes(needle) || mail.includes(needle);
+      })
+      .map((company) => `<option value="${escapeHtml(String(company.id))}">${escapeHtml(String(company.name || "Firma"))} (${escapeHtml(getCompanyDocumentEmail(company) || "keine Dokument-Mail")})</option>`)
+      .join("");
+
+    selectEl.innerHTML = `<option value="">— bitte wählen —</option>${options}`;
+    if (prev && Array.from(selectEl.options).some((opt) => opt.value === prev)) {
+      selectEl.value = prev;
+    }
+  };
+
+  renderCompanyOptions("");
+  if (filterInput) {
+    filterInput.addEventListener("input", () => {
+      renderCompanyOptions(filterInput.value);
+    });
+  }
 
   const closeBtn = document.querySelector("#docAssignCancelBtn");
   if (closeBtn) {
