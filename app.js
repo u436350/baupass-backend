@@ -9138,6 +9138,10 @@ function openManualCompanyMatchPanel(inboxId) {
   if (!panel || !content) return;
   panel.style.display = "";
 
+  const closePanel = () => {
+    panel.style.display = "none";
+  };
+
   const activeCompanies = (state.companies || [])
     .filter((company) => !company.deleted_at)
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"));
@@ -9151,7 +9155,7 @@ function openManualCompanyMatchPanel(inboxId) {
         </div>
       </div>`;
     const closeBtn = document.querySelector("#docAssignCancelBtn");
-    if (closeBtn) closeBtn.addEventListener("click", () => { panel.style.display = "none"; });
+    if (closeBtn) closeBtn.addEventListener("click", closePanel);
     return;
   }
 
@@ -9206,13 +9210,45 @@ function openManualCompanyMatchPanel(inboxId) {
 
   const closeBtn = document.querySelector("#docAssignCancelBtn");
   if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      panel.style.display = "none";
-    });
+    closeBtn.addEventListener("click", closePanel);
   }
 
   const form = document.querySelector("#docCompanyMatchForm");
   if (!form) return;
+
+  if (filterInput) {
+    // UX: sofort Suchfeld fokussieren, damit direkt getippt werden kann.
+    window.setTimeout(() => {
+      filterInput.focus();
+      filterInput.select();
+    }, 0);
+
+    filterInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!selectEl) return;
+        if (selectEl.value) {
+          return;
+        }
+        const firstRealOption = Array.from(selectEl.options).find((opt) => opt.value);
+        if (firstRealOption) {
+          selectEl.value = firstRealOption.value;
+        }
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePanel();
+      }
+    });
+  }
+
+  form.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closePanel();
+    }
+  });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const companyId = String(document.querySelector("#docCompanyMatchSelect")?.value || "").trim();
@@ -9230,7 +9266,7 @@ function openManualCompanyMatchPanel(inboxId) {
         method: "POST",
         body: { companyId },
       });
-      panel.style.display = "none";
+      closePanel();
       await loadDocumentInbox();
     } catch (error) {
       if (msgEl) {
