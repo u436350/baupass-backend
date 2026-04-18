@@ -4376,7 +4376,7 @@ function bindCompanyRowActions() {
       }
 
       const currentValue = getCompanyDocumentEmail(company);
-      const nextValue = window.prompt(`Dokument-E-Mail für ${company.name} festlegen`, currentValue || "");
+      const nextValue = window.prompt(`Dokument-E-Mail für ${company.name} festlegen`, currentValue || suggestCompanyDocumentEmail(company.name));
       if (nextValue === null) {
         return;
       }
@@ -4566,6 +4566,22 @@ function getCompanyBillingEmail(company) {
 
 function getCompanyDocumentEmail(company) {
   return (company?.documentEmail || company?.document_email || "").trim();
+}
+
+function suggestCompanyDocumentEmail(companyName) {
+  const imapUsername = String(state.settings?.imapUsername || "").trim().toLowerCase();
+  if (!companyName || !imapUsername.includes("@")) {
+    return "";
+  }
+  const slug = String(companyName)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "firma";
+  const [localPart, domain] = imapUsername.split("@", 2);
+  const aliasBase = (localPart.split("+", 1)[0] || "dokumente").trim() || "dokumente";
+  return `${aliasBase}+${slug}@${domain}`;
 }
 
 function syncInvoiceRecipientFromCompany() {
@@ -8495,6 +8511,20 @@ if (settingsForm) {
 const companyForm = document.querySelector("#companyForm");
 if (companyForm) {
   companyForm.addEventListener("submit", handleCompanySubmit);
+
+  const companyNameInput = document.querySelector("#companyName");
+  const companyDocumentEmailInput = document.querySelector("#companyDocumentEmail");
+  if (companyNameInput && companyDocumentEmailInput) {
+    let lastSuggestedValue = "";
+    companyNameInput.addEventListener("input", () => {
+      const nextSuggestion = suggestCompanyDocumentEmail(companyNameInput.value);
+      const currentValue = companyDocumentEmailInput.value.trim();
+      if (!currentValue || currentValue === lastSuggestedValue) {
+        companyDocumentEmailInput.value = nextSuggestion;
+        lastSuggestedValue = nextSuggestion;
+      }
+    });
+  }
 }
 
 if (elements.desktopInstallButton) {
@@ -8869,10 +8899,12 @@ function renderDocumentInbox(emails) {
   listEl.innerHTML = emails.map((email) => {
     const previewText = String(email.body_text || "").trim();
     const previewShort = previewText.length > 220 ? `${previewText.slice(0, 220)}…` : previewText;
+    const recipientLine = String(email.to_addr || "").trim();
+    const matchedCompanyName = String(email.matched_company_name || "").trim();
     const attachments = (email.attachments || []).map((att) => `
       <span class="attachment-chip">
         📎 ${escapeHtml(att.filename)}
-        <button class="link-button" data-inbox-id="${escapeHtml(String(email.id))}" data-attachment-id="${escapeHtml(String(att.id))}" data-filename="${escapeHtml(att.filename)}" data-assign-btn>
+        <button class="link-button" data-inbox-id="${escapeHtml(String(email.id))}" data-attachment-id="${escapeHtml(String(att.id))}" data-filename="${escapeHtml(att.filename)}" data-matched-company-id="${escapeHtml(String(email.matched_company_id || ""))}" data-assign-btn>
           ${escapeHtml(uiT("btnAssignDoc"))}
         </button>
       </span>`).join("");
@@ -8882,6 +8914,8 @@ function renderDocumentInbox(emails) {
           <strong>${escapeHtml(email.from_addr || "-")}</strong>
           <span class="muted">${escapeHtml(email.received_at ? formatTimestamp(email.received_at) : "")}</span>
         </div>
+        ${recipientLine ? `<div class="muted" style="margin-top:4px; font-size:0.85em;"><strong>An:</strong> ${escapeHtml(recipientLine)}</div>` : ""}
+        ${matchedCompanyName ? `<div class="muted" style="margin-top:2px; font-size:0.85em;"><strong>Firma:</strong> ${escapeHtml(matchedCompanyName)}</div>` : ""}
         <div class="list-item-subject">${escapeHtml(email.subject || "(kein Betreff)")}</div>
         ${previewShort ? `
           <div class="muted" style="margin-top:6px; font-size:0.9em; white-space:pre-wrap;">${escapeHtml(previewShort)}</div>
@@ -8904,7 +8938,7 @@ function renderDocumentInbox(emails) {
   // Assign-Buttons
   listEl.querySelectorAll("[data-assign-btn]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      openDocAssignPanel(btn.dataset.inboxId, btn.dataset.attachmentId, btn.dataset.filename);
+      openDocAssignPanel(btn.dataset.inboxId, btn.dataset.attachmentId, btn.dataset.filename, btn.dataset.matchedCompanyId || "");
     });
   });
 
@@ -8934,14 +8968,22 @@ function renderDocumentInbox(emails) {
   });
 }
 
-function openDocAssignPanel(inboxId, attachmentId, filename) {
+function openDocAssignPanel(inboxId, attachmentId, filename, matchedCompanyId = "") {
   const panel = document.querySelector("#docAssignPanel");
   const content = document.querySelector("#docAssignContent");
   if (!panel || !content) return;
   panel.style.display = "";
 
   // Mitarbeiter-Liste aus state.workers (aktive Nicht-Besucher)
-  const workers = (state.workers || []).filter((w) => !isVisitorWorker(w) && w.status !== "inaktiv");
+  const workers = (state.workers || []).filter((w) => {
+    if (isVisitorWorker(w) || w.status === "inaktiv") {
+      return false;
+    }
+    if (matchedCompanyId && String(w.companyId || w.company_id || "") !== String(matchedCompanyId)) {
+      return false;
+    }
+    return true;
+  });
   const workerOptions = workers.map((w) =>
     `<option value="${escapeHtml(String(w.id))}">${escapeHtml(w.firstName + " " + w.lastName)} — ${escapeHtml(w.badgeId)}</option>`
   ).join("");
@@ -8953,6 +8995,7 @@ function openDocAssignPanel(inboxId, attachmentId, filename) {
   content.innerHTML = `
     <form id="docAssignForm" class="settings-form">
       <p class="muted">📎 ${escapeHtml(filename)}</p>
+      ${matchedCompanyId ? `<p class="muted">Vorauswahl auf erkannte Firma eingeschränkt.</p>` : ""}
       <label>
         <span>${escapeHtml(uiT("docAssignWorkerLabel"))}</span>
         <select id="docAssignWorkerId" required>
@@ -9150,9 +9193,12 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
     const copyBtn = document.querySelector("#docEmailCopyBtn");
     if (!bar || !addrEl) return;
     const currentUser = getCurrentUser();
+    const role = String(currentUser?.role || "").toLowerCase();
     const currentCompanyId = currentUser?.company_id || currentUser?.companyId || "";
     const currentCompany = (state.companies || []).find((company) => company.id === currentCompanyId);
-    const email = getCompanyDocumentEmail(currentCompany) || (state.settings?.imapUsername || "").trim();
+    const companyEmail = getCompanyDocumentEmail(currentCompany);
+    const globalEmail = (state.settings?.imapUsername || "").trim();
+    const email = companyEmail || (role === "superadmin" ? globalEmail : "");
     if (email) {
       addrEl.textContent = email;
       bar.style.display = "";

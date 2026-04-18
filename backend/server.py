@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from email.message import EmailMessage
+from email.utils import getaddresses
 from urllib.parse import quote, urlsplit, urlunsplit
 from flask import Flask, jsonify, request, send_from_directory, g, Response, redirect, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -314,6 +315,56 @@ def purge_expired_worker_app_sessions(db, now_value=None):
 def normalize_company_plan(plan_value):
     plan = str(plan_value or "").strip().lower()
     return plan if plan in PLAN_NET_PRICE_EUR else "tageskarte"
+
+
+def slugify_company_alias(value):
+    normalized = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower())
+    normalized = normalized.strip("-")
+    return normalized[:48] or "firma"
+
+
+def normalize_email_address(value):
+    return re.sub(r"\s+", "", str(value or "").strip().lower())
+
+
+def suggest_company_document_email(company_name, settings_row=None):
+    row = settings_row
+    if row is None:
+        try:
+            row = get_db().execute("SELECT imap_username FROM settings WHERE id = 1").fetchone()
+        except Exception:
+            row = None
+
+    imap_username = (row["imap_username"] if row and "imap_username" in row.keys() else "") or ""
+    imap_username = normalize_email_address(imap_username)
+    if "@" not in imap_username:
+        return ""
+
+    local_part, domain = imap_username.split("@", 1)
+    alias_base = (local_part.split("+", 1)[0] or "dokumente").strip() or "dokumente"
+    return f"{alias_base}+{slugify_company_alias(company_name)}@{domain}"
+
+
+def extract_message_recipient_address(msg):
+    for header_name in ("Delivered-To", "X-Original-To", "Envelope-To", "To"):
+        header_value = msg.get(header_name)
+        if not header_value:
+            continue
+        for _, email_addr in getaddresses([header_value]):
+            normalized = normalize_email_address(email_addr)
+            if normalized:
+                return normalized
+    return ""
+
+
+def find_company_by_document_email(db, email_address):
+    normalized = normalize_email_address(email_address)
+    if not normalized:
+        return None
+    return db.execute(
+        "SELECT * FROM companies WHERE lower(document_email) = ? AND deleted_at IS NULL",
+        (normalized,),
+    ).fetchone()
 
 
 def normalize_worker_type(worker_type):
@@ -903,6 +954,7 @@ def init_db():
             name TEXT NOT NULL,
             contact TEXT NOT NULL,
             billing_email TEXT NOT NULL DEFAULT '',
+            document_email TEXT NOT NULL DEFAULT '',
             access_host TEXT NOT NULL DEFAULT '',
             plan TEXT NOT NULL,
             status TEXT NOT NULL,
@@ -1047,11 +1099,14 @@ def init_db():
             id TEXT PRIMARY KEY,
             message_id TEXT NOT NULL DEFAULT '',
             from_addr TEXT NOT NULL DEFAULT '',
+            to_addr TEXT NOT NULL DEFAULT '',
             subject TEXT NOT NULL DEFAULT '',
             body_text TEXT NOT NULL DEFAULT '',
+            matched_company_id TEXT,
             received_at TEXT NOT NULL,
             processed INTEGER NOT NULL DEFAULT 0,
-            dismissed INTEGER NOT NULL DEFAULT 0
+            dismissed INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY(matched_company_id) REFERENCES companies(id)
         );
 
         CREATE TABLE IF NOT EXISTS email_attachments (
@@ -1209,6 +1264,12 @@ def init_db():
         cur.execute("ALTER TABLE settings ADD COLUMN imap_folder TEXT NOT NULL DEFAULT 'INBOX'")
     if "imap_use_ssl" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN imap_use_ssl INTEGER NOT NULL DEFAULT 1")
+
+    inbox_columns = [row[1] for row in cur.execute("PRAGMA table_info(email_inbox)").fetchall()]
+    if "to_addr" not in inbox_columns:
+        cur.execute("ALTER TABLE email_inbox ADD COLUMN to_addr TEXT NOT NULL DEFAULT ''")
+    if "matched_company_id" not in inbox_columns:
+        cur.execute("ALTER TABLE email_inbox ADD COLUMN matched_company_id TEXT")
 
     session_columns = [row[1] for row in cur.execute("PRAGMA table_info(sessions)").fetchall()]
     if "last_seen" not in session_columns:
@@ -2905,6 +2966,8 @@ def create_company():
     company_contact = clean_text_input(payload.get("contact", ""), max_len=180)
     billing_email = clean_text_input(payload.get("billingEmail", ""), max_len=160)
     document_email = clean_text_input(payload.get("documentEmail", ""), max_len=160)
+    if not document_email:
+        document_email = suggest_company_document_email(company_name)
     access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
     company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
     admin_password = (payload.get("adminPassword") or "").strip() or "1234"
@@ -3946,6 +4009,8 @@ def update_company(company_id):
     company_contact = clean_text_input(payload.get("contact", company["contact"]), max_len=180)
     company_billing_email = clean_text_input(payload.get("billingEmail", company["billing_email"]), max_len=160)
     company_document_email = clean_text_input(payload.get("documentEmail", company["document_email"]), max_len=160)
+    if not company_document_email:
+        company_document_email = suggest_company_document_email(company_name)
     company_access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or company["access_host"]), max_len=180)
     company_status = clean_text_input(payload.get("status", company["status"]), max_len=32) or company["status"]
 
@@ -5684,8 +5749,11 @@ def poll_imap_inbox():
                 if not message_id and imap_uid:
                     message_id = f"imap-uid:{imap_uid}"
                 from_addr = _decode_mime_header(msg.get("From") or "")
+                to_addr = extract_message_recipient_address(msg)
                 subject = _decode_mime_header(msg.get("Subject") or "")
                 received_at = now_iso()
+                matched_company = find_company_by_document_email(db, to_addr)
+                matched_company_id = matched_company["id"] if matched_company else None
 
                 # Doppelten Einlese-Schutz via message_id
                 if message_id:
@@ -5730,8 +5798,8 @@ def poll_imap_inbox():
 
                 inbox_id = f"inb-{secrets.token_hex(8)}"
                 db.execute(
-                    "INSERT INTO email_inbox (id, message_id, from_addr, subject, body_text, received_at) VALUES (?,?,?,?,?,?)",
-                    (inbox_id, message_id, from_addr, subject, body_text[:2000], received_at),
+                    "INSERT INTO email_inbox (id, message_id, from_addr, to_addr, subject, body_text, matched_company_id, received_at) VALUES (?,?,?,?,?,?,?,?)",
+                    (inbox_id, message_id, from_addr, to_addr, subject, body_text[:2000], matched_company_id, received_at),
                 )
 
                 for att in attachments_data:
@@ -5825,9 +5893,15 @@ def trigger_imap_poll():
 @require_roles("superadmin", "company-admin", "turnstile")
 def list_document_inbox():
     db = get_db()
-    rows = db.execute(
-        "SELECT * FROM email_inbox WHERE dismissed = 0 ORDER BY received_at DESC LIMIT 100"
-    ).fetchall()
+    if g.current_user["role"] == "superadmin":
+        rows = db.execute(
+            "SELECT * FROM email_inbox WHERE dismissed = 0 ORDER BY received_at DESC LIMIT 100"
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT * FROM email_inbox WHERE dismissed = 0 AND matched_company_id = ? ORDER BY received_at DESC LIMIT 100",
+            (g.current_user.get("company_id"),),
+        ).fetchall()
 
     result = []
     for row in rows:
@@ -5838,6 +5912,14 @@ def list_document_inbox():
         ).fetchall()
         entry = dict(row)
         entry["attachments"] = [dict(a) for a in attachments]
+        if row["matched_company_id"]:
+            company = db.execute(
+                "SELECT id, name, document_email FROM companies WHERE id = ?",
+                (row["matched_company_id"],),
+            ).fetchone()
+            if company:
+                entry["matched_company_name"] = company["name"]
+                entry["matched_company_document_email"] = company["document_email"]
         result.append(entry)
 
     return jsonify(result)
