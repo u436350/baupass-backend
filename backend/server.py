@@ -764,6 +764,20 @@ def get_request_host():
     return (request.host or "").split(":", 1)[0].strip().lower()
 
 
+def is_request_secure():
+    forwarded_proto = (request.headers.get("X-Forwarded-Proto") or "").split(",", 1)[0].strip().lower()
+    if forwarded_proto:
+        return forwarded_proto == "https"
+    return request.is_secure
+
+
+def get_auth_token_from_request():
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header.split(" ", 1)[1].strip()
+    return (request.cookies.get(SESSION_COOKIE_NAME, "") or "").strip()
+
+
 def get_preferred_local_ip():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -813,7 +827,7 @@ def get_public_base_url():
 def should_use_cross_site_cookie():
     origin = (request.headers.get("Origin") or "").strip().rstrip("/")
     current_origin = f"{request.scheme}://{request.host}".rstrip("/")
-    return bool(origin) and origin != current_origin and request.is_secure
+    return bool(origin) and origin != current_origin and is_request_secure()
 
 
 def get_ssl_context_from_env():
@@ -1316,11 +1330,9 @@ def is_tenant_host_valid(db, user):
 def require_auth(handler):
     @wraps(handler)
     def wrapper(*args, **kwargs):
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
+        token = get_auth_token_from_request()
+        if not token:
             return jsonify({"error": "unauthorized"}), 401
-
-        token = auth_header.split(" ", 1)[1]
         db = get_db()
         session = db.execute("SELECT user_id, expires_at FROM sessions WHERE token = ?", (token,)).fetchone()
         if not session:
@@ -2393,7 +2405,7 @@ def login():
         token,
         httponly=True,
         samesite="None" if should_use_cross_site_cookie() else "Lax",
-        secure=request.is_secure,
+        secure=is_request_secure(),
     )
     return response
 
@@ -2417,10 +2429,7 @@ def me():
 
 @app.get("/api/session/bootstrap")
 def session_bootstrap():
-    auth_header = request.headers.get("Authorization", "")
-    auth_token = auth_header.split(" ", 1)[1].strip() if auth_header.startswith("Bearer ") else ""
-    cookie_token = request.cookies.get(SESSION_COOKIE_NAME, "")
-    token = auth_token or cookie_token
+    token = get_auth_token_from_request()
 
     user = get_user_from_session_token(token)
     if not user:
