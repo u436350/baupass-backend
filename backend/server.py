@@ -2852,9 +2852,11 @@ def update_settings():
     db = get_db()
 
     current_row = db.execute(
-        "SELECT imap_password FROM settings WHERE id = 1"
+        "SELECT smtp_password, imap_password FROM settings WHERE id = 1"
     ).fetchone()
+    current_smtp_password = str(current_row["smtp_password"] or "") if current_row else ""
     current_imap_password = str(current_row["imap_password"] or "") if current_row else ""
+    payload_smtp_password = str(payload.get("smtpPassword") or "")
     db.execute(
         """
         UPDATE settings
@@ -2876,7 +2878,7 @@ def update_settings():
             payload.get("smtpHost", ""),
             int(payload.get("smtpPort", 587) or 587),
             payload.get("smtpUsername", ""),
-            payload.get("smtpPassword", ""),
+            payload_smtp_password if payload_smtp_password.strip() else current_smtp_password,
             payload.get("smtpSenderEmail", ""),
             payload.get("smtpSenderName", "BauPass Control"),
             1 if payload.get("smtpUseTls", True) else 0,
@@ -3071,10 +3073,22 @@ def create_company():
     access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
     company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
     admin_password = (payload.get("adminPassword") or "").strip() or "1234"
+    turnstile_password = (payload.get("turnstilePassword") or "").strip() or admin_password
+    try:
+        turnstile_count = int(payload.get("turnstileCount", 1) or 1)
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid_turnstile_count", "message": "Anzahl Drehkreuze muss eine Zahl sein."}), 400
+
+    if turnstile_count < 1 or turnstile_count > 20:
+        return jsonify({"error": "invalid_turnstile_count", "message": "Anzahl Drehkreuze muss zwischen 1 und 20 liegen."}), 400
+
     if len(admin_password) < 4:
         return jsonify({"error": "password_too_short", "message": "Passwort muss mindestens 4 Zeichen haben."}), 400
+    if len(turnstile_password) < 4:
+        return jsonify({"error": "turnstile_password_too_short", "message": "Drehkreuz-Passwort muss mindestens 4 Zeichen haben."}), 400
 
-    get_db().execute(
+    db = get_db()
+    db.execute(
         "INSERT INTO companies (id, name, contact, billing_email, document_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             company_id,
@@ -3091,7 +3105,6 @@ def create_company():
     username_base = "".join(c for c in company_name.lower() if c.isalnum())[:12] or "firma"
     username = username_base
     suffix = 1
-    db = get_db()
     while db.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone():
         username = f"{username_base}{suffix}"
         suffix += 1
@@ -3107,6 +3120,40 @@ def create_company():
             company_id,
         ),
     )
+
+    turnstile_credentials = []
+    for index in range(turnstile_count):
+        if turnstile_count == 1:
+            turnstile_username_base = f"{username_base}gate"
+            turnstile_display_name = f"{company_name} Drehkreuz"
+        else:
+            turnstile_username_base = f"{username_base}gate{index + 1}"
+            turnstile_display_name = f"{company_name} Drehkreuz {index + 1}"
+
+        turnstile_username = turnstile_username_base
+        turnstile_suffix = 1
+        while db.execute("SELECT 1 FROM users WHERE username = ?", (turnstile_username,)).fetchone():
+            turnstile_username = f"{turnstile_username_base}{turnstile_suffix}"
+            turnstile_suffix += 1
+
+        db.execute(
+            "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                f"usr-{secrets.token_hex(6)}",
+                turnstile_username,
+                generate_password_hash(turnstile_password),
+                turnstile_display_name,
+                "turnstile",
+                company_id,
+            ),
+        )
+        turnstile_credentials.append(
+            {
+                "username": turnstile_username,
+                "password": turnstile_password,
+            }
+        )
+
     db.commit()
     log_audit("company.created", f"Firma {company_name} wurde angelegt", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
 
@@ -3119,6 +3166,11 @@ def create_company():
                     "username": username,
                     "password": admin_password,
                 },
+                "turnstileCredentials": {
+                    "username": turnstile_credentials[0]["username"],
+                    "password": turnstile_credentials[0]["password"],
+                },
+                "turnstileCredentialsList": turnstile_credentials,
             }
         ),
         201,

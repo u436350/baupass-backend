@@ -5939,7 +5939,6 @@ async function handleSettingsSubmit(event) {
       smtpHost: document.querySelector("#smtpHost").value.trim(),
       smtpPort: Number(document.querySelector("#smtpPort").value || 587),
       smtpUsername: document.querySelector("#smtpUsername").value.trim(),
-      smtpPassword: document.querySelector("#smtpPassword").value,
       smtpSenderEmail: document.querySelector("#smtpSenderEmail").value.trim(),
       smtpSenderName: document.querySelector("#smtpSenderName").value.trim(),
       smtpUseTls: document.querySelector("#smtpUseTls").value === "1",
@@ -5952,6 +5951,10 @@ async function handleSettingsSubmit(event) {
       imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
       imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
     };
+    const smtpPasswordValue = document.querySelector("#smtpPassword")?.value || "";
+    if (smtpPasswordValue.trim()) {
+      settingsBody.smtpPassword = smtpPasswordValue;
+    }
     const imapPasswordValue = document.querySelector("#imapPassword")?.value || "";
     if (imapPasswordValue.trim()) {
       settingsBody.imapPassword = imapPasswordValue;
@@ -6520,19 +6523,43 @@ async function handleCompanySubmit(event) {
         accessHost: document.querySelector("#companyAccessHost").value.trim().toLowerCase(),
         plan: document.querySelector("#companyPlan").value,
         status: document.querySelector("#companyStatus").value,
-        adminPassword: document.querySelector("#companyAdminPassword").value.trim() || undefined
+        adminPassword: document.querySelector("#companyAdminPassword").value.trim() || undefined,
+        turnstilePassword: (document.querySelector("#companyTurnstilePassword")?.value || "").trim() || undefined,
+        turnstileCount: Number(document.querySelector("#companyTurnstileCount")?.value || 1),
       }
     });
 
     elements.companyForm.reset();
     document.querySelector("#companyPlan").value = "tageskarte";
     document.querySelector("#companyStatus").value = "aktiv";
+    const turnstileCountInput = document.querySelector("#companyTurnstileCount");
+    if (turnstileCountInput) {
+      turnstileCountInput.value = "1";
+    }
 
     await loadAllData();
     refreshAll();
 
     if (response.adminCredentials) {
-      window.alert(`Firma angelegt. Admin-Zugang: ${response.adminCredentials.username} / ${response.adminCredentials.password}`);
+      const accessLines = [
+        `Admin-Zugang: ${response.adminCredentials.username} / ${response.adminCredentials.password}`,
+      ];
+
+      const turnstileCredentials = Array.isArray(response.turnstileCredentialsList)
+        ? response.turnstileCredentialsList
+        : response.turnstileCredentials?.username
+          ? [response.turnstileCredentials]
+          : [];
+
+      turnstileCredentials.forEach((credential, index) => {
+        accessLines.push(`Drehkreuz-Zugang ${index + 1}: ${credential.username} / ${credential.password}`);
+      });
+
+      if (!turnstileCredentials.length && response.turnstileCredentials?.username) {
+        accessLines.push(`Drehkreuz-Zugang: ${response.turnstileCredentials.username} / ${response.turnstileCredentials.password}`);
+      }
+
+      window.alert(`Firma angelegt.\n${accessLines.join("\n")}`);
     }
   } catch (error) {
     window.alert(`Firma konnte nicht angelegt werden: ${error.message}`);
