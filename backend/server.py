@@ -2879,6 +2879,43 @@ def list_companies():
     return jsonify([row_to_dict(row) for row in rows])
 
 
+@app.get("/api/companies/document-emails/export")
+@require_auth
+@require_roles("superadmin")
+def export_company_document_emails_csv():
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT id, name, contact, billing_email, document_email, status, deleted_at
+        FROM companies
+        ORDER BY name
+        """
+    ).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["company_id", "company_name", "document_email", "status", "contact", "billing_email", "deleted"])
+    for row in rows:
+        writer.writerow([
+            row["id"],
+            row["name"],
+            row["document_email"] or "",
+            row["status"] or "",
+            row["contact"] or "",
+            row["billing_email"] or "",
+            "1" if row["deleted_at"] else "0",
+        ])
+
+    csv_text = output.getvalue()
+    output.close()
+    filename = f"company-document-emails-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.get("/api/subcompanies")
 @require_auth
 def list_subcompanies():

@@ -15,7 +15,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260418l";
+        const buildTag = "20260418m";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -1005,6 +1005,9 @@
                 <p class="eyebrow" data-ui-i18n="companiesListEyebrow">Mandanten</p>
                 <h3 data-ui-i18n="companiesListH3">Baufirmen und Pläne</h3>
               </div>
+              <div class="button-row">
+                <button id="exportCompanyDocEmailsBtn" type="button" class="ghost-button">Dokument-Mails exportieren</button>
+              </div>
             </div>
             <div id="companyList" class="card-list"></div>
 
@@ -1129,6 +1132,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260418l"></script>
+  <script src="./app.js?v=20260418m"></script>
 </body>
 </html>

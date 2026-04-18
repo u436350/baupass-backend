@@ -8474,6 +8474,43 @@ if (invoiceFilterStatus) {
   invoiceFilterStatus.addEventListener("change", () => renderInvoiceManagementList());
 }
 
+const exportCompanyDocEmailsBtn = document.querySelector("#exportCompanyDocEmailsBtn");
+if (exportCompanyDocEmailsBtn) {
+  exportCompanyDocEmailsBtn.addEventListener("click", async () => {
+    if (!token) {
+      handleExpiredControlSession();
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/companies/document-emails/export`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!response.ok) {
+        let payload = {};
+        try {
+          payload = await response.json();
+        } catch {
+          payload = {};
+        }
+        throw new Error(payload?.error || `http_${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `company-document-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(`Export fehlgeschlagen: ${error.message}`);
+    }
+  });
+}
+
 const collectionsFilter = document.querySelector("#collectionsFilter");
 if (collectionsFilter) {
   collectionsFilter.addEventListener("change", () => renderCollectionsList());
@@ -8896,7 +8933,22 @@ function renderDocumentInbox(emails) {
     listEl.innerHTML = `<div class="empty-state">${escapeHtml(uiT("docInboxEmpty"))}</div>`;
     return;
   }
-  listEl.innerHTML = emails.map((email) => {
+  const statusChip = (email) => {
+    const attachments = Array.isArray(email.attachments) ? email.attachments : [];
+    const assignedCount = attachments.filter((att) => att.assigned_worker_id).length;
+    if (!email.matched_company_id) {
+      return '<span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#ffe8e8; color:#9f1d1d; font-size:0.75em; font-weight:700;">Nicht erkannt</span>';
+    }
+    if (!attachments.length || assignedCount === 0) {
+      return '<span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#fff3d1; color:#8a5b00; font-size:0.75em; font-weight:700;">Neu</span>';
+    }
+    if (assignedCount < attachments.length) {
+      return '<span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#e7f0ff; color:#114b9f; font-size:0.75em; font-weight:700;">Teilweise</span>';
+    }
+    return '<span style="display:inline-block; padding:2px 8px; border-radius:999px; background:#e7ffe9; color:#1f7a35; font-size:0.75em; font-weight:700;">Zugeordnet</span>';
+  };
+
+  const renderEmailCard = (email) => {
     const previewText = String(email.body_text || "").trim();
     const previewShort = previewText.length > 220 ? `${previewText.slice(0, 220)}…` : previewText;
     const recipientLine = String(email.to_addr || "").trim();
@@ -8911,7 +8963,7 @@ function renderDocumentInbox(emails) {
     return `
       <div class="list-item" data-email-id="${escapeHtml(String(email.id))}">
         <div class="list-item-meta">
-          <strong>${escapeHtml(email.from_addr || "-")}</strong>
+          <strong>${escapeHtml(email.from_addr || "-")}</strong> ${statusChip(email)}
           <span class="muted">${escapeHtml(email.received_at ? formatTimestamp(email.received_at) : "")}</span>
         </div>
         ${recipientLine ? `<div class="muted" style="margin-top:4px; font-size:0.85em;"><strong>An:</strong> ${escapeHtml(recipientLine)}</div>` : ""}
@@ -8933,7 +8985,21 @@ function renderDocumentInbox(emails) {
           </button>
         </div>
       </div>`;
-  }).join("");
+  };
+
+  const recognized = emails.filter((entry) => Boolean(entry.matched_company_id));
+  const unrecognized = emails.filter((entry) => !entry.matched_company_id);
+
+  listEl.innerHTML = `
+    <div class="meta-box" style="margin-bottom:8px;">
+      <p style="margin:0;"><strong>Erkannt:</strong> ${recognized.length} | <strong>Prüfkorb:</strong> ${unrecognized.length}</p>
+    </div>
+    ${recognized.length ? recognized.map(renderEmailCard).join("") : '<div class="empty-state">Keine erkannten Mails.</div>'}
+    <div class="meta-box" style="margin-top:12px;">
+      <p style="margin:0;"><strong>Prüfkorb</strong> (Empfängeradresse konnte keiner Firma zugeordnet werden)</p>
+    </div>
+    ${unrecognized.length ? unrecognized.map(renderEmailCard).join("") : '<div class="empty-state">Keine ungeklärten Mails.</div>'}
+  `;
 
   // Assign-Buttons
   listEl.querySelectorAll("[data-assign-btn]").forEach((btn) => {
