@@ -15,7 +15,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260417m";
+        const buildTag = "20260418j";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -104,11 +104,11 @@
       <form id="loginForm" class="auth-form">
         <label>
           <span data-ui-i18n="loginUsernameLabel">Benutzername</span>
-          <input id="loginUsername" type="text" placeholder="superadmin" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required />
+          <input id="loginUsername" type="text" placeholder="Benutzername" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="username" />
         </label>
         <label>
           <span data-ui-i18n="loginPasswordLabel">Passwort</span>
-          <input id="loginPassword" type="password" placeholder="1234" data-ui-i18n="loginPasswordPlaceholder" data-ui-i18n-attr="placeholder" required />
+          <input id="loginPassword" type="password" placeholder="Passwort eingeben" data-ui-i18n="loginPasswordPlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="current-password" />
         </label>
         <label>
           <span data-ui-i18n="loginOtpLabel">OTP-Code (wenn 2FA aktiv)</span>
@@ -127,12 +127,6 @@
       </form>
 
       <div class="auth-hints">
-        <div class="meta-box">
-          <p data-ui-i18n="demoAccessTitle">Demo-Zugänge</p>
-          <p data-ui-i18n="demoSuperAdmin">Super-Admin: superadmin / 1234</p>
-          <p data-ui-i18n="demoCompanyAdmin">Firmen-Admin: firma / 1234</p>
-          <p data-ui-i18n="demoTurnstile">Drehkreuz: drehkreuz / 1234</p>
-        </div>
         <div class="meta-box install-box">
           <p data-ui-i18n="desktopAppTitle">Desktop-App</p>
           <p id="desktopInstallHint" class="helper-text" data-ui-i18n="desktopInstallHint">Dieses Portal kann auf dem Computer wie ein Programm installiert werden.</p>
@@ -142,7 +136,7 @@
     </div>
   </div>
 
-  <div id="mainShell" class="shell locked" style="display:none;">
+  <div id="mainShell" class="shell locked" style="display:none;" hidden aria-hidden="true">
     <aside class="sidebar">
       <div>
         <img class="website-logo-sync website-logo website-logo-sidebar hidden" alt="Firmenlogo" />
@@ -1131,6 +1125,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260418i"></script>
+  <script src="./app.js?v=20260418j"></script>
 </body>
 </html>

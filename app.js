@@ -89,9 +89,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Betreiber",
     authTurnstile: "Drehkreuz-Endpunkt",
     loginUsernameLabel: "Benutzername",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Benutzername",
     loginPasswordLabel: "Passwort",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Passwort eingeben",
     loginOtpLabel: "OTP-Code (wenn 2FA aktiv)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Sprache",
@@ -410,9 +410,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Operator",
     authTurnstile: "Turnstile Endpoint",
     loginUsernameLabel: "Username",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Username",
     loginPasswordLabel: "Password",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Enter password",
     loginOtpLabel: "OTP code (if 2FA is enabled)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Language",
@@ -731,9 +731,9 @@ const UI_TRANSLATIONS = {
     authOperator: "İşletmeci",
     authTurnstile: "Turnike Uç Noktası",
     loginUsernameLabel: "Kullanıcı adı",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Kullanici adi",
     loginPasswordLabel: "Şifre",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Parola girin",
     loginOtpLabel: "OTP kodu (2FA aktifse)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Dil",
@@ -1174,9 +1174,9 @@ const UI_TRANSLATIONS = {
     authOperator: "المشغّل",
     authTurnstile: "نقطة نهاية البوابة",
     loginUsernameLabel: "اسم المستخدم",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "اسم المستخدم",
     loginPasswordLabel: "كلمة المرور",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "أدخل كلمة المرور",
     loginOtpLabel: "رمز OTP (إذا كانت 2FA مفعلة)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "اللغة",
@@ -1426,9 +1426,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Opérateur",
     authTurnstile: "Point d'accès tourniquet",
     loginUsernameLabel: "Nom d'utilisateur",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Nom d'utilisateur",
     loginPasswordLabel: "Mot de passe",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Saisir le mot de passe",
     loginOtpLabel: "Code OTP (si 2FA activée)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Langue",
@@ -1678,9 +1678,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Operador",
     authTurnstile: "Endpoint de torniquete",
     loginUsernameLabel: "Usuario",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Usuario",
     loginPasswordLabel: "Contraseña",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Introduce la contraseña",
     loginOtpLabel: "Código OTP (si 2FA está activa)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Idioma",
@@ -1930,9 +1930,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Operatore",
     authTurnstile: "Endpoint tornello",
     loginUsernameLabel: "Nome utente",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Nome utente",
     loginPasswordLabel: "Password",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Inserisci la password",
     loginOtpLabel: "Codice OTP (se 2FA è attiva)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Lingua",
@@ -2182,9 +2182,9 @@ const UI_TRANSLATIONS = {
     authOperator: "Operator",
     authTurnstile: "Endpoint bramki",
     loginUsernameLabel: "Nazwa użytkownika",
-    loginUsernamePlaceholder: "superadmin",
+    loginUsernamePlaceholder: "Nazwa uzytkownika",
     loginPasswordLabel: "Hasło",
-    loginPasswordPlaceholder: "1234",
+    loginPasswordPlaceholder: "Wpisz haslo",
     loginOtpLabel: "Kod OTP (jeśli 2FA jest aktywne)",
     loginOtpPlaceholder: "123456",
     uiLanguageLabel: "Język",
@@ -3839,10 +3839,13 @@ function refreshAll() {
   const loggedIn = Boolean(token && state.currentUser);
   if (elements.authOverlay) {
     elements.authOverlay.style.display = loggedIn ? "none" : "grid";
+    elements.authOverlay.setAttribute("aria-hidden", loggedIn ? "true" : "false");
   }
   if (elements.mainShell) {
     elements.mainShell.style.display = loggedIn ? "grid" : "none";
     elements.mainShell.classList.toggle("locked", !loggedIn);
+    elements.mainShell.hidden = !loggedIn;
+    elements.mainShell.setAttribute("aria-hidden", loggedIn ? "false" : "true");
   }
   if (elements.body) {
     elements.body.classList.toggle("auth-locked", !loggedIn);
