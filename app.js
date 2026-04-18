@@ -2801,6 +2801,7 @@ let backendStatusTimer = null;
 let heartbeatTimer = null;
 let selfieSegmenter = null;
 let sessionExpiryNoticeShown = false;
+let sessionExpiryNoticeAt = 0;
 
 const PLAN_LABELS = {
   tageskarte: "Besucherkarte",
@@ -3604,10 +3605,12 @@ function clearSession() {
 function handleExpiredControlSession() {
   clearSession();
   refreshAll();
-  if (sessionExpiryNoticeShown) {
+  const now = Date.now();
+  if (sessionExpiryNoticeShown && (now - sessionExpiryNoticeAt) < 2500) {
     return;
   }
   sessionExpiryNoticeShown = true;
+  sessionExpiryNoticeAt = now;
   window.alert(uiT("alertSessionExpired"));
 }
 
