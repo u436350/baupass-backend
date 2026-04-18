@@ -56,8 +56,30 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
+const SESSION_TOKEN_STORAGE_KEY = "baupass-control-token";
 const UI_LANG_STORAGE_KEY = "baupass-ui-lang";
 const UI_FALLBACK_LANG = "de";
+
+function loadStoredSessionToken() {
+  try {
+    return (window.localStorage.getItem(SESSION_TOKEN_STORAGE_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function persistSessionToken(value) {
+  try {
+    const next = String(value || "").trim();
+    if (next) {
+      window.localStorage.setItem(SESSION_TOKEN_STORAGE_KEY, next);
+    } else {
+      window.localStorage.removeItem(SESSION_TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage failures (private mode / quota)
+  }
+}
 const UI_TRANSLATIONS = {
   de: {
     authEyebrow: "Melde-Seite",
@@ -2792,7 +2814,7 @@ const elements = {
   // ...weitere Elemente nach Bedarf...
 };
 
-let token = "";
+let token = loadStoredSessionToken();
 let qrLibraryLoadPromise = null;
 let accessFeedbackTimer = null;
 let accessAudioContext = null;
@@ -3599,6 +3621,7 @@ function setView(viewName) {
 
 function clearSession() {
   token = "";
+  persistSessionToken("");
   state.currentUser = null;
 }
 
@@ -3718,10 +3741,7 @@ async function loadAllData() {
       const msg = String(error?.message || "");
       // Nicht eingeloggt ist beim ersten Laden ein normaler Zustand.
       if (["unauthorized", "invalid_session", "session_expired"].includes(msg)) {
-        // Wenn bereits ein Token da ist, behalten wir die aktive Session bei.
-        if (!token) {
-          clearSession();
-        }
+        clearSession();
         sessionExpiryNoticeShown = false;
         return;
       }
@@ -3729,6 +3749,7 @@ async function loadAllData() {
     }
     if (bootstrap?.token) {
       token = bootstrap.token;
+      persistSessionToken(token);
     }
     if (bootstrap?.user) {
       state.currentUser = bootstrap.user;
@@ -6777,6 +6798,7 @@ async function handleLoginSubmit(event) {
     }
 
     token = payload.token;
+    persistSessionToken(token);
     state.currentUser = payload.user;
     elements.loginForm.reset();
     startHeartbeat();
