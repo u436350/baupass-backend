@@ -2739,6 +2739,7 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
+  loginResetPasswordButton: document.querySelector("#loginResetPasswordButton"),
   systemThemeToggleButton: document.querySelector("#systemThemeToggleButton"),
   desktopInstallButton: document.querySelector("#desktopInstallButton"),
   desktopInstallHint: document.querySelector("#desktopInstallHint"),
@@ -2788,6 +2789,8 @@ const elements = {
   badgePinHint: document.querySelector("#badgePinHint"),
   invoiceCompanySelect: document.querySelector("#invoiceCompanySelect"),
   companyList: document.querySelector("#companyList"),
+  compliancePanel: document.querySelector("#compliancePanel"),
+  auditLogPanel: document.querySelector("#auditLogPanel"),
   dayCloseAcknowledgeForm: document.querySelector("#dayCloseAcknowledgeForm"),
   dayCloseComment: document.querySelector("#dayCloseComment"),
   dayCloseAcknowledgeButton: document.querySelector("#dayCloseAcknowledgeButton"),
@@ -2858,6 +2861,9 @@ const state = {
   companyRepairBusy: {},
   companyRepairStatus: {},
   companyLockBusy: {},
+  companyTurnstiles: {},
+  complianceOverview: [],
+  auditLogs: [],
   repairHistoryWindowDays: 30,
   onlyCompaniesWithRepairs: false,
   dayClose: null,
@@ -3798,10 +3804,12 @@ async function loadAllData() {
     apiRequest(`${API_BASE}/api/access-logs/summary`),
     apiRequest(`${API_BASE}/api/access-logs/day-close-check`),
     apiRequest(`${API_BASE}/api/audit-logs?eventType=company.repair&targetType=company&limit=120`),
-    apiRequest(reportUrl)
+    apiRequest(reportUrl),
+    apiRequest(`${API_BASE}/api/compliance/overview`),
+    apiRequest(`${API_BASE}/api/audit-logs?limit=50`)
   ]);
 
-  const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit, reporting] = requests;
+  const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit, reporting, complianceOverview, auditLogs] = requests;
   if (settings.status === "fulfilled") {
     state.settings = settings.value || state.settings;
     document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
@@ -3817,7 +3825,7 @@ async function loadAllData() {
   if (dayClose.status === "fulfilled") state.dayClose = dayClose.value || null;
   if (repairAudit.status === "fulfilled") {
     const grouped = {};
-    (repairAudit.value || []).forEach((entry) => {
+    ((repairAudit.value && Array.isArray(repairAudit.value.logs) ? repairAudit.value.logs : repairAudit.value) || []).forEach((entry) => {
       const companyId = entry?.target_id || "";
       if (!companyId) {
         return;
@@ -3833,6 +3841,32 @@ async function loadAllData() {
     state.companyRepairHistory = grouped;
   } else {
     state.companyRepairHistory = {};
+  }
+
+  if (complianceOverview.status === "fulfilled") {
+    state.complianceOverview = Array.isArray(complianceOverview.value) ? complianceOverview.value : [];
+  } else {
+    state.complianceOverview = [];
+  }
+
+  if (auditLogs.status === "fulfilled") {
+    state.auditLogs = Array.isArray(auditLogs.value?.logs) ? auditLogs.value.logs : [];
+  } else {
+    state.auditLogs = [];
+  }
+
+  state.companyTurnstiles = {};
+  if (companies.status === "fulfilled" && ["superadmin", "company-admin"].includes(String(state.currentUser?.role || ""))) {
+    const visibleCompanies = (companies.value || []).filter((company) => !company.deleted_at);
+    const turnstileRequests = await Promise.allSettled(
+      visibleCompanies.map((company) => apiRequest(`${API_BASE}/api/companies/${company.id}/turnstiles`))
+    );
+    visibleCompanies.forEach((company, index) => {
+      const result = turnstileRequests[index];
+      state.companyTurnstiles[company.id] = result?.status === "fulfilled" && Array.isArray(result.value)
+        ? result.value
+        : [];
+    });
   }
 }
 
@@ -3871,6 +3905,8 @@ function refreshAll() {
   renderReportingPanels();
   renderWorkerList();
   renderCompanyList();
+  renderCompliancePanel();
+  renderAuditLogPanel();
   populateWorkerSelectOptions();
   populateCompanySelectOptions();
   renderSystemIdentity();
@@ -3888,6 +3924,47 @@ function refreshAll() {
   renderInvoiceManagementList();
   ensureInvoiceDefaults();
   refreshInvoicePreview({ silent: true });
+}
+
+function renderCompliancePanel() {
+  if (!elements.compliancePanel) return;
+  const items = Array.isArray(state.complianceOverview) ? state.complianceOverview : [];
+  if (!items.length) {
+    elements.compliancePanel.innerHTML = '<div class="card-item"><p class="muted">Keine Compliance-Daten geladen.</p></div>';
+    return;
+  }
+  elements.compliancePanel.innerHTML = items.map((company) => {
+    const criticalWorkers = (company.workers || []).filter((worker) => worker.overall === "red").slice(0, 6);
+    return `
+      <article class="card-item">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+          <div>
+            <strong>${escapeHtml(company.companyName || "Firma")}</strong>
+            <p class="helper-text">Gruen ${Number(company.greenCount || 0)} | Gelb ${Number(company.yellowCount || 0)} | Rot ${Number(company.redCount || 0)}</p>
+          </div>
+        </div>
+        ${criticalWorkers.length ? `<div class="meta-box">${criticalWorkers.map((worker) => `<span>• ${escapeHtml(worker.name || "Mitarbeiter")}: ${Object.entries(worker.docs || {}).filter(([, value]) => value !== "ok").map(([key, value]) => `${escapeHtml(key)}=${escapeHtml(value)}`).join(", ")}</span>`).join("")}</div>` : '<p class="helper-text helper-text-ok">Keine kritischen Dokumentluecken.</p>'}
+      </article>
+    `;
+  }).join("");
+}
+
+function renderAuditLogPanel() {
+  if (!elements.auditLogPanel) return;
+  const logs = Array.isArray(state.auditLogs) ? state.auditLogs : [];
+  if (!logs.length) {
+    elements.auditLogPanel.innerHTML = '<div class="card-item"><p class="muted">Keine Audit-Eintraege vorhanden.</p></div>';
+    return;
+  }
+  elements.auditLogPanel.innerHTML = `
+    <article class="card-item">
+      ${logs.slice(0, 20).map((entry) => `<div style="padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.08);">
+        <strong>${escapeHtml(entry.event_type || "event")}</strong>
+        <span class="muted" style="display:block; font-size:0.84em;">${escapeHtml(formatTimestamp(entry.created_at || ""))}</span>
+        <span>${escapeHtml(entry.message || "")}</span>
+      </div>`).join("")}
+    </article>
+  `;
 }
 
 function ensureInvoiceDefaults() {
@@ -4270,18 +4347,23 @@ function renderCompanyList() {
           ? "helper-text helper-text-ok"
           : "helper-text helper-text-info";
       const documentEmail = getCompanyDocumentEmail(company);
+      const turnstiles = Array.isArray(state.companyTurnstiles?.[companyId]) ? state.companyTurnstiles[companyId] : [];
       const repairHistory = filterRepairHistoryByWindow(state.companyRepairHistory?.[companyId] || []);
       const historyMarkup = repairHistory.length
         ? repairHistory
             .map((entry) => `<span>• ${escapeHtml(formatTimestamp(entry.created_at))}: ${escapeHtml(entry.message || "Reparatur ausgefuehrt")}</span>`)
             .join("")
         : "<span>Keine Reparaturen im gewaelten Zeitraum.</span>";
+      const turnstileMarkup = turnstiles.length
+        ? `<div class="meta-box"><p><strong>Drehkreuz-Accounts</strong></p>${turnstiles.map((entry) => `<span>• ${escapeHtml(entry.username || entry.name || "Drehkreuz")} | ${entry.isActive ? "aktiv" : "deaktiviert"} <button type="button" class="ghost-button small-button" data-turnstile-reset="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">Passwort neu</button> <button type="button" class="ghost-button small-button" data-turnstile-toggle="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">${entry.isActive ? "Deaktivieren" : "Aktivieren"}</button></span>`).join("")}</div>`
+        : '<div class="meta-box"><span>Keine Drehkreuz-Accounts vorhanden.</span></div>';
       return `
         <article class="card-item ${deleted ? "is-deleted" : ""}">
           <strong>${escapeHtml(company.name || "Firma")}</strong>
           <span>${escapeHtml(company.plan || "-")}</span>
           <p class="${statusMeta.className}">Status: ${escapeHtml(statusMeta.label)}</p>
           <p><strong>Dokument-E-Mail:</strong> ${escapeHtml(documentEmail || "Nicht gesetzt")}</p>
+          ${turnstileMarkup}
           <div class="meta-box">
             <p><strong>Letzte Reparaturen</strong></p>
             ${historyMarkup}
@@ -4503,6 +4585,42 @@ function bindCompanyRowActions() {
         window.alert(`Drehkreuz-Zugang angelegt:\nBenutzername: ${result.username}\nPasswort: ${result.password}`);
       } catch (error) {
         window.alert(`Drehkreuz konnte nicht angelegt werden: ${error.message}`);
+      }
+      return;
+    }
+
+    const resetTurnstileButton = event.target.closest("[data-turnstile-reset]");
+    if (resetTurnstileButton && elements.companyList.contains(resetTurnstileButton)) {
+      const companyId = resetTurnstileButton.dataset.turnstileCompany;
+      const userId = resetTurnstileButton.dataset.turnstileReset;
+      const password = window.prompt("Neues Drehkreuz-Passwort festlegen (min. 4 Zeichen):", "");
+      if (password === null) return;
+      if (password.trim().length < 4) {
+        window.alert("Passwort muss mindestens 4 Zeichen haben.");
+        return;
+      }
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}/turnstiles/${userId}/reset-password`, {
+          method: "POST",
+          body: { password: password.trim() }
+        });
+        window.alert("Drehkreuz-Passwort wurde aktualisiert.");
+      } catch (error) {
+        window.alert(`Passwort-Reset fehlgeschlagen: ${error.message}`);
+      }
+      return;
+    }
+
+    const toggleTurnstileButton = event.target.closest("[data-turnstile-toggle]");
+    if (toggleTurnstileButton && elements.companyList.contains(toggleTurnstileButton)) {
+      const companyId = toggleTurnstileButton.dataset.turnstileCompany;
+      const userId = toggleTurnstileButton.dataset.turnstileToggle;
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}/turnstiles/${userId}/toggle-active`, { method: "POST" });
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Drehkreuz konnte nicht umgeschaltet werden: ${error.message}`);
       }
       return;
     }
@@ -5534,12 +5652,45 @@ function renderTurnstileQuickPanel() {
     <div class="quick-panel-card">
       <strong>Drehkreuz-Schnellmodus</strong>
       <p class="helper-text">Mitarbeiter waehlen und sofort Check-in oder Check-out buchen.</p>
+      <input type="search" id="turnstileQuickSearch" placeholder="Mitarbeiter suchen" />
+      <div id="turnstileQuickPreview" class="meta-box" style="display:flex; gap:12px; align-items:center; margin:10px 0;"></div>
       <div class="button-row">
         <button type="button" class="ghost-button" data-quick-direction="check-in">Schnell Check-in</button>
         <button type="button" class="ghost-button" data-quick-direction="check-out">Schnell Check-out</button>
       </div>
     </div>
   `;
+
+  const searchInput = document.querySelector("#turnstileQuickSearch");
+  const preview = document.querySelector("#turnstileQuickPreview");
+  const renderPreview = () => {
+    const worker = state.workers.find((entry) => entry.id === elements.accessWorkerSelect.value);
+    if (!preview) return;
+    if (!worker) {
+      preview.innerHTML = '<span class="helper-text">Noch kein Mitarbeiter ausgewaehlt.</span>';
+      return;
+    }
+    const photoSrc = sanitizeImageSrc(worker.photoData, createAvatar(worker));
+    preview.innerHTML = `
+      <img src="${photoSrc}" alt="${escapeHtml(`${worker.firstName || ""} ${worker.lastName || ""}`.trim())}" style="width:58px; height:58px; border-radius:14px; object-fit:cover;" />
+      <div>
+        <strong>${escapeHtml(`${worker.firstName || ""} ${worker.lastName || ""}`.trim())}</strong>
+        <span class="muted" style="display:block; font-size:0.84em;">${escapeHtml(worker.badgeId || "-")}</span>
+      </div>
+    `;
+  };
+
+  if (searchInput && elements.accessWorkerSelect) {
+    searchInput.addEventListener("input", () => {
+      const needle = searchInput.value.trim().toLowerCase();
+      Array.from(elements.accessWorkerSelect.options).forEach((option, index) => {
+        if (index === 0) return;
+        option.hidden = needle ? !option.textContent.toLowerCase().includes(needle) : false;
+      });
+    });
+    elements.accessWorkerSelect.addEventListener("change", renderPreview);
+  }
+  renderPreview();
 
   elements.turnstileQuickPanel.querySelectorAll("[data-quick-direction]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -7000,6 +7151,48 @@ async function handleLoginSubmit(event) {
       return;
     }
     window.alert(`Login fehlgeschlagen: ${error.message}`);
+  }
+}
+
+async function requestPasswordResetFromLogin() {
+  const username = String(elements.loginUsername?.value || "").trim();
+  if (!username) {
+    window.alert("Bitte zuerst Benutzername oder E-Mail eintragen.");
+    return;
+  }
+  try {
+    await apiRequest(API_BASE + "/api/auth/request-password-reset", {
+      auth: false,
+      method: "POST",
+      body: { username }
+    });
+    window.alert("Wenn ein passender Account gefunden wurde, wurde eine Reset-E-Mail versendet.");
+  } catch (error) {
+    window.alert(`Passwort-Reset konnte nicht gestartet werden: ${error.message}`);
+  }
+}
+
+async function maybeHandlePasswordResetToken() {
+  const url = new URL(window.location.href);
+  const rawToken = url.searchParams.get("resetToken");
+  if (!rawToken) {
+    return;
+  }
+  const newPassword = window.prompt("Neues Passwort eingeben (mindestens 8 Zeichen):", "");
+  if (!newPassword) {
+    return;
+  }
+  try {
+    await apiRequest(`${API_BASE}/api/auth/reset-password/${encodeURIComponent(rawToken)}`, {
+      auth: false,
+      method: "POST",
+      body: { password: newPassword }
+    });
+    url.searchParams.delete("resetToken");
+    window.history.replaceState({}, document.title, url.toString());
+    window.alert("Passwort wurde erfolgreich gesetzt. Du kannst dich jetzt anmelden.");
+  } catch (error) {
+    window.alert(`Reset-Link konnte nicht verwendet werden: ${error.message}`);
   }
 }
 
@@ -9341,11 +9534,14 @@ async function loadWorkerDocuments(workerId) {
   }
 }
 
-async function uploadWorkerDocument(workerId, file, docType, notes) {
+async function uploadWorkerDocument(workerId, file, docType, notes, expiryDate) {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("docType", docType);
   fd.append("notes", notes);
+  if (expiryDate) {
+    fd.append("expiryDate", expiryDate);
+  }
   const response = await fetch(API_BASE + `/api/workers/${workerId}/documents/upload`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
@@ -9373,6 +9569,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
         <input type="file" class="doc-upload-file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx" required />
         <select class="doc-upload-type" required>${docTypeOptions}</select>
         <input type="text" class="doc-upload-notes" placeholder="${escapeHtml(uiT("docAssignNotesLabel"))}" />
+        <label style="display:flex; flex-direction:column; gap:4px;">
+          <span class="helper-text">Ablaufdatum (optional)</span>
+          <input type="date" class="doc-upload-expiry" />
+        </label>
         <div class="button-row">
           <button type="submit" class="primary-button small-button">${escapeHtml(uiT("btnConfirmUpload"))}</button>
         </div>
@@ -9388,6 +9588,7 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
             <span style="font-weight:600;">📄 ${escapeHtml(docTypeLabelForValue(doc.doc_type))}</span>
             <span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.filename)}</span>
             ${doc.notes ? `<span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.notes)}</span>` : ""}
+            ${doc.expiry_date ? `<span class="muted" style="display:block; font-size:0.8em; color:${doc.expiry_date < new Date().toISOString().slice(0, 10) ? "var(--color-danger, #b42318)" : "inherit"};">Ablaufdatum: ${escapeHtml(doc.expiry_date)}</span>` : ""}
             <span class="muted" style="display:block; font-size:0.8em;">${escapeHtml(doc.created_at ? formatTimestamp(doc.created_at) : "")}</span>
           </div>
           <div class="button-row" style="flex-shrink:0;">
@@ -9420,6 +9621,7 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       const fileInput = uploadFormEl.querySelector(".doc-upload-file");
       const typeSelect = uploadFormEl.querySelector(".doc-upload-type");
       const notesInput = uploadFormEl.querySelector(".doc-upload-notes");
+      const expiryInput = uploadFormEl.querySelector(".doc-upload-expiry");
       const msgEl = uploadFormEl.querySelector(".doc-upload-msg");
       const submitBtn = uploadFormEl.querySelector("[type='submit']");
       const file = fileInput?.files?.[0];
@@ -9427,7 +9629,7 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       submitBtn.disabled = true;
       msgEl.style.display = "none";
       try {
-        await uploadWorkerDocument(workerId, file, typeSelect.value, notesInput.value.trim());
+        await uploadWorkerDocument(workerId, file, typeSelect.value, notesInput.value.trim(), expiryInput?.value || "");
         msgEl.textContent = uiT("docUploadSuccess");
         msgEl.style.color = "var(--color-success, green)";
         msgEl.style.display = "";
@@ -9637,4 +9839,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       }
     });
   }
+
+  if (elements.loginResetPasswordButton) {
+    elements.loginResetPasswordButton.addEventListener("click", requestPasswordResetFromLogin);
+  }
+
+  maybeHandlePasswordResetToken();
 })();

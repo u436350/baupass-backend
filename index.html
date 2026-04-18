@@ -15,7 +15,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260418t";
+        const buildTag = "20260418u";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -124,6 +124,7 @@
           </select>
         </label>
         <button type="submit" class="primary-button" data-ui-i18n="loginButton">Anmelden</button>
+        <button id="loginResetPasswordButton" type="button" class="ghost-button">Passwort vergessen</button>
       </form>
 
       <div class="auth-hints">
@@ -1024,6 +1025,26 @@
 
             <div class="panel-heading">
               <div>
+                <p class="eyebrow">Compliance</p>
+                <h3>Dokumentenstatus</h3>
+              </div>
+            </div>
+            <div id="compliancePanel" class="card-list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Audit</p>
+                <h3>Letzte Systemereignisse</h3>
+              </div>
+            </div>
+            <div id="auditLogPanel" class="card-list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
                 <p class="eyebrow" data-ui-i18n="invFormEyebrow">Rechnungen</p>
                 <h3 data-ui-i18n="invFormH3">Mit Logo und Design versenden</h3>
               </div>
@@ -1141,6 +1162,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260418t"></script>
+  <script src="./app.js?v=20260418u"></script>
 </body>
 </html>

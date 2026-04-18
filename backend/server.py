@@ -1362,6 +1362,31 @@ def init_db():
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_company_invoice_number_unique ON invoices(company_id, invoice_number)"
     )
 
+    # ── Neu: is_active fuer User (Drehkreuz deaktivierbar) ──
+    user_columns = [row[1] for row in cur.execute("PRAGMA table_info(users)").fetchall()]
+    if "is_active" not in user_columns:
+        cur.execute("ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1")
+
+    # ── Neu: Ablaufdatum fuer Mitarbeiterdokumente ──
+    doc_columns = [row[1] for row in cur.execute("PRAGMA table_info(worker_documents)").fetchall()]
+    if "expiry_date" not in doc_columns:
+        cur.execute("ALTER TABLE worker_documents ADD COLUMN expiry_date TEXT")
+
+    # ── Neu: Passwort-Reset-Token Tabelle ──
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """
+    )
+
     db.commit()
     db.close()
 
@@ -1446,6 +1471,9 @@ def require_auth(handler):
         user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
         if not user:
             return jsonify({"error": "invalid_user"}), 401
+
+        if int(user["is_active"] if "is_active" in user.keys() else 1) == 0:
+            return jsonify({"error": "account_disabled"}), 403
 
         user_payload = row_to_dict(user)
 
@@ -1983,6 +2011,106 @@ def start_background_jobs():
                         details={"error": str(exc)},
                     )
             time.sleep(interval_hours * 3600)
+
+    def check_doc_expiry_warnings():
+        """Erstellt System-Alerts für ablaufende Dokumente."""
+        try:
+            with app.app_context():
+                db = get_db()
+                today = now_iso()[:10]
+                warn_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
+                rows = db.execute(
+                    """SELECT wd.id, wd.doc_type, wd.expiry_date, wd.worker_id,
+                              w.first_name, w.last_name, w.badge_id, w.company_id,
+                              c.name AS company_name
+                       FROM worker_documents wd
+                       JOIN workers w ON w.id = wd.worker_id
+                       JOIN companies c ON c.id = w.company_id
+                       WHERE wd.expiry_date IS NOT NULL
+                         AND wd.expiry_date <= ?
+                         AND wd.expiry_date >= ?
+                         AND w.deleted_at IS NULL
+                         AND c.deleted_at IS NULL
+                       ORDER BY wd.expiry_date""",
+                    (warn_date, today),
+                ).fetchall()
+                for row in rows:
+                    alert_code = f"doc_expiry_{row['id']}"
+                    existing = db.execute("SELECT id FROM system_alerts WHERE code = ? AND resolved_at IS NULL", (alert_code,)).fetchone()
+                    if not existing:
+                        create_system_alert(
+                            db, code=alert_code, severity="warning",
+                            message=f"Dokument '{row['doc_type']}' von {row['first_name']} {row['last_name']} ({row['badge_id']}) bei Firma {row['company_name']} läuft ab am {row['expiry_date']}.",
+                            details={"workerId": row["worker_id"], "docId": row["id"], "companyId": row["company_id"]},
+                        )
+                db.commit()
+        except Exception:
+            pass
+
+    def send_daily_summary_email():
+        """Sendet tägliche Zusammenfassung an Superadmin-E-Mail."""
+        try:
+            with app.app_context():
+                db = get_db()
+                settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+                if not settings:
+                    return
+                smtp_host = (settings["smtp_host"] or "").strip()
+                smtp_sender = (settings["smtp_sender_email"] or "").strip()
+                admin_email = ((settings["admin_summary_email"] if "admin_summary_email" in settings.keys() else "") or smtp_sender)
+                if not smtp_host or not admin_email:
+                    return
+
+                today = now_iso()[:10]
+                yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+                total_entries = db.execute(
+                    "SELECT COUNT(*) AS c FROM access_logs WHERE DATE(check_in_time) = ?", (yesterday,)
+                ).fetchone()["c"]
+                companies_active = db.execute(
+                    "SELECT COUNT(DISTINCT company_id) AS c FROM access_logs WHERE DATE(check_in_time) = ?", (yesterday,)
+                ).fetchone()["c"]
+                new_workers = db.execute(
+                    "SELECT COUNT(*) AS c FROM workers WHERE DATE(created_at) = ?", (yesterday,)
+                ).fetchone()["c"]
+                expired_docs_count = db.execute(
+                    "SELECT COUNT(*) AS c FROM worker_documents WHERE expiry_date IS NOT NULL AND expiry_date < ?", (today,)
+                ).fetchone()["c"]
+
+                import email.message, smtplib
+                msg = email.message.EmailMessage()
+                msg["Subject"] = f"BauPass Tageszusammenfassung {yesterday}"
+                msg["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
+                msg["To"] = admin_email
+                msg.set_content(
+                    f"BauPass Tageszusammenfassung für {yesterday}:\n\n"
+                    f"  Zutritte gestern:       {total_entries}\n"
+                    f"  Aktive Firmen gestern:  {companies_active}\n"
+                    f"  Neue Mitarbeiter:       {new_workers}\n"
+                    f"  Abgelaufene Dokumente:  {expired_docs_count}\n\n"
+                    f"Diese Zusammenfassung wurde automatisch von BauPass Control erstellt."
+                )
+
+                with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
+                    if int(settings["smtp_use_tls"] or 0):
+                        smtp.starttls()
+                    if (settings["smtp_username"] or "").strip():
+                        smtp.login(settings["smtp_username"], settings["smtp_password"] or "")
+                    smtp.send_message(msg)
+        except Exception:
+            pass
+
+    # Expiry-Check beim Start einmal ausführen, danach täglich
+    check_doc_expiry_warnings()
+
+    def daily_job_loop():
+        """Läuft einmal täglich: Dokument-Ablauf-Prüfung + Zusammenfassungs-E-Mail."""
+        while True:
+            time.sleep(86400)  # 24 Stunden warten
+            check_doc_expiry_warnings()
+            send_daily_summary_email()
+
+    threading.Thread(target=daily_job_loop, name="baupass-daily-jobs", daemon=True).start()
 
     def worker_session_cleanup_loop():
         while True:
@@ -4312,6 +4440,246 @@ def add_company_turnstile(company_id):
     return jsonify({"ok": True, "username": username, "password": password}), 201
 
 
+# ── Drehkreuz-User Verwaltung ──────────────────────────────────────────────
+
+@app.get("/api/companies/<company_id>/turnstiles")
+@require_auth
+@require_roles("superadmin")
+def list_company_turnstiles(company_id):
+    db = get_db()
+    company = db.execute("SELECT id FROM companies WHERE id = ? AND deleted_at IS NULL", (company_id,)).fetchone()
+    if not company:
+        return jsonify({"error": "company_not_found"}), 404
+    rows = db.execute(
+        """SELECT u.id, u.username, u.name, u.is_active,
+                  MAX(s.last_seen) AS last_seen
+           FROM users u
+           LEFT JOIN sessions s ON s.user_id = u.id
+           WHERE u.company_id = ? AND u.role = 'turnstile'
+           GROUP BY u.id ORDER BY u.name""",
+        (company_id,),
+    ).fetchall()
+    return jsonify([
+        {"id": r["id"], "username": r["username"], "name": r["name"],
+         "isActive": int(r["is_active"] or 1) == 1, "lastSeen": r["last_seen"]}
+        for r in rows
+    ])
+
+
+@app.post("/api/companies/<company_id>/turnstiles/<user_id>/reset-password")
+@require_auth
+@require_roles("superadmin")
+def reset_turnstile_password(company_id, user_id):
+    payload = request.get_json(silent=True) or {}
+    password = (payload.get("password") or "").strip()
+    if len(password) < 4:
+        return jsonify({"error": "password_too_short"}), 400
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE id = ? AND company_id = ? AND role = 'turnstile'",
+        (user_id, company_id),
+    ).fetchone()
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(password), user_id))
+    db.commit()
+    log_audit("security.turnstile_password_reset", f"Passwort für Drehkreuz '{user['username']}' zurückgesetzt",
+              target_type="user", target_id=user_id, company_id=company_id, actor=g.current_user)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/companies/<company_id>/turnstiles/<user_id>/toggle-active")
+@require_auth
+@require_roles("superadmin")
+def toggle_turnstile_active(company_id, user_id):
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE id = ? AND company_id = ? AND role = 'turnstile'",
+        (user_id, company_id),
+    ).fetchone()
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+    new_active = 0 if int(user["is_active"] or 1) == 1 else 1
+    db.execute("UPDATE users SET is_active = ? WHERE id = ?", (new_active, user_id))
+    if new_active == 0:
+        db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    db.commit()
+    log_audit(
+        "security.turnstile_toggled",
+        f"Drehkreuz '{user['username']}' {'deaktiviert' if not new_active else 'aktiviert'}",
+        target_type="user", target_id=user_id, company_id=company_id, actor=g.current_user,
+    )
+    return jsonify({"ok": True, "isActive": new_active == 1})
+
+
+# ── Compliance-Übersicht ───────────────────────────────────────────────────
+
+REQUIRED_DOC_TYPES = ["mindestlohnnachweis", "personalausweis"]
+
+@app.get("/api/compliance/overview")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def compliance_overview():
+    user = g.current_user
+    db = get_db()
+    today = now_iso()[:10]
+
+    if user["role"] == "superadmin":
+        companies = db.execute("SELECT id, name FROM companies WHERE deleted_at IS NULL ORDER BY name").fetchall()
+    else:
+        companies = db.execute("SELECT id, name FROM companies WHERE id = ?", (user["company_id"],)).fetchall()
+
+    result = []
+    for company in companies:
+        workers = db.execute(
+            "SELECT id, first_name, last_name, badge_id, status FROM workers WHERE company_id = ? AND deleted_at IS NULL AND worker_type = 'worker'",
+            (company["id"],),
+        ).fetchall()
+
+        company_entry = {"companyId": company["id"], "companyName": company["name"], "workers": []}
+        for worker in workers:
+            docs = db.execute(
+                "SELECT doc_type, expiry_date FROM worker_documents WHERE worker_id = ? ORDER BY created_at DESC",
+                (worker["id"],),
+            ).fetchall()
+            present_types = {}
+            for doc in docs:
+                dt = doc["doc_type"]
+                if dt not in present_types:
+                    present_types[dt] = doc["expiry_date"]
+
+            worker_status = {}
+            overall = "ok"
+            for req in REQUIRED_DOC_TYPES:
+                if req not in present_types:
+                    worker_status[req] = "missing"
+                    overall = "red"
+                else:
+                    expiry = present_types[req]
+                    if expiry and expiry < today:
+                        worker_status[req] = "expired"
+                        if overall != "red":
+                            overall = "yellow"
+                    elif expiry:
+                        days_left = (datetime.strptime(expiry, "%Y-%m-%d") - datetime.utcnow()).days
+                        if days_left <= 30:
+                            worker_status[req] = "expiring_soon"
+                            if overall == "ok":
+                                overall = "yellow"
+                        else:
+                            worker_status[req] = "ok"
+                    else:
+                        worker_status[req] = "ok"
+
+            company_entry["workers"].append({
+                "id": worker["id"],
+                "name": f"{worker['first_name']} {worker['last_name']}".strip(),
+                "badgeId": worker["badge_id"],
+                "status": worker["status"],
+                "docs": worker_status,
+                "overall": overall,
+            })
+
+        red_count = sum(1 for w in company_entry["workers"] if w["overall"] == "red")
+        yellow_count = sum(1 for w in company_entry["workers"] if w["overall"] == "yellow")
+        company_entry["redCount"] = red_count
+        company_entry["yellowCount"] = yellow_count
+        company_entry["greenCount"] = len(company_entry["workers"]) - red_count - yellow_count
+        result.append(company_entry)
+
+    return jsonify(result)
+
+
+# ── Passwort-Reset per E-Mail ──────────────────────────────────────────────
+
+@app.post("/api/auth/request-password-reset")
+def request_password_reset():
+    payload = request.get_json(silent=True) or {}
+    username = clean_text_input(payload.get("username") or "", max_len=120)
+    if not username:
+        return jsonify({"ok": True})  # Keine Rückmeldung ob User existiert
+
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE username = ? AND role IN ('company-admin', 'superadmin')",
+        (username,),
+    ).fetchone()
+    if not user:
+        return jsonify({"ok": True})
+
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    smtp_host = (settings["smtp_host"] if settings else "").strip()
+    smtp_sender = (settings["smtp_sender_email"] if settings else "").strip()
+    if not smtp_host or not smtp_sender:
+        return jsonify({"error": "smtp_not_configured", "message": "E-Mail-Versand ist nicht konfiguriert."}), 503
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = __import__("hashlib").sha256(raw_token.encode()).hexdigest()
+    token_id = f"rst-{secrets.token_hex(8)}"
+    expires_at = (datetime.utcnow() + timedelta(hours=2)).replace(microsecond=0).isoformat() + "Z"
+
+    db.execute(
+        "INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at) VALUES (?,?,?,?,?)",
+        (token_id, user["id"], token_hash, expires_at, now_iso()),
+    )
+    db.commit()
+
+    base_url = request.host_url.rstrip("/")
+    reset_link = f"{base_url}/?resetToken={raw_token}"
+    msg = __import__("email.message", fromlist=["EmailMessage"]).EmailMessage()
+    msg["Subject"] = "Passwort zurücksetzen – BauPass Control"
+    msg["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
+    msg["To"] = username  # Falls username eine E-Mail ist; wird gebounced wenn nicht
+
+    # Suche nach E-Mail-Adresse in der users-Tabelle (optional) – nutze billing_email der Firma
+    company_row = db.execute("SELECT billing_email FROM companies WHERE id = ?", (user["company_id"] or "",)).fetchone()
+    recipient = (company_row["billing_email"] if company_row else "") or username
+    msg["To"] = recipient
+    msg.set_content(
+        f"Hallo {user['name']},\n\nKlicke auf folgenden Link, um dein Passwort zurückzusetzen (gültig 2 Stunden):\n\n{reset_link}\n\nWenn du das nicht angefordert hast, ignoriere diese E-Mail.\n\nViele Grüße\n{settings['operator_name']}"
+    )
+
+    try:
+        import smtplib
+        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
+            if int(settings["smtp_use_tls"] or 0):
+                smtp.starttls()
+            if (settings["smtp_username"] or "").strip():
+                smtp.login(settings["smtp_username"], settings["smtp_password"] or "")
+            smtp.send_message(msg)
+    except Exception as exc:
+        return jsonify({"error": "smtp_error", "message": str(exc)}), 502
+
+    log_audit("security.password_reset_requested", f"Passwort-Reset angefordert für {username}")
+    return jsonify({"ok": True})
+
+
+@app.post("/api/auth/reset-password/<raw_token>")
+def apply_password_reset(raw_token):
+    payload = request.get_json(silent=True) or {}
+    new_password = (payload.get("password") or "").strip()
+    if len(new_password) < 8:
+        return jsonify({"error": "password_too_short", "message": "Mindestens 8 Zeichen."}), 400
+
+    token_hash = __import__("hashlib").sha256(raw_token.encode()).hexdigest()
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL",
+        (token_hash,),
+    ).fetchone()
+    if not row:
+        return jsonify({"error": "invalid_token"}), 400
+    if row["expires_at"] < now_iso():
+        return jsonify({"error": "token_expired"}), 400
+
+    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(new_password), row["user_id"]))
+    db.execute("UPDATE password_reset_tokens SET used_at = ? WHERE id = ?", (now_iso(), row["id"]))
+    db.execute("DELETE FROM sessions WHERE user_id = ?", (row["user_id"],))
+    db.commit()
+    log_audit("security.password_reset_applied", "Passwort wurde über Reset-Link geändert", target_type="user", target_id=row["user_id"])
+    return jsonify({"ok": True})
+
+
 @app.post("/api/companies/<company_id>/repair")
 @require_auth
 @require_roles("superadmin", "company-admin")
@@ -5148,20 +5516,21 @@ def list_audit_logs():
     actor_role = (request.args.get("actorRole") or "").strip()
     target_type = (request.args.get("targetType") or "").strip()
     query_text = (request.args.get("q") or "").strip()
-    from_date = (request.args.get("from") or "").strip()
-    to_date = (request.args.get("to") or "").strip()
+    from_date = (request.args.get("from") or request.args.get("dateFrom") or "").strip()
+    to_date = (request.args.get("to") or request.args.get("dateTo") or "").strip()
     limit = min(max(int(request.args.get("limit", "300")), 1), 1000)
+    offset = max(int(request.args.get("offset", "0")), 0)
 
     conditions = []
     params = []
 
     if user["role"] != "superadmin":
-        conditions.append("(company_id = ? OR company_id IS NULL)")
-        params.append(user["company_id"])
+        conditions.append("(company_id = ? OR actor_user_id IN (SELECT id FROM users WHERE company_id = ?) OR company_id IS NULL)")
+        params.extend([user["company_id"], user["company_id"]])
 
     if event_type:
-        conditions.append("event_type = ?")
-        params.append(event_type)
+        conditions.append("event_type LIKE ?")
+        params.append(f"{event_type}%")
 
     if actor_role:
         conditions.append("actor_role = ?")
@@ -5185,9 +5554,18 @@ def list_audit_logs():
         params.append(f"{to_date}T23:59:59Z")
 
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    rows = db.execute(f"SELECT * FROM audit_logs {where_clause} ORDER BY created_at DESC LIMIT ?", [*params, limit]).fetchall()
+    rows = db.execute(
+        f"SELECT * FROM audit_logs {where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [*params, limit, offset],
+    ).fetchall()
+    total = db.execute(f"SELECT COUNT(*) AS c FROM audit_logs {where_clause}", params).fetchone()["c"]
 
-    return jsonify([row_to_dict(row) for row in rows])
+    return jsonify({
+        "logs": [row_to_dict(row) for row in rows],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    })
 
 
 @app.get("/api/audit-logs/export.csv")
@@ -6302,7 +6680,7 @@ def list_worker_documents(worker_id):
         return jsonify({"error": "forbidden_worker"}), 403
 
     rows = db.execute(
-        "SELECT id, doc_type, filename, file_size, source_email_from, created_at, notes FROM worker_documents WHERE worker_id = ? ORDER BY created_at DESC",
+        "SELECT id, doc_type, filename, file_size, source_email_from, created_at, notes, expiry_date FROM worker_documents WHERE worker_id = ? ORDER BY created_at DESC",
         (worker_id,),
     ).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -6315,6 +6693,12 @@ def upload_worker_document(worker_id):
     """Direkt-Upload eines Dokuments vom PC für einen Mitarbeiter."""
     doc_type = clean_text_input(request.form.get("docType", ""), max_len=64).lower()
     notes = clean_text_input(request.form.get("notes", ""), max_len=500)
+    expiry_date = clean_text_input(request.form.get("expiryDate", ""), max_len=10) or None
+    if expiry_date:
+        try:
+            datetime.strptime(expiry_date, "%Y-%m-%d")
+        except ValueError:
+            expiry_date = None
 
     if doc_type not in ALLOWED_DOC_TYPES:
         return jsonify({"error": "invalid_doc_type", "allowed": sorted(ALLOWED_DOC_TYPES)}), 400
@@ -6363,12 +6747,12 @@ def upload_worker_document(worker_id):
     doc_id = f"doc-{secrets.token_hex(8)}"
     db.execute(
         """INSERT INTO worker_documents
-           (id, worker_id, company_id, doc_type, filename, file_path, file_size, source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+           (id, worker_id, company_id, doc_type, filename, file_path, file_size, source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes, expiry_date)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             doc_id, worker_id, worker["company_id"], doc_type, safe_name,
             stored_path, len(file_data), "", None,
-            g.current_user["id"], now_iso(), notes,
+            g.current_user["id"], now_iso(), notes, expiry_date,
         ),
     )
     db.commit()
