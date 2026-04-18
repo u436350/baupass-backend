@@ -9033,38 +9033,10 @@ function renderDocumentInbox(emails) {
 
   // Manueller Firmen-Match für Prüfkorb
   listEl.querySelectorAll("[data-manual-company-match]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const inboxId = btn.dataset.manualCompanyMatch;
       if (!inboxId) return;
-
-      const activeCompanies = (state.companies || []).filter((company) => !company.deleted_at);
-      if (!activeCompanies.length) {
-        window.alert("Keine aktiven Firmen vorhanden.");
-        return;
-      }
-
-      const optionsText = activeCompanies
-        .slice(0, 30)
-        .map((company) => `${company.id} - ${company.name}`)
-        .join("\n");
-      const selected = window.prompt(`Firma-ID für Zuordnung eingeben:\n${optionsText}`, activeCompanies[0].id || "");
-      if (selected === null) return;
-
-      const companyId = selected.trim();
-      if (!companyId) {
-        window.alert("Bitte eine gültige Firmen-ID angeben.");
-        return;
-      }
-
-      try {
-        await apiRequest(`${API_BASE}/api/documents/inbox/${inboxId}/match-company`, {
-          method: "POST",
-          body: { companyId },
-        });
-        await loadDocumentInbox();
-      } catch (error) {
-        window.alert(`Manuelle Zuordnung fehlgeschlagen: ${error.message}`);
-      }
+      openManualCompanyMatchPanel(inboxId);
     });
   });
 
@@ -9156,6 +9128,87 @@ function openDocAssignPanel(inboxId, attachmentId, filename, matchedCompanyId = 
     } catch (err) {
       msgEl.textContent = err.message;
       msgEl.style.color = "var(--color-danger, red)";
+    }
+  });
+}
+
+function openManualCompanyMatchPanel(inboxId) {
+  const panel = document.querySelector("#docAssignPanel");
+  const content = document.querySelector("#docAssignContent");
+  if (!panel || !content) return;
+  panel.style.display = "";
+
+  const activeCompanies = (state.companies || [])
+    .filter((company) => !company.deleted_at)
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"));
+
+  if (!activeCompanies.length) {
+    content.innerHTML = `
+      <div class="settings-form">
+        <p class="helper-text" style="color:var(--color-danger, red);">Keine aktiven Firmen vorhanden.</p>
+        <div class="button-row">
+          <button type="button" class="ghost-button" id="docAssignCancelBtn">Schließen</button>
+        </div>
+      </div>`;
+    const closeBtn = document.querySelector("#docAssignCancelBtn");
+    if (closeBtn) closeBtn.addEventListener("click", () => { panel.style.display = "none"; });
+    return;
+  }
+
+  const companyOptions = activeCompanies
+    .map((company) => `<option value="${escapeHtml(String(company.id))}">${escapeHtml(String(company.name || "Firma"))} (${escapeHtml(getCompanyDocumentEmail(company) || "keine Dokument-Mail")})</option>`)
+    .join("");
+
+  content.innerHTML = `
+    <form id="docCompanyMatchForm" class="settings-form">
+      <p class="muted">Mail aus Prüfkorb manuell einer Firma zuordnen.</p>
+      <label>
+        <span>Firma</span>
+        <select id="docCompanyMatchSelect" required>
+          <option value="">— bitte wählen —</option>
+          ${companyOptions}
+        </select>
+      </label>
+      <div class="button-row">
+        <button type="submit" class="primary-button">Zuordnen</button>
+        <button type="button" class="ghost-button" id="docAssignCancelBtn">Abbrechen</button>
+      </div>
+      <p id="docCompanyMatchMsg" class="helper-text"></p>
+    </form>`;
+
+  const closeBtn = document.querySelector("#docAssignCancelBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      panel.style.display = "none";
+    });
+  }
+
+  const form = document.querySelector("#docCompanyMatchForm");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const companyId = String(document.querySelector("#docCompanyMatchSelect")?.value || "").trim();
+    const msgEl = document.querySelector("#docCompanyMatchMsg");
+    if (!companyId) {
+      if (msgEl) {
+        msgEl.textContent = "Bitte eine Firma wählen.";
+        msgEl.style.color = "var(--color-danger, red)";
+      }
+      return;
+    }
+
+    try {
+      await apiRequest(`${API_BASE}/api/documents/inbox/${inboxId}/match-company`, {
+        method: "POST",
+        body: { companyId },
+      });
+      panel.style.display = "none";
+      await loadDocumentInbox();
+    } catch (error) {
+      if (msgEl) {
+        msgEl.textContent = `Zuordnung fehlgeschlagen: ${error.message}`;
+        msgEl.style.color = "var(--color-danger, red)";
+      }
     }
   });
 }
