@@ -2472,6 +2472,7 @@ const UI_PLACEHOLDER_TEXTS = {
   companyName: { de: "Muster Bau GmbH", intl: "Example Construction Ltd" },
   companyContact: { de: "Sabine Keller", intl: "Sarah Keller" },
   companyBillingEmail: { de: "buchhaltung@firma.de", intl: "billing@company.com" },
+  companyDocumentEmail: { de: "dokumente+firma@deinedomain.de", intl: "documents+company@yourdomain.com" },
   companyAccessHost: { de: "firma-a.deine-domain.de", intl: "company-a.your-domain.com" },
   invoiceNumber: { de: "RE-2026-0001", intl: "INV-2026-0001" },
   invoiceRecipientEmail: { de: "buchhaltung@firma.de", intl: "billing@company.com" },
@@ -4268,6 +4269,7 @@ function renderCompanyList() {
         : repairStatus?.kind === "success"
           ? "helper-text helper-text-ok"
           : "helper-text helper-text-info";
+      const documentEmail = getCompanyDocumentEmail(company);
       const repairHistory = filterRepairHistoryByWindow(state.companyRepairHistory?.[companyId] || []);
       const historyMarkup = repairHistory.length
         ? repairHistory
@@ -4279,12 +4281,14 @@ function renderCompanyList() {
           <strong>${escapeHtml(company.name || "Firma")}</strong>
           <span>${escapeHtml(company.plan || "-")}</span>
           <p class="${statusMeta.className}">Status: ${escapeHtml(statusMeta.label)}</p>
+          <p><strong>Dokument-E-Mail:</strong> ${escapeHtml(documentEmail || "Nicht gesetzt")}</p>
           <div class="meta-box">
             <p><strong>Letzte Reparaturen</strong></p>
             ${historyMarkup}
           </div>
           ${repairStatus ? `<p class="${repairStatusClass}">${escapeHtml(repairStatus.message || "")}</p>` : ""}
           <div class="button-row">
+            <button type="button" class="ghost-button" data-company-doc-email="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Dokument-Mail setzen</button>
             <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Reparatur laeuft..." : "Firma reparieren"}</button>
             <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
             <button type="button" class="ghost-button" data-company-delete="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Firma löschen</button>
@@ -4363,6 +4367,41 @@ function bindCompanyRowActions() {
 
   elements.companyList.dataset.repairBound = "1";
   elements.companyList.addEventListener("click", async (event) => {
+    const docEmailButton = event.target.closest("[data-company-doc-email]");
+    if (docEmailButton && !docEmailButton.disabled && elements.companyList.contains(docEmailButton)) {
+      const companyId = docEmailButton.dataset.companyDocEmail;
+      const company = state.companies.find((entry) => entry.id === companyId);
+      if (!companyId || !company) {
+        return;
+      }
+
+      const currentValue = getCompanyDocumentEmail(company);
+      const nextValue = window.prompt(`Dokument-E-Mail für ${company.name} festlegen`, currentValue || "");
+      if (nextValue === null) {
+        return;
+      }
+
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}`, {
+          method: "PUT",
+          body: {
+            name: company.name,
+            contact: company.contact,
+            billingEmail: getCompanyBillingEmail(company),
+            documentEmail: nextValue.trim(),
+            accessHost: company.accessHost || company.access_host || "",
+            plan: company.plan,
+            status: company.status,
+          }
+        });
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Dokument-E-Mail konnte nicht gespeichert werden: ${error.message}`);
+      }
+      return;
+    }
+
     const deleteButton = event.target.closest("[data-company-delete]");
     if (deleteButton && !deleteButton.disabled && elements.companyList.contains(deleteButton)) {
       const companyId = deleteButton.dataset.companyDelete;
@@ -4523,6 +4562,10 @@ function populateCompanySelectOptions() {
 
 function getCompanyBillingEmail(company) {
   return (company?.billingEmail || company?.billing_email || "").trim();
+}
+
+function getCompanyDocumentEmail(company) {
+  return (company?.documentEmail || company?.document_email || "").trim();
 }
 
 function syncInvoiceRecipientFromCompany() {
@@ -6457,6 +6500,7 @@ async function handleCompanySubmit(event) {
         name: document.querySelector("#companyName").value.trim(),
         contact: document.querySelector("#companyContact").value.trim(),
         billingEmail: document.querySelector("#companyBillingEmail").value.trim(),
+        documentEmail: document.querySelector("#companyDocumentEmail").value.trim(),
         accessHost: document.querySelector("#companyAccessHost").value.trim().toLowerCase(),
         plan: document.querySelector("#companyPlan").value,
         status: document.querySelector("#companyStatus").value,
@@ -9105,7 +9149,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
     const addrEl = document.querySelector("#docEmailInfoAddr");
     const copyBtn = document.querySelector("#docEmailCopyBtn");
     if (!bar || !addrEl) return;
-    const email = (state.settings?.imapUsername || "").trim();
+    const currentUser = getCurrentUser();
+    const currentCompanyId = currentUser?.company_id || currentUser?.companyId || "";
+    const currentCompany = (state.companies || []).find((company) => company.id === currentCompanyId);
+    const email = getCompanyDocumentEmail(currentCompany) || (state.settings?.imapUsername || "").trim();
     if (email) {
       addrEl.textContent = email;
       bar.style.display = "";

@@ -1170,6 +1170,8 @@ def init_db():
         cur.execute("ALTER TABLE companies ADD COLUMN billing_email TEXT NOT NULL DEFAULT ''")
     if "access_host" not in company_columns:
         cur.execute("ALTER TABLE companies ADD COLUMN access_host TEXT NOT NULL DEFAULT ''")
+    if "document_email" not in company_columns:
+        cur.execute("ALTER TABLE companies ADD COLUMN document_email TEXT NOT NULL DEFAULT ''")
 
     worker_columns = [row[1] for row in cur.execute("PRAGMA table_info(workers)").fetchall()]
     if "deleted_at" not in worker_columns:
@@ -2902,6 +2904,7 @@ def create_company():
     company_name = clean_text_input(payload.get("name", "Neue Firma"), max_len=120) or "Neue Firma"
     company_contact = clean_text_input(payload.get("contact", ""), max_len=180)
     billing_email = clean_text_input(payload.get("billingEmail", ""), max_len=160)
+    document_email = clean_text_input(payload.get("documentEmail", ""), max_len=160)
     access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
     company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
     admin_password = (payload.get("adminPassword") or "").strip() or "1234"
@@ -2909,12 +2912,13 @@ def create_company():
         return jsonify({"error": "password_too_short", "message": "Passwort muss mindestens 4 Zeichen haben."}), 400
 
     get_db().execute(
-        "INSERT INTO companies (id, name, contact, billing_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO companies (id, name, contact, billing_email, document_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             company_id,
             company_name,
             company_contact,
             billing_email,
+            document_email,
             access_host,
             normalize_company_plan(payload.get("plan", "tageskarte")),
             company_status,
@@ -3941,15 +3945,17 @@ def update_company(company_id):
     company_name = clean_text_input(payload.get("name", company["name"]), max_len=120)
     company_contact = clean_text_input(payload.get("contact", company["contact"]), max_len=180)
     company_billing_email = clean_text_input(payload.get("billingEmail", company["billing_email"]), max_len=160)
+    company_document_email = clean_text_input(payload.get("documentEmail", company["document_email"]), max_len=160)
     company_access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or company["access_host"]), max_len=180)
     company_status = clean_text_input(payload.get("status", company["status"]), max_len=32) or company["status"]
 
     db.execute(
-        "UPDATE companies SET name = ?, contact = ?, billing_email = ?, access_host = ?, plan = ?, status = ? WHERE id = ?",
+        "UPDATE companies SET name = ?, contact = ?, billing_email = ?, document_email = ?, access_host = ?, plan = ?, status = ? WHERE id = ?",
         (
             company_name,
             company_contact,
             company_billing_email,
+            company_document_email,
             company_access_host,
             payload.get("plan", company["plan"]),
             company_status,

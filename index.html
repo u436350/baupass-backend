@@ -15,7 +15,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260418j";
+        const buildTag = "20260418k";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -936,6 +936,10 @@
                 <input id="companyBillingEmail" type="email" placeholder="buchhaltung@firma.de" />
               </label>
               <label>
+                <span>Dokument-E-Mail</span>
+                <input id="companyDocumentEmail" type="email" placeholder="dokumente+firma@deinedomain.de" />
+              </label>
+              <label>
                 <span data-ui-i18n="labelAccessHost">Firmen-Zugangsdomain</span>
                 <input id="companyAccessHost" type="text" placeholder="firma-a.deine-domain.de" />
               </label>
@@ -1125,6 +1129,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260418j"></script>
+  <script src="./app.js?v=20260418k"></script>
 </body>
 </html>
