@@ -3651,7 +3651,20 @@ function startHeartbeat() {
   heartbeatTimer = window.setInterval(async () => {
     if (!token) return;
     try {
-      await apiRequest(`${API_BASE}/api/me/heartbeat`, { method: "POST", body: {}, auth: true });
+      const response = await fetch(`${API_BASE}/api/me/heartbeat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.active === false) {
+        clearSession();
+        refreshAll();
+      }
     } catch {
       // heartbeat failures should not hard-crash UI
     }
@@ -8793,7 +8806,7 @@ async function loadDocumentInbox() {
   if (!listEl) return;
   try {
     const data = await apiRequest(API_BASE + "/api/documents/inbox");
-    renderDocumentInbox(data.emails || []);
+    renderDocumentInbox(Array.isArray(data) ? data : (data.emails || []));
   } catch (e) {
     if (listEl) listEl.innerHTML = `<div class="empty-state">${escapeHtml(e.message)}</div>`;
   }
@@ -8807,6 +8820,8 @@ function renderDocumentInbox(emails) {
     return;
   }
   listEl.innerHTML = emails.map((email) => {
+    const previewText = String(email.body_text || "").trim();
+    const previewShort = previewText.length > 220 ? `${previewText.slice(0, 220)}…` : previewText;
     const attachments = (email.attachments || []).map((att) => `
       <span class="attachment-chip">
         📎 ${escapeHtml(att.filename)}
@@ -8821,6 +8836,15 @@ function renderDocumentInbox(emails) {
           <span class="muted">${escapeHtml(email.received_at ? formatTimestamp(email.received_at) : "")}</span>
         </div>
         <div class="list-item-subject">${escapeHtml(email.subject || "(kein Betreff)")}</div>
+        ${previewShort ? `
+          <div class="muted" style="margin-top:6px; font-size:0.9em; white-space:pre-wrap;">${escapeHtml(previewShort)}</div>
+          <button class="link-button" type="button" data-toggle-mail-details="${escapeHtml(String(email.id))}" style="margin-top:4px;">
+            ${escapeHtml("Details")}
+          </button>
+          <div class="muted" data-mail-details="${escapeHtml(String(email.id))}" style="display:none; margin-top:6px; white-space:pre-wrap; line-height:1.4; border-left:3px solid var(--color-border, #ddd); padding-left:10px;">
+            ${escapeHtml(previewText)}
+          </div>
+        ` : ""}
         ${attachments ? `<div class="attachment-list">${attachments}</div>` : ""}
         <div class="button-row" style="margin-top:8px">
           <button class="ghost-button small-button" data-dismiss-email-id="${escapeHtml(String(email.id))}">
@@ -8847,6 +8871,18 @@ function renderDocumentInbox(emails) {
       } catch (e) {
         window.alert(e.message);
       }
+    });
+  });
+
+  // Mail-Details ein-/ausblenden
+  listEl.querySelectorAll("[data-toggle-mail-details]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emailId = btn.dataset.toggleMailDetails;
+      const detailsEl = listEl.querySelector(`[data-mail-details="${CSS.escape(emailId || "")}"]`);
+      if (!detailsEl) return;
+      const isHidden = detailsEl.style.display === "none" || !detailsEl.style.display;
+      detailsEl.style.display = isHidden ? "" : "none";
+      btn.textContent = isHidden ? "Weniger" : "Details";
     });
   });
 }

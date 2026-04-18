@@ -2607,12 +2607,24 @@ def system_repair():
 
 
 @app.post("/api/me/heartbeat")
-@require_auth
 def heartbeat():
+    token = get_auth_token_from_request()
+    if not token:
+        return jsonify({"ok": True, "active": False})
+
     db = get_db()
-    db.execute("UPDATE sessions SET last_seen = ? WHERE token = ?", (now_iso(), g.token))
+    session = db.execute("SELECT expires_at FROM sessions WHERE token = ?", (token,)).fetchone()
+    if not session:
+        return jsonify({"ok": True, "active": False})
+
+    if session["expires_at"] < now_iso():
+        db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        db.commit()
+        return jsonify({"ok": True, "active": False})
+
+    db.execute("UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token = ?", (now_iso(), expiry_iso(), token))
     db.commit()
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "active": True})
 
 
 @app.post("/api/me/password")
