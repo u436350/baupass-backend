@@ -367,6 +367,43 @@ def find_company_by_document_email(db, email_address):
     ).fetchone()
 
 
+def rematch_inbox_company_links(db, company_id=None):
+    """Rebuild inbox-company matches by recipient address. Optionally limited to one company."""
+    if company_id:
+        company = db.execute(
+            "SELECT id, document_email FROM companies WHERE id = ?",
+            (company_id,),
+        ).fetchone()
+        if not company:
+            return 0
+
+        db.execute("UPDATE email_inbox SET matched_company_id = NULL WHERE matched_company_id = ?", (company_id,))
+        document_email = normalize_email_address(company["document_email"] or "")
+        if not document_email:
+            return 0
+        result = db.execute(
+            "UPDATE email_inbox SET matched_company_id = ? WHERE lower(to_addr) = ?",
+            (company_id, document_email),
+        )
+        return int(result.rowcount or 0)
+
+    db.execute("UPDATE email_inbox SET matched_company_id = NULL")
+    result = db.execute(
+        """
+        UPDATE email_inbox
+        SET matched_company_id = (
+            SELECT c.id
+            FROM companies c
+            WHERE c.deleted_at IS NULL
+              AND lower(c.document_email) = lower(email_inbox.to_addr)
+            LIMIT 1
+        )
+        WHERE COALESCE(to_addr, '') <> ''
+        """
+    )
+    return int(result.rowcount or 0)
+
+
 def normalize_worker_type(worker_type):
     normalized = str(worker_type or "worker").strip().lower()
     return normalized if normalized in {"worker", "visitor"} else "worker"
@@ -2886,15 +2923,38 @@ def export_company_document_emails_csv():
     db = get_db()
     rows = db.execute(
         """
-        SELECT id, name, contact, billing_email, document_email, status, deleted_at
-        FROM companies
+        SELECT
+            c.id,
+            c.name,
+            c.contact,
+            c.billing_email,
+            c.document_email,
+            c.status,
+            c.deleted_at,
+            MAX(e.received_at) AS last_inbox_activity_at,
+            SUM(CASE WHEN e.dismissed = 0 THEN 1 ELSE 0 END) AS open_inbox_count,
+            SUM(CASE WHEN e.dismissed = 0 AND e.matched_company_id IS NULL AND lower(e.to_addr) = lower(c.document_email) THEN 1 ELSE 0 END) AS unresolved_inbox_count
+        FROM companies c
+        LEFT JOIN email_inbox e ON (e.matched_company_id = c.id OR lower(e.to_addr) = lower(c.document_email))
+        GROUP BY c.id, c.name, c.contact, c.billing_email, c.document_email, c.status, c.deleted_at
         ORDER BY name
         """
     ).fetchall()
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
-    writer.writerow(["company_id", "company_name", "document_email", "status", "contact", "billing_email", "deleted"])
+    writer.writerow([
+        "company_id",
+        "company_name",
+        "document_email",
+        "status",
+        "contact",
+        "billing_email",
+        "deleted",
+        "last_inbox_activity_at",
+        "open_inbox_count",
+        "unresolved_inbox_count",
+    ])
     for row in rows:
         writer.writerow([
             row["id"],
@@ -2904,6 +2964,9 @@ def export_company_document_emails_csv():
             row["contact"] or "",
             row["billing_email"] or "",
             "1" if row["deleted_at"] else "0",
+            row["last_inbox_activity_at"] or "",
+            int(row["open_inbox_count"] or 0),
+            int(row["unresolved_inbox_count"] or 0),
         ])
 
     csv_text = output.getvalue()
@@ -4064,8 +4127,43 @@ def update_company(company_id):
             company_id,
         ),
     )
+    rematch_inbox_company_links(db, company_id=company_id)
     db.commit()
     log_audit("company.updated", f"Firma {company_id} aktualisiert", target_type="company", target_id=company_id, company_id=company_id, actor=g.current_user)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/documents/inbox/rematch-company-links")
+@require_auth
+@require_roles("superadmin")
+def rematch_document_inbox_links():
+    db = get_db()
+    count = rematch_inbox_company_links(db)
+    db.commit()
+    return jsonify({"ok": True, "matchedCount": count})
+
+
+@app.post("/api/documents/inbox/<inbox_id>/match-company")
+@require_auth
+@require_roles("superadmin")
+def set_document_inbox_company_match(inbox_id):
+    payload = request.get_json(silent=True) or {}
+    company_id = clean_text_input(payload.get("companyId", ""), max_len=64)
+    db = get_db()
+
+    inbox_row = db.execute("SELECT id FROM email_inbox WHERE id = ?", (inbox_id,)).fetchone()
+    if not inbox_row:
+        return jsonify({"error": "inbox_not_found"}), 404
+
+    if company_id:
+        company = db.execute("SELECT id FROM companies WHERE id = ? AND deleted_at IS NULL", (company_id,)).fetchone()
+        if not company:
+            return jsonify({"error": "company_not_found"}), 404
+        db.execute("UPDATE email_inbox SET matched_company_id = ? WHERE id = ?", (company_id, inbox_id))
+    else:
+        db.execute("UPDATE email_inbox SET matched_company_id = NULL WHERE id = ?", (inbox_id,))
+
+    db.commit()
     return jsonify({"ok": True})
 
 

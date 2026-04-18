@@ -15,7 +15,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260418m";
+        const buildTag = "20260418n";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -665,6 +665,7 @@
                 <button id="docInboxRefreshBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxRefresh">Aktualisieren</button>
                 <button id="docInboxSyncBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxSync">System-Eingang abrufen</button>
                 <button id="docInboxPollBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxOpenGmail">Gmail oeffnen</button>
+                <button id="docInboxRematchBtn" type="button" class="ghost-button">Neu zuordnen</button>
               </div>
             </div>
             <div class="meta-box">
@@ -1132,6 +1133,6 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260418m"></script>
+  <script src="./app.js?v=20260418n"></script>
 </body>
 </html>

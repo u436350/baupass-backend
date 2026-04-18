@@ -8918,6 +8918,10 @@ function docTypeLabelForValue(value) {
 async function loadDocumentInbox() {
   const listEl = document.querySelector("#docInboxList");
   if (!listEl) return;
+  const rematchBtn = document.querySelector("#docInboxRematchBtn");
+  if (rematchBtn) {
+    rematchBtn.style.display = String(getCurrentUser()?.role || "").toLowerCase() === "superadmin" ? "" : "none";
+  }
   try {
     const data = await apiRequest(API_BASE + "/api/documents/inbox");
     renderDocumentInbox(Array.isArray(data) ? data : (data.emails || []));
@@ -8929,6 +8933,7 @@ async function loadDocumentInbox() {
 function renderDocumentInbox(emails) {
   const listEl = document.querySelector("#docInboxList");
   if (!listEl) return;
+  const isSuperadmin = String(getCurrentUser()?.role || "").toLowerCase() === "superadmin";
   if (!emails.length) {
     listEl.innerHTML = `<div class="empty-state">${escapeHtml(uiT("docInboxEmpty"))}</div>`;
     return;
@@ -8978,6 +8983,11 @@ function renderDocumentInbox(emails) {
             ${escapeHtml(previewText)}
           </div>
         ` : ""}
+        ${isSuperadmin && !email.matched_company_id ? `
+          <div class="button-row" style="margin-top:6px;">
+            <button class="ghost-button small-button" data-manual-company-match="${escapeHtml(String(email.id))}">Firma manuell zuweisen</button>
+          </div>
+        ` : ""}
         ${attachments ? `<div class="attachment-list">${attachments}</div>` : ""}
         <div class="button-row" style="margin-top:8px">
           <button class="ghost-button small-button" data-dismiss-email-id="${escapeHtml(String(email.id))}">
@@ -9017,6 +9027,43 @@ function renderDocumentInbox(emails) {
         loadDocumentInbox();
       } catch (e) {
         window.alert(e.message);
+      }
+    });
+  });
+
+  // Manueller Firmen-Match für Prüfkorb
+  listEl.querySelectorAll("[data-manual-company-match]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const inboxId = btn.dataset.manualCompanyMatch;
+      if (!inboxId) return;
+
+      const activeCompanies = (state.companies || []).filter((company) => !company.deleted_at);
+      if (!activeCompanies.length) {
+        window.alert("Keine aktiven Firmen vorhanden.");
+        return;
+      }
+
+      const optionsText = activeCompanies
+        .slice(0, 30)
+        .map((company) => `${company.id} - ${company.name}`)
+        .join("\n");
+      const selected = window.prompt(`Firma-ID für Zuordnung eingeben:\n${optionsText}`, activeCompanies[0].id || "");
+      if (selected === null) return;
+
+      const companyId = selected.trim();
+      if (!companyId) {
+        window.alert("Bitte eine gültige Firmen-ID angeben.");
+        return;
+      }
+
+      try {
+        await apiRequest(`${API_BASE}/api/documents/inbox/${inboxId}/match-company`, {
+          method: "POST",
+          body: { companyId },
+        });
+        await loadDocumentInbox();
+      } catch (error) {
+        window.alert(`Manuelle Zuordnung fehlgeschlagen: ${error.message}`);
       }
     });
   });
@@ -9313,6 +9360,27 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
         return;
       }
       await runDocumentInboxSync(syncBtn);
+    });
+  }
+
+  const rematchBtn = document.querySelector("#docInboxRematchBtn");
+  if (rematchBtn) {
+    rematchBtn.style.display = String(getCurrentUser()?.role || "").toLowerCase() === "superadmin" ? "" : "none";
+    rematchBtn.addEventListener("click", async () => {
+      if (!token) {
+        handleExpiredControlSession();
+        return;
+      }
+      rematchBtn.disabled = true;
+      try {
+        const res = await apiRequest(API_BASE + "/api/documents/inbox/rematch-company-links", { method: "POST", body: {} });
+        await loadDocumentInbox();
+        window.alert(`Neu-Zuordnung abgeschlossen. Treffer: ${Number(res?.matchedCount || 0)}`);
+      } catch (error) {
+        window.alert(`Neu-Zuordnung fehlgeschlagen: ${error.message}`);
+      } finally {
+        rematchBtn.disabled = false;
+      }
     });
   }
 
