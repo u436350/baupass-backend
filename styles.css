@@ -601,7 +601,7 @@ select {
 
 .content {
   padding: 28px;
-  padding-top: calc(28px + 60px);
+  padding-top: calc(28px + 116px);
   max-width: 1380px;
   width: 100%;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0));
@@ -1133,6 +1133,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin: 0;
   padding: 16px 28px;
@@ -1148,8 +1149,10 @@ select {
 
 .topbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .superadmin-preview-pill {
@@ -3220,7 +3223,7 @@ body[data-branding-preset="premium"] {
   }
 
   .content {
-    padding-top: calc(16px + 52px);
+    padding-top: calc(16px + 132px);
   }
 
   .topbar h2 {
