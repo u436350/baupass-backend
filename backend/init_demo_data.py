@@ -1,6 +1,6 @@
 import sqlite3
 from werkzeug.security import generate_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 # Pfad zur Datenbank
 import os
@@ -23,7 +23,7 @@ company_plan = 'starter'
 company_status = 'aktiv'
 
 # Zeitstempel
-now = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
+now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + 'Z'
 
 conn = sqlite3.connect(DB_PATH)
 c = conn.cursor()

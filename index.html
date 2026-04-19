@@ -35,6 +35,7 @@
     </script>
   <link rel="manifest" href="./control-manifest.json" />
   <link rel="apple-touch-icon" sizes="192x192" href="./worker-icon-192.png" />
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="./worker-icon-192.svg" />
   <link id="appFavicon" rel="icon" type="image/png" sizes="192x192" href="./worker-icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -102,6 +103,7 @@
       </div>
 
       <form id="loginForm" class="auth-form">
+        <div id="loginSupportNotice" class="meta-box" style="display:none;"></div>
         <label>
           <span data-ui-i18n="loginUsernameLabel">Benutzername</span>
           <input id="loginUsername" type="text" placeholder="Benutzername" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="username" />
@@ -175,6 +177,14 @@
           <button id="logoutButton" class="ghost-button" data-ui-i18n="btnLogout">Sicher abmelden</button>
         </div>
       </header>
+
+      <div id="systemAlertBanner" class="system-alert-banner" style="display:none;">
+        <div>
+          <strong>Kritische Versandlage</strong>
+          <p id="systemAlertText" class="helper-text">Aktuell liegen kritische Rechnungs-Fehlversände vor.</p>
+        </div>
+        <button id="systemAlertActionBtn" type="button" class="ghost-button">Zu Rechnungen</button>
+      </div>
 
       <section class="view active" data-view="dashboard">
         <div id="sessionCard" class="session-card" style="margin-bottom:24px;"></div>
@@ -616,9 +626,9 @@
             </div>
             <div class="divider"></div>
             
-            <div class="button-row" style="margin-bottom:16px; gap:10px;">
-              <input id="invoiceFilterCompany" type="text" placeholder="Nach Firma filtern..." style="flex:1;" />
-              <select id="invoiceFilterStatus" style="min-width:120px;">
+            <div class="button-row invoice-toolbar">
+              <input id="invoiceFilterCompany" class="invoice-filter-input" type="text" placeholder="Nach Firma filtern..." />
+              <select id="invoiceFilterStatus" class="invoice-filter-select">
                 <option value="">Alle Status</option>
                 <option value="draft">Entwurf</option>
                 <option value="sent">Versendet</option>
@@ -629,7 +639,76 @@
               <button type="button" class="ghost-button" id="invoiceRefreshButton" data-ui-i18n="btnRefreshList">Aktualisieren</button>
             </div>
 
+            <div id="invoiceStatusKpiGrid" class="list invoice-kpi-grid"></div>
+
             <div id="invoiceManagementList" class="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Operations</p>
+                <h3>Versand-SLA und Fehlerlage</h3>
+              </div>
+            </div>
+            <div id="invoiceOpsKpiGrid" class="list invoice-kpi-grid"></div>
+            <div id="invoiceOpsTrendList" class="list invoice-ops-trend-list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Versand</p>
+                <h3>Warteschlange für fehlgeschlagene Mails</h3>
+              </div>
+            </div>
+            <div id="invoiceRetryKpiGrid" class="list invoice-kpi-grid"></div>
+            <div class="button-row invoice-toolbar">
+              <select id="invoiceRetryFilterMode" class="invoice-filter-select invoice-filter-select-wide">
+                <option value="all">Alle Fehlversände</option>
+                <option value="priority">Priorität zuerst</option>
+                <option value="maxed">Max Retries erreicht</option>
+                <option value="today_failed">Heute fehlgeschlagen</option>
+              </select>
+              <input id="invoiceRetryFilterCompany" class="invoice-filter-input" type="text" placeholder="Firma in Warteschlange filtern..." />
+              <label class="invoice-top-issues-toggle">
+                <input id="invoiceRetryTopIssuesOnly" type="checkbox" />
+                <span>Nur meine Top-Probleme</span>
+              </label>
+              <button type="button" id="invoiceRetryCriticalSendBtn" class="ghost-button">Nur kritische jetzt senden</button>
+              <button type="button" id="invoiceRetryExportBtn" class="ghost-button">Queue CSV</button>
+              <button type="button" id="invoiceIncidentExportBtn" class="ghost-button">Incident CSV</button>
+              <button type="button" id="invoiceRetryBulkSendBtn" class="ghost-button">Ausgewählte erneut senden</button>
+            </div>
+            <div id="invoiceRetryQueue" class="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Freigaben</p>
+                <h3>4-Augen-Prüfung für kritische Aktionen</h3>
+              </div>
+            </div>
+            <div class="button-row invoice-toolbar">
+              <select id="invoiceApprovalFilterAction" class="invoice-filter-select invoice-filter-select-wide">
+                <option value="all">Alle Aktionstypen</option>
+                <option value="invoice.retry_send_bulk">Bulk-Retry</option>
+                <option value="invoice.dead_letter_resolve">Dead-Letter-Resolve</option>
+              </select>
+              <input id="invoiceApprovalMaxAgeMinutes" class="invoice-filter-input" type="number" min="0" step="5" placeholder="Max Alter in Minuten (0 = alle)" />
+            </div>
+            <div id="invoiceApprovalList" class="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Dead-Letter</p>
+                <h3>Manuell zu klärende Rechnungen</h3>
+              </div>
+            </div>
+            <div id="invoiceDeadLetterList" class="list"></div>
 
             <div class="divider"></div>
 
@@ -639,15 +718,15 @@
                 <h3 data-ui-i18n="inkassoH3">Überfällig, vor Sperre, gesperrt</h3>
               </div>
             </div>
-            <div class="button-row" style="margin-bottom:16px; gap:10px;">
-              <select id="collectionsFilter" style="min-width:180px;">
+            <div class="button-row invoice-toolbar">
+              <select id="collectionsFilter" class="invoice-filter-select invoice-filter-select-wide">
                 <option value="all" data-ui-i18n="optAllPositions">Alle offenen Positionen</option>
                 <option value="overdue" data-ui-i18n="optOverdue">Überfällig</option>
                 <option value="prelock" data-ui-i18n="optPrelock">Vor Sperre</option>
                 <option value="locked" data-ui-i18n="optLocked">Bereits gesperrt</option>
               </select>
             </div>
-            <div id="collectionsKpiGrid" class="list" style="margin-bottom:12px;"></div>
+            <div id="collectionsKpiGrid" class="list invoice-kpi-grid"></div>
             <div id="collectionsList" class="list"></div>
           </article>
         </div>
@@ -748,10 +827,6 @@
                 <span data-ui-i18n="labelOperatorName">Betreiber</span>
                 <input id="operatorName" type="text" placeholder="Deine Firma" required />
               </label>
-              <label class="full-width">
-                <span data-ui-i18n="labelTurnstileEp">Drehkreuz-API Endpoint</span>
-                <input id="turnstileEndpoint" type="url" placeholder="https://api.dein-gateway.de/access" />
-              </label>
 
               <!-- ── Rechnungsdesign ── -->
               <div class="form-section">
@@ -786,6 +861,7 @@
               <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width">Alternative laden</button>
               <input id="invoiceLogoData" type="hidden" />
               <img id="invoiceLogoPreview" class="invoice-logo-preview hidden" alt="Logo Vorschau" />
+              <p class="helper-text full-width">Das Rechnungslogo wird auch als System-Icon und Mitarbeiter-App-Icon verwendet.</p>
 
               <!-- ── SMTP ── -->
               <div class="form-section">
@@ -925,6 +1001,10 @@
               </div>
             </div>
             <form id="companyForm" class="form-grid compact-grid">
+              <label class="full-width">
+                <span data-ui-i18n="labelTurnstileEp">Drehkreuz-API Endpoint</span>
+                <input id="companyTurnstileEndpoint" type="url" placeholder="https://api.dein-gateway.de/access" />
+              </label>
               <label>
                 <span data-ui-i18n="labelCompanyName">Firmenname</span>
                 <input id="companyName" type="text" placeholder="Muster Bau GmbH" required />
@@ -952,6 +1032,14 @@
                   <option value="starter">Starter (49 EUR)</option>
                   <option value="professional">Professional (99 EUR)</option>
                   <option value="enterprise">Enterprise (199 EUR)</option>
+                </select>
+              </label>
+              <label>
+                <span>Branding-Preset</span>
+                <select id="companyBrandingPreset">
+                  <option value="construction">Bau</option>
+                  <option value="industry">Industrie</option>
+                  <option value="premium">Premium</option>
                 </select>
               </label>
               <label>

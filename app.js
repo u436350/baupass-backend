@@ -57,6 +57,7 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const SESSION_TOKEN_STORAGE_KEY = "baupass-control-token";
+const SUPPORT_LOGIN_CONTEXT_KEY = "baupass-support-login-context";
 const UI_LANG_STORAGE_KEY = "baupass-ui-lang";
 const UI_FALLBACK_LANG = "de";
 
@@ -80,6 +81,63 @@ function persistSessionToken(value) {
     // ignore storage failures (private mode / quota)
   }
 }
+
+function loadSupportLoginContext() {
+  try {
+    const url = new URL(window.location.href);
+    const companyId = String(url.searchParams.get("supportCompanyId") || "").trim();
+    if (companyId) {
+      return {
+        companyId,
+        companyName: String(url.searchParams.get("supportCompanyName") || "").trim(),
+        actorName: String(url.searchParams.get("supportActorName") || "").trim(),
+      };
+    }
+  } catch {
+    // ignore URL parsing failures
+  }
+  try {
+    const raw = window.sessionStorage.getItem(SUPPORT_LOGIN_CONTEXT_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.companyId) {
+      return null;
+    }
+    return {
+      companyId: String(parsed.companyId || "").trim(),
+      companyName: String(parsed.companyName || "").trim(),
+      actorName: String(parsed.actorName || "").trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistSupportLoginContext(context) {
+  try {
+    if (!context?.companyId) {
+      window.sessionStorage.removeItem(SUPPORT_LOGIN_CONTEXT_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(SUPPORT_LOGIN_CONTEXT_KEY, JSON.stringify({
+      companyId: String(context.companyId || "").trim(),
+      companyName: String(context.companyName || "").trim(),
+      actorName: String(context.actorName || "").trim(),
+    }));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function clearSupportLoginContext() {
+  try {
+    window.sessionStorage.removeItem(SUPPORT_LOGIN_CONTEXT_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
 const UI_TRANSLATIONS = {
   de: {
     authEyebrow: "Melde-Seite",
@@ -100,6 +158,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Server-Admin",
     loginScopeCompanyAdmin: "Firmen-Admin",
     loginScopeTurnstile: "Drehkreuz",
+    supportReadOnlyAlert: "Dieser Support-Login ist nur lesend. Aenderungen sind in dieser Sitzung gesperrt.",
+    supportReadOnlyTitle: "Support-Modus: nur lesen",
+    supportLoginActive: "Support-Login aktiv:",
+    supportCompanyFallback: "Firma",
+    supportStartedBy: "gestartet von",
+    supportReadOnlyNotice: "Nach der Anmeldung ist der Zugriff nur lesend.",
+    supportModeLabel: "Support-Modus:",
+    supportReadOnlyFor: "Nur lesen fuer",
+    supportCompanyLoginConfirmPrefix: "Zum Firmen-Login fuer",
+    supportCompanyLoginConfirmSuffix: "wechseln? Deine aktuelle Admin-Sitzung wird abgemeldet. Danach ist der Zugriff nur lesend.",
+    supportCompanyLoginOpenedPrefix: "Login fuer",
+    supportCompanyLoginOpenedSuffix: "geoeffnet. Bitte jetzt den Firmen-Admin anmelden. Diese Sitzung bleibt nur lesend.",
+    supportModeReadOnlyLine: "Support-Modus aktiv: Nur lesen.",
+    supportReadOnlyShort: "Support-Modus: nur lesen.",
     loginButton: "Anmelden",
     demoAccessTitle: "Demo-Zugänge",
     demoSuperAdmin: "Super-Admin: superadmin / 1234",
@@ -421,6 +493,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Server Admin",
     loginScopeCompanyAdmin: "Company Admin",
     loginScopeTurnstile: "Turnstile",
+    supportReadOnlyAlert: "This support login is read-only. Changes are blocked in this session.",
+    supportReadOnlyTitle: "Support mode: read-only",
+    supportLoginActive: "Support login active:",
+    supportCompanyFallback: "Company",
+    supportStartedBy: "started by",
+    supportReadOnlyNotice: "After sign-in, access is read-only.",
+    supportModeLabel: "Support mode:",
+    supportReadOnlyFor: "Read-only for",
+    supportCompanyLoginConfirmPrefix: "Switch to company login for",
+    supportCompanyLoginConfirmSuffix: "? Your current admin session will be logged out. Access will then be read-only.",
+    supportCompanyLoginOpenedPrefix: "Login for",
+    supportCompanyLoginOpenedSuffix: "opened. Please sign in with the company admin now. This session remains read-only.",
+    supportModeReadOnlyLine: "Support mode active: Read-only.",
+    supportReadOnlyShort: "Support mode: read-only.",
     loginButton: "Sign in",
     demoAccessTitle: "Demo Accounts",
     demoSuperAdmin: "Super Admin: superadmin / 1234",
@@ -742,6 +828,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Sunucu Yöneticisi",
     loginScopeCompanyAdmin: "Firma Yöneticisi",
     loginScopeTurnstile: "Turnike",
+    supportReadOnlyAlert: "Bu destek oturumu salt okunur. Bu oturumda değişiklik yapamazsınız.",
+    supportReadOnlyTitle: "Destek modu: salt okunur",
+    supportLoginActive: "Destek oturumu aktif:",
+    supportCompanyFallback: "Firma",
+    supportStartedBy: "başlatan:",
+    supportReadOnlyNotice: "Girişten sonra erişim salt okunur olur.",
+    supportModeLabel: "Destek modu:",
+    supportReadOnlyFor: "Şu firma için salt okunur:",
+    supportCompanyLoginConfirmPrefix: "Şu firma için girişe geçilsin",
+    supportCompanyLoginConfirmSuffix: "? Mevcut admin oturumun kapatılacak. Sonrasında erişim salt okunur olacak.",
+    supportCompanyLoginOpenedPrefix: "Şu firma için giriş ekranı",
+    supportCompanyLoginOpenedSuffix: "açıldı. Şimdi firma yöneticisi ile giriş yapın. Bu oturum salt okunur kalacaktır.",
+    supportModeReadOnlyLine: "Destek modu aktif: Salt okunur erişim.",
+    supportReadOnlyShort: "Destek modu: salt okunur erişim.",
     loginButton: "Giriş yap",
     demoAccessTitle: "Demo Hesaplar",
     demoSuperAdmin: "Süper Admin: superadmin / 1234",
@@ -1185,6 +1285,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "مدير الخادم",
     loginScopeCompanyAdmin: "مدير الشركة",
     loginScopeTurnstile: "البوابة الدوارة",
+    supportReadOnlyAlert: "تسجيل الدعم هذا للقراءة فقط. التغييرات محظورة في هذه الجلسة.",
+    supportReadOnlyTitle: "وضع الدعم: قراءة فقط",
+    supportLoginActive: "جلسة الدعم نشطة:",
+    supportCompanyFallback: "الشركة",
+    supportStartedBy: "بدأه",
+    supportReadOnlyNotice: "بعد تسجيل الدخول سيكون الوصول للقراءة فقط.",
+    supportModeLabel: "وضع الدعم:",
+    supportReadOnlyFor: "قراءة فقط لشركة",
+    supportCompanyLoginConfirmPrefix: "الانتقال إلى تسجيل الدخول للشركة",
+    supportCompanyLoginConfirmSuffix: "؟ سيتم تسجيل خروج جلسة المشرف الحالية. بعد ذلك سيكون الوصول للقراءة فقط.",
+    supportCompanyLoginOpenedPrefix: "تم فتح تسجيل الدخول للشركة",
+    supportCompanyLoginOpenedSuffix: "يرجى الآن تسجيل الدخول بمدير الشركة. ستبقى هذه الجلسة للقراءة فقط.",
+    supportModeReadOnlyLine: "وضع الدعم نشط: قراءة فقط.",
+    supportReadOnlyShort: "وضع الدعم: قراءة فقط.",
     loginButton: "تسجيل الدخول",
     demoAccessTitle: "حسابات تجريبية",
     demoSuperAdmin: "مشرف عام: superadmin / 1234",
@@ -1437,6 +1551,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Admin serveur",
     loginScopeCompanyAdmin: "Admin entreprise",
     loginScopeTurnstile: "Tourniquet",
+    supportReadOnlyAlert: "Cette connexion support est en lecture seule. Les modifications sont bloquées dans cette session.",
+    supportReadOnlyTitle: "Mode support : lecture seule",
+    supportLoginActive: "Connexion support active :",
+    supportCompanyFallback: "Entreprise",
+    supportStartedBy: "démarré par",
+    supportReadOnlyNotice: "Après la connexion, l'accès est en lecture seule.",
+    supportModeLabel: "Mode support :",
+    supportReadOnlyFor: "Lecture seule pour",
+    supportCompanyLoginConfirmPrefix: "Basculer vers la connexion entreprise pour",
+    supportCompanyLoginConfirmSuffix: "? Votre session admin actuelle sera déconnectée. L'accès sera ensuite en lecture seule.",
+    supportCompanyLoginOpenedPrefix: "Connexion pour",
+    supportCompanyLoginOpenedSuffix: "ouverte. Connectez-vous maintenant avec le compte admin entreprise. Cette session reste en lecture seule.",
+    supportModeReadOnlyLine: "Mode support actif : lecture seule.",
+    supportReadOnlyShort: "Mode support : lecture seule.",
     loginButton: "Se connecter",
     demoAccessTitle: "Comptes de démonstration",
     demoSuperAdmin: "Super Admin: superadmin / 1234",
@@ -1689,6 +1817,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Admin del servidor",
     loginScopeCompanyAdmin: "Admin de empresa",
     loginScopeTurnstile: "Torniquete",
+    supportReadOnlyAlert: "Este acceso de soporte es de solo lectura. Los cambios están bloqueados en esta sesión.",
+    supportReadOnlyTitle: "Modo soporte: solo lectura",
+    supportLoginActive: "Acceso de soporte activo:",
+    supportCompanyFallback: "Empresa",
+    supportStartedBy: "iniciado por",
+    supportReadOnlyNotice: "Después de iniciar sesión, el acceso es de solo lectura.",
+    supportModeLabel: "Modo soporte:",
+    supportReadOnlyFor: "Solo lectura para",
+    supportCompanyLoginConfirmPrefix: "Cambiar al acceso de empresa para",
+    supportCompanyLoginConfirmSuffix: "? Tu sesión de admin actual se cerrará. Después, el acceso será de solo lectura.",
+    supportCompanyLoginOpenedPrefix: "Acceso para",
+    supportCompanyLoginOpenedSuffix: "abierto. Inicia sesión ahora con el administrador de empresa. Esta sesión seguirá en solo lectura.",
+    supportModeReadOnlyLine: "Modo soporte activo: Solo lectura.",
+    supportReadOnlyShort: "Modo soporte: solo lectura.",
     loginButton: "Iniciar sesión",
     demoAccessTitle: "Cuentas demo",
     demoSuperAdmin: "Super Admin: superadmin / 1234",
@@ -1941,6 +2083,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Admin server",
     loginScopeCompanyAdmin: "Admin azienda",
     loginScopeTurnstile: "Tornello",
+    supportReadOnlyAlert: "Questo accesso di supporto è in sola lettura. Le modifiche sono bloccate in questa sessione.",
+    supportReadOnlyTitle: "Modalità supporto: sola lettura",
+    supportLoginActive: "Accesso supporto attivo:",
+    supportCompanyFallback: "Azienda",
+    supportStartedBy: "avviato da",
+    supportReadOnlyNotice: "Dopo l'accesso, l'operatività è in sola lettura.",
+    supportModeLabel: "Modalità supporto:",
+    supportReadOnlyFor: "Sola lettura per",
+    supportCompanyLoginConfirmPrefix: "Passare al login aziendale per",
+    supportCompanyLoginConfirmSuffix: "? La sessione admin corrente verrà disconnessa. Dopo, l'accesso sarà in sola lettura.",
+    supportCompanyLoginOpenedPrefix: "Login per",
+    supportCompanyLoginOpenedSuffix: "aperto. Accedi ora con l'admin aziendale. Questa sessione resta in sola lettura.",
+    supportModeReadOnlyLine: "Modalità supporto attiva: sola lettura.",
+    supportReadOnlyShort: "Modalità supporto: sola lettura.",
     loginButton: "Accedi",
     demoAccessTitle: "Account demo",
     demoSuperAdmin: "Super Admin: superadmin / 1234",
@@ -2193,6 +2349,20 @@ const UI_TRANSLATIONS = {
     loginScopeServerAdmin: "Admin serwera",
     loginScopeCompanyAdmin: "Admin firmy",
     loginScopeTurnstile: "Bramka",
+    supportReadOnlyAlert: "To logowanie wsparcia jest tylko do odczytu. Zmiany są zablokowane w tej sesji.",
+    supportReadOnlyTitle: "Tryb wsparcia: tylko odczyt",
+    supportLoginActive: "Aktywna sesja wsparcia:",
+    supportCompanyFallback: "Firma",
+    supportStartedBy: "uruchomione przez",
+    supportReadOnlyNotice: "Po zalogowaniu dostęp będzie tylko do odczytu.",
+    supportModeLabel: "Tryb wsparcia:",
+    supportReadOnlyFor: "Tylko odczyt dla firmy",
+    supportCompanyLoginConfirmPrefix: "Przejść do logowania firmy",
+    supportCompanyLoginConfirmSuffix: "? Twoja bieżąca sesja admina zostanie wylogowana. Potem dostęp będzie tylko do odczytu.",
+    supportCompanyLoginOpenedPrefix: "Logowanie dla",
+    supportCompanyLoginOpenedSuffix: "otwarte. Zaloguj się teraz kontem administratora firmy. Ta sesja pozostaje tylko do odczytu.",
+    supportModeReadOnlyLine: "Tryb wsparcia aktywny: tylko odczyt.",
+    supportReadOnlyShort: "Tryb wsparcia: tylko odczyt.",
     loginButton: "Zaloguj się",
     demoAccessTitle: "Konta demo",
     demoSuperAdmin: "Super Admin: superadmin / 1234",
@@ -2739,11 +2909,15 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginOtpCode: document.querySelector("#loginOtpCode"),
   loginScope: document.querySelector("#loginScope"),
+  loginSupportNotice: document.querySelector("#loginSupportNotice"),
   loginResetPasswordButton: document.querySelector("#loginResetPasswordButton"),
   systemThemeToggleButton: document.querySelector("#systemThemeToggleButton"),
   desktopInstallButton: document.querySelector("#desktopInstallButton"),
   desktopInstallHint: document.querySelector("#desktopInstallHint"),
   logoutButton: document.querySelector("#logoutButton"),
+  systemAlertBanner: document.querySelector("#systemAlertBanner"),
+  systemAlertText: document.querySelector("#systemAlertText"),
+  systemAlertActionBtn: document.querySelector("#systemAlertActionBtn"),
   seedDataButton: document.querySelector("#seedDataButton"),
   exportButton: document.querySelector("#exportButton"),
   importButton: document.querySelector("#importButton"),
@@ -2828,6 +3002,13 @@ let heartbeatTimer = null;
 let selfieSegmenter = null;
 let sessionExpiryNoticeShown = false;
 let sessionExpiryNoticeAt = 0;
+let invoicePaidHighlightTimer = null;
+let invoiceAutoRefreshTimer = null;
+let invoiceApprovalRefreshTimer = null;
+let turnstileTapInFlight = false;
+let turnstileTapLiveResetTimer = null;
+let companyBrandingPreviewOverride = "";
+let superadminUiPreviewCompanyId = "";
 
 const PLAN_LABELS = {
   tageskarte: "Besucherkarte",
@@ -2845,6 +3026,7 @@ const PLAN_NET_PRICE_EUR = {
 
 const state = {
   currentUser: null,
+  supportLoginContext: loadSupportLoginContext(),
   settings: {
     platformName: "BauPass Control",
     operatorName: "Deine Betriebsfirma",
@@ -2857,6 +3039,14 @@ const state = {
   accessInsights: { hourly: [], openEntries: [] },
   reporting: { kpis: {}, accessDaily: [], topOverdueCompanies: [] },
   invoices: [],
+  invoiceOpsMetrics: {
+    avgFirstSuccessMinutes: 0,
+    criticalOver24h: 0,
+    retryVolume7d: [],
+    topErrorReasons: [],
+  },
+  invoiceDeadLetters: [],
+  invoiceApprovalRequests: [],
   companyRepairHistory: {},
   companyRepairBusy: {},
   companyRepairStatus: {},
@@ -2871,7 +3061,14 @@ const state = {
   selectedWorkerId: null,
   accessFilter: { from: "", to: "", direction: "", gate: "" },
   porterLive: { workerId: null, lastEvent: null },
-  twofa: { enabled: false, secret: "", otpauthUri: "" }
+  twofa: { enabled: false, secret: "", otpauthUri: "" },
+  invoiceJustPaidId: "",
+  invoiceSeenIds: {},
+  invoiceNewIds: {},
+  invoiceRetrySelectedIds: [],
+  invoiceAttemptHistoryById: {},
+  invoiceAttemptHistoryLoadingById: {},
+  invoiceHistoryExpandedById: {}
 };
 
 const PHOTO_EDITOR_ZOOM_DEFAULT = 1.18;
@@ -3266,30 +3463,117 @@ function getRoleLabel(role) {
   return normalized || texts.roleUnknown;
 }
 
+function isSupportReadOnlyMode() {
+  return Boolean(state.currentUser?.support_read_only);
+}
+
+function showSupportReadOnlyAlert() {
+  window.alert(uiT("supportReadOnlyAlert"));
+}
+
+function syncSupportLoginUi() {
+  const context = state.supportLoginContext || loadSupportLoginContext();
+  state.supportLoginContext = context;
+  if (context?.companyId) {
+    persistSupportLoginContext(context);
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("supportCompanyId")) {
+        url.searchParams.delete("supportCompanyId");
+        url.searchParams.delete("supportCompanyName");
+        url.searchParams.delete("supportActorName");
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    } catch {
+      // ignore history update failures
+    }
+  }
+  if (elements.loginSupportNotice) {
+    if (context?.companyId) {
+      const actorText = context.actorName ? ` ${escapeHtml(uiT("supportStartedBy"))} ${escapeHtml(context.actorName)}` : "";
+      elements.loginSupportNotice.innerHTML = `<strong>${escapeHtml(uiT("supportLoginActive"))}</strong> ${escapeHtml(context.companyName || uiT("supportCompanyFallback"))}${actorText}. ${escapeHtml(uiT("supportReadOnlyNotice"))}`;
+      elements.loginSupportNotice.style.display = "block";
+    } else {
+      elements.loginSupportNotice.innerHTML = "";
+      elements.loginSupportNotice.style.display = "none";
+    }
+  }
+  if (!token && context?.companyId && elements.loginScope) {
+    elements.loginScope.value = "company-admin";
+  }
+}
+
+function applySupportReadOnlyUiState() {
+  const readOnly = isSupportReadOnlyMode();
+  const selectors = [
+    "#workerForm input, #workerForm select, #workerForm textarea, #workerForm button",
+    "#companyForm input, #companyForm select, #companyForm textarea, #companyForm button",
+    "#settingsForm input, #settingsForm select, #settingsForm textarea, #settingsForm button",
+    "#invoiceForm input, #invoiceForm select, #invoiceForm textarea, #invoiceForm button",
+    "#accessForm input, #accessForm select, #accessForm textarea, #accessForm button",
+    "#workerCsvButton, #accessCsvButton, #auditCsvButton",
+    "#docInboxSyncBtn, #docInboxRematchBtn, #imapTestBtn",
+    "[data-assign-btn], [data-dismiss-email-id], [data-manual-company-match], [data-delete-doc-id]",
+    ".worker-doc-upload-form input, .worker-doc-upload-form select, .worker-doc-upload-form textarea, .worker-doc-upload-form button",
+    "#docAssignForm input, #docAssignForm select, #docAssignForm textarea, #docAssignForm button",
+    "#docCompanyMatchForm input, #docCompanyMatchForm select, #docCompanyMatchForm textarea, #docCompanyMatchForm button",
+    "[data-worker-edit], [data-worker-delete], [data-worker-restore], [data-worker-app-link], [data-worker-reset-pin]",
+    "[data-company-doc-email], [data-company-add-turnstile], [data-company-repair], [data-company-toggle-lock], [data-company-delete]",
+    "[data-collections-mark-paid], [data-collections-toggle-lock]"
+  ];
+
+  selectors.forEach((selector) => {
+    document.querySelectorAll(selector).forEach((element) => {
+      if (!(element instanceof HTMLButtonElement || element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement)) {
+        return;
+      }
+      if (readOnly) {
+        if (!element.dataset.supportReadOnlyOriginalTitle) {
+          element.dataset.supportReadOnlyOriginalTitle = element.getAttribute("title") || "";
+        }
+        if (element.dataset.supportReadOnlyOriginalDisabled === undefined) {
+          element.dataset.supportReadOnlyOriginalDisabled = element.disabled ? "1" : "0";
+        }
+        element.disabled = true;
+        element.setAttribute("title", uiT("supportReadOnlyTitle"));
+      } else if (element.dataset.supportReadOnlyOriginalTitle !== undefined) {
+        element.disabled = element.dataset.supportReadOnlyOriginalDisabled === "1";
+        element.setAttribute("title", element.dataset.supportReadOnlyOriginalTitle);
+        delete element.dataset.supportReadOnlyOriginalTitle;
+        delete element.dataset.supportReadOnlyOriginalDisabled;
+      }
+    });
+  });
+}
+
 function userCanManageSystem() {
-  const role = getCurrentUser()?.role;
-  return role === "superadmin";
+  const role = getEffectiveUiRole();
+  return role === "superadmin" && !isSupportReadOnlyMode() && !isSuperadminCompanyPreviewMode();
 }
 
 function userCanManageWorkers() {
-  const role = getCurrentUser()?.role;
-  return role === "superadmin" || role === "company-admin";
+  const role = getEffectiveUiRole();
+  return (role === "superadmin" || role === "company-admin") && !isSupportReadOnlyMode() && !isSuperadminCompanyPreviewMode();
 }
 
 function userCanManageAccess() {
-  const role = getCurrentUser()?.role;
-  return role === "superadmin" || role === "company-admin" || role === "turnstile";
+  const role = getEffectiveUiRole();
+  return (role === "superadmin" || role === "company-admin" || role === "turnstile") && !isSupportReadOnlyMode() && !isSuperadminCompanyPreviewMode();
 }
 
 function canRepairCompany(company) {
-  const user = getCurrentUser();
-  if (!user || !company?.id) {
+  const effectiveRole = getEffectiveUiRole();
+  const effectiveCompanyId = getEffectiveUiCompanyId();
+  if (!effectiveRole || !company?.id) {
     return false;
   }
-  if (user.role === "superadmin") {
+  if (isSupportReadOnlyMode() || isSuperadminCompanyPreviewMode()) {
+    return false;
+  }
+  if (effectiveRole === "superadmin") {
     return true;
   }
-  return user.role === "company-admin" && user.company_id === company.id;
+  return effectiveRole === "company-admin" && effectiveCompanyId === company.id;
 }
 
 function mapCompanyRepairError(error) {
@@ -3571,10 +3855,51 @@ function applyWebsiteLogo(dataUrl) {
     }
     img.classList.toggle("hidden", !hasLogo && img.classList.contains("website-logo-sidebar"));
   });
+
+  const appFavicon = document.querySelector("#appFavicon");
+  if (appFavicon) {
+    appFavicon.href = hasLogo ? dataUrl : "./worker-icon-192.png";
+  }
+  document.querySelectorAll('link[rel="apple-touch-icon"]').forEach((link) => {
+    link.href = hasLogo ? dataUrl : "./worker-icon-192.png";
+  });
 }
 
 function getCurrentUser() {
   return state.currentUser;
+}
+
+function isSuperadminCompanyPreviewMode() {
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  return role === "superadmin" && Boolean(String(superadminUiPreviewCompanyId || "").trim());
+}
+
+function getEffectiveUiRole() {
+  if (isSuperadminCompanyPreviewMode()) {
+    return "company-admin";
+  }
+  return String(getCurrentUser()?.role || "").toLowerCase();
+}
+
+function getEffectiveUiCompanyId() {
+  if (isSuperadminCompanyPreviewMode()) {
+    return String(superadminUiPreviewCompanyId || "").trim();
+  }
+  return String(getCurrentUser()?.company_id || getCurrentUser()?.companyId || "").trim();
+}
+
+function getUiVisibleWorkers() {
+  const companyId = getEffectiveUiCompanyId();
+  if (!companyId) {
+    return [...state.workers];
+  }
+  return state.workers.filter((entry) => String(entry?.companyId || entry?.company_id || "").trim() === companyId);
+}
+
+function getUiVisibleAccessLogs() {
+  const workers = getUiVisibleWorkers();
+  const allowedWorkerIds = new Set(workers.map((entry) => entry.id));
+  return state.accessLogs.filter((entry) => allowedWorkerIds.has(entry.workerId));
 }
 
 function getDefaultViewForRole(role) {
@@ -3605,7 +3930,7 @@ function getCurrentViewName() {
 }
 
 function enforceRoleViewAccess() {
-  const role = getCurrentUser()?.role;
+  const role = getEffectiveUiRole();
   const allowedViews = getAllowedViewsForRole(role);
   const currentView = getCurrentViewName();
 
@@ -3621,7 +3946,7 @@ function enforceRoleViewAccess() {
 }
 
 function setView(viewName) {
-  const role = getCurrentUser()?.role;
+  const role = getEffectiveUiRole();
   const allowedViews = getAllowedViewsForRole(role);
   const targetView = allowedViews.includes(viewName) ? viewName : getDefaultViewForRole(role);
 
@@ -3631,6 +3956,79 @@ function setView(viewName) {
   elements.navLinks.forEach((link) => {
     link.classList.toggle("active", link.dataset.view === targetView);
   });
+
+  if (targetView === "invoices") {
+    markCurrentInvoicesAsSeen();
+    startInvoiceAutoRefresh();
+    startInvoiceApprovalAutoRefresh();
+  } else {
+    stopInvoiceAutoRefresh();
+    stopInvoiceApprovalAutoRefresh();
+  }
+}
+
+function stopInvoiceAutoRefresh() {
+  if (invoiceAutoRefreshTimer) {
+    window.clearInterval(invoiceAutoRefreshTimer);
+    invoiceAutoRefreshTimer = null;
+  }
+}
+
+function stopInvoiceApprovalAutoRefresh() {
+  if (invoiceApprovalRefreshTimer) {
+    window.clearInterval(invoiceApprovalRefreshTimer);
+    invoiceApprovalRefreshTimer = null;
+  }
+}
+
+function markCurrentInvoicesAsSeen() {
+  const seen = { ...(state.invoiceSeenIds || {}) };
+  (state.invoices || []).forEach((invoice) => {
+    if (invoice?.id) {
+      seen[invoice.id] = true;
+    }
+  });
+  state.invoiceSeenIds = seen;
+  state.invoiceNewIds = {};
+}
+
+function startInvoiceAutoRefresh() {
+  if (invoiceAutoRefreshTimer || getCurrentViewName() !== "invoices") {
+    return;
+  }
+  invoiceAutoRefreshTimer = window.setInterval(async () => {
+    if (!token || getCurrentViewName() !== "invoices") {
+      stopInvoiceAutoRefresh();
+      return;
+    }
+    await loadAndRenderInvoices({ silent: true });
+  }, 25000);
+}
+
+async function loadInvoiceApprovalsOnly(options = {}) {
+  const { silent = true } = options;
+  try {
+    const approvalResponse = await apiRequest(API_BASE + "/api/invoices/approvals/pending");
+    state.invoiceApprovalRequests = Array.isArray(approvalResponse) ? approvalResponse : [];
+    renderInvoiceApprovalQueue();
+  } catch (error) {
+    if (!silent) {
+      console.error("Failed to load invoice approvals:", error);
+    }
+  }
+}
+
+function startInvoiceApprovalAutoRefresh() {
+  if (invoiceApprovalRefreshTimer || getCurrentViewName() !== "invoices") {
+    return;
+  }
+  invoiceApprovalRefreshTimer = window.setInterval(async () => {
+    if (!token || getCurrentViewName() !== "invoices") {
+      stopInvoiceApprovalAutoRefresh();
+      return;
+    }
+    await loadInvoiceApprovalsOnly({ silent: true });
+  }, 20000);
 }
 
 function clearSession() {
@@ -3696,6 +4094,16 @@ async function apiRequest(url, options = {}) {
   if (auth && !token) {
     handleExpiredControlSession();
     throw new Error("session_expired");
+  }
+  const normalizedMethod = String(method || "GET").toUpperCase();
+  if (
+    auth
+    && isSupportReadOnlyMode()
+    && !["GET", "HEAD", "OPTIONS"].includes(normalizedMethod)
+    && !String(url || "").includes("/api/logout")
+    && !String(url || "").includes("/api/me/heartbeat")
+  ) {
+    throw new Error("support_session_read_only");
   }
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (auth && token) {
@@ -3788,6 +4196,12 @@ async function loadAllData() {
     }
     if (bootstrap?.user) {
       state.currentUser = bootstrap.user;
+      // Serverseitig gespeicherte Vorschau-Session wiederherstellen
+      if (bootstrap.user.role === "superadmin" && bootstrap.user.preview_company_id) {
+        superadminUiPreviewCompanyId = bootstrap.user.preview_company_id;
+        const previewCompany = (state.companies || []).find((c) => c.id === superadminUiPreviewCompanyId);
+        companyBrandingPreviewOverride = previewCompany ? getCompanyBrandingPreset(previewCompany) : "";
+      }
     }
   }
 
@@ -3814,7 +4228,16 @@ async function loadAllData() {
     state.settings = settings.value || state.settings;
     document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
   }
-  if (companies.status === "fulfilled") state.companies = companies.value || [];
+  if (companies.status === "fulfilled") {
+    state.companies = companies.value || [];
+    // Branding-Override nach Laden der Unternehmen auflösen (bei wiederhergestellter Vorschau-Session)
+    if (superadminUiPreviewCompanyId && !companyBrandingPreviewOverride) {
+      const previewCompany = state.companies.find((c) => c.id === superadminUiPreviewCompanyId);
+      if (previewCompany) {
+        companyBrandingPreviewOverride = getCompanyBrandingPreset(previewCompany);
+      }
+    }
+  }
   if (subcompanies.status === "fulfilled") state.subcompanies = subcompanies.value || [];
   if (workers.status === "fulfilled") state.workers = workers.value || [];
   if (accessLogs.status === "fulfilled") state.accessLogs = (accessLogs.value || []).map(normalizeLog);
@@ -3872,6 +4295,7 @@ async function loadAllData() {
 
 function refreshAll() {
   const loggedIn = Boolean(token && state.currentUser);
+  syncSupportLoginUi();
   if (elements.authOverlay) {
     elements.authOverlay.style.display = loggedIn ? "none" : "grid";
     elements.authOverlay.setAttribute("aria-hidden", loggedIn ? "true" : "false");
@@ -3884,22 +4308,41 @@ function refreshAll() {
   }
   if (elements.body) {
     elements.body.classList.toggle("auth-locked", !loggedIn);
+    if (!loggedIn) {
+      companyBrandingPreviewOverride = "";
+      superadminUiPreviewCompanyId = "";
+      elements.body.setAttribute("data-branding-preset", "construction");
+    }
   }
 
   updateTopbarActionsState(loggedIn);
+  renderSuperadminPreviewTopbar(loggedIn);
+  renderSuperadminSimulationBar(loggedIn);
+  renderSuperadminPreviewSidebarStatus(loggedIn);
+  renderSystemAlertBanner(loggedIn);
 
   if (loggedIn && elements.sessionCard) {
     const texts = getRuntimeUiTexts();
     const role = getRoleLabel(state.currentUser?.role || "");
     const user = state.currentUser?.username || "-";
-    elements.sessionCard.innerHTML = `<strong>${escapeHtml(texts.sessionLoggedIn)}:</strong> ${escapeHtml(user)} | <strong>${escapeHtml(texts.sessionRole)}:</strong> ${escapeHtml(role)}`;
+    const supportModeMarkup = isSupportReadOnlyMode()
+      ? `<br /><strong>${escapeHtml(uiT("supportModeLabel"))}</strong> ${escapeHtml(uiT("supportReadOnlyFor"))} ${escapeHtml(state.currentUser?.support_company_name || uiT("supportCompanyFallback"))}${state.currentUser?.support_actor_name ? ` | ${escapeHtml(uiT("supportStartedBy"))} ${escapeHtml(state.currentUser.support_actor_name)}` : ""}`
+      : "";
+    const previewCompany = state.companies.find((entry) => String(entry?.id || "") === String(superadminUiPreviewCompanyId || ""));
+    const previewMarkup = isSuperadminCompanyPreviewMode() && previewCompany
+      ? `<br /><strong>Vorschau:</strong> Firmenansicht ${escapeHtml(previewCompany.name || "Firma")}`
+      : "";
+    elements.sessionCard.innerHTML = `<strong>${escapeHtml(texts.sessionLoggedIn)}:</strong> ${escapeHtml(user)} | <strong>${escapeHtml(texts.sessionRole)}:</strong> ${escapeHtml(role)}${supportModeMarkup}${previewMarkup}`;
   }
 
   if (!loggedIn) {
+    stopInvoiceAutoRefresh();
+    stopInvoiceApprovalAutoRefresh();
     return;
   }
 
   enforceRoleViewAccess();
+  applyActiveCompanyBrandingPreset();
 
   renderStats();
   renderReportingPanels();
@@ -3922,8 +4365,46 @@ function refreshAll() {
   renderBadge();
   renderInvoiceHistory();
   renderInvoiceManagementList();
+  if (getCurrentViewName() === "invoices") {
+    startInvoiceAutoRefresh();
+  }
   ensureInvoiceDefaults();
   refreshInvoicePreview({ silent: true });
+  applySupportReadOnlyUiState();
+}
+
+function renderSystemAlertBanner(loggedIn) {
+  if (!elements.systemAlertBanner || !elements.systemAlertText || !elements.systemAlertActionBtn) {
+    return;
+  }
+
+  if (!loggedIn) {
+    elements.systemAlertBanner.style.display = "none";
+    return;
+  }
+
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  if (role !== "superadmin") {
+    elements.systemAlertBanner.style.display = "none";
+    return;
+  }
+
+  const criticalIds = getCriticalRetryInvoiceIds(state.invoices, 50);
+  const criticalCount = criticalIds.length;
+  if (criticalCount < 10) {
+    elements.systemAlertBanner.style.display = "none";
+    return;
+  }
+
+  elements.systemAlertText.textContent = `${criticalCount} kritische Rechnungs-Fehlversände (Score >= 70) erfordern Aufmerksamkeit.`;
+  elements.systemAlertActionBtn.textContent = `Rechnungen öffnen (${criticalCount})`;
+  elements.systemAlertBanner.style.display = "flex";
+  elements.systemAlertBanner.classList.remove("system-alert-banner-warn", "system-alert-banner-alert");
+  if (criticalCount >= 20) {
+    elements.systemAlertBanner.classList.add("system-alert-banner-alert");
+  } else {
+    elements.systemAlertBanner.classList.add("system-alert-banner-warn");
+  }
 }
 
 function renderCompliancePanel() {
@@ -3990,7 +4471,8 @@ function ensureInvoiceDefaults() {
 
 function updateTopbarActionsState(loggedIn) {
   const role = getCurrentUser()?.role || "";
-  const canSeed = role === "superadmin" || role === "company-admin";
+  const canWrite = !isSupportReadOnlyMode();
+  const canSeed = (role === "superadmin" || role === "company-admin") && canWrite;
 
   if (elements.seedDataButton) {
     elements.seedDataButton.style.display = loggedIn ? "inline-flex" : "none";
@@ -3999,14 +4481,14 @@ function updateTopbarActionsState(loggedIn) {
   }
 
   if (elements.exportButton) {
-    const canExport = role === "superadmin" || role === "company-admin";
+    const canExport = (role === "superadmin" || role === "company-admin") && canWrite;
     elements.exportButton.style.display = loggedIn && canExport ? "inline-flex" : "none";
     elements.exportButton.disabled = !canExport;
     elements.exportButton.title = canExport ? "" : "Nur für Admin-Rollen";
   }
 
   if (elements.importButton) {
-    const canImport = role === "superadmin" || role === "company-admin";
+    const canImport = (role === "superadmin" || role === "company-admin") && canWrite;
     elements.importButton.style.display = loggedIn && canImport ? "inline-flex" : "none";
     elements.importButton.disabled = !canImport;
     elements.importButton.title = canImport ? "" : "Nur für Admin-Rollen";
@@ -4018,15 +4500,223 @@ function updateTopbarActionsState(loggedIn) {
   }
 }
 
+async function clearSuperadminPreviewMode({ refresh = true } = {}) {
+  superadminUiPreviewCompanyId = "";
+  companyBrandingPreviewOverride = "";
+  try {
+    await apiRequest(API_BASE + "/api/superadmin/preview-session", { method: "POST", body: { company_id: null } });
+  } catch (e) {
+    console.warn("[preview] Fehler beim Beenden der Vorschau-Session:", e);
+  }
+  if (refresh) {
+    refreshAll();
+  }
+}
+
+async function setSuperadminPreviewCompany(companyId, { refresh = true } = {}) {
+  const selectedCompanyId = String(companyId || "").trim();
+  superadminUiPreviewCompanyId = selectedCompanyId;
+  companyBrandingPreviewOverride = "";
+  const company = state.companies.find((entry) => String(entry?.id || "") === selectedCompanyId);
+  if (company) {
+    companyBrandingPreviewOverride = getCompanyBrandingPreset(company);
+  }
+  try {
+    await apiRequest(API_BASE + "/api/superadmin/preview-session", { method: "POST", body: { company_id: selectedCompanyId || null } });
+  } catch (e) {
+    console.warn("[preview] Fehler beim Setzen der Vorschau-Session:", e);
+  }
+  if (refresh) {
+    refreshAll();
+  }
+}
+
+function renderSuperadminPreviewTopbar(loggedIn) {
+  const topbarActions = document.querySelector(".topbar-actions");
+  if (!topbarActions) {
+    return;
+  }
+
+  let previewPill = document.querySelector("#superadminPreviewTopbarPill");
+  const previewActive = loggedIn && isSuperadminCompanyPreviewMode();
+  if (!previewActive) {
+    if (previewPill) {
+      previewPill.remove();
+    }
+    return;
+  }
+
+  if (!previewPill) {
+    previewPill = document.createElement("div");
+    previewPill.id = "superadminPreviewTopbarPill";
+    previewPill.className = "superadmin-preview-pill";
+
+    const label = document.createElement("span");
+    label.id = "superadminPreviewTopbarLabel";
+    label.className = "superadmin-preview-pill-label";
+    previewPill.appendChild(label);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "ghost-button small-button superadmin-preview-pill-close";
+    closeButton.textContent = "Vorschau beenden";
+    closeButton.addEventListener("click", () => clearSuperadminPreviewMode());
+    previewPill.appendChild(closeButton);
+
+    const logoutButton = elements.logoutButton && topbarActions.contains(elements.logoutButton)
+      ? elements.logoutButton
+      : null;
+    if (logoutButton) {
+      topbarActions.insertBefore(previewPill, logoutButton);
+    } else {
+      topbarActions.appendChild(previewPill);
+    }
+  }
+
+  const previewCompany = state.companies.find((entry) => String(entry?.id || "") === String(superadminUiPreviewCompanyId || ""));
+  const labelText = previewCompany?.name
+    ? `Vorschau aktiv: ${previewCompany.name}`
+    : "Vorschau aktiv";
+  const labelNode = document.querySelector("#superadminPreviewTopbarLabel");
+  if (labelNode) {
+    labelNode.textContent = labelText;
+  }
+}
+
+function renderSuperadminSimulationBar(loggedIn) {
+  const content = document.querySelector(".content");
+  if (!content) {
+    return;
+  }
+
+  let simulationBar = document.querySelector("#superadminSimulationBar");
+  const previewActive = loggedIn && isSuperadminCompanyPreviewMode();
+  if (!previewActive) {
+    if (simulationBar) {
+      simulationBar.remove();
+    }
+    return;
+  }
+
+  const previewCompany = state.companies.find((entry) => String(entry?.id || "") === String(superadminUiPreviewCompanyId || ""));
+  const previewCompanyName = String(previewCompany?.name || "Firma");
+  const previewPreset = getCompanyBrandingPreset(previewCompany);
+  const previewPresetLabel = getCompanyBrandingPresetLabel(previewPreset);
+
+  if (!simulationBar) {
+    simulationBar = document.createElement("div");
+    simulationBar.id = "superadminSimulationBar";
+    simulationBar.className = "superadmin-simulation-bar";
+    simulationBar.setAttribute("role", "status");
+    simulationBar.setAttribute("aria-live", "polite");
+
+    const main = document.createElement("div");
+    main.className = "superadmin-simulation-main";
+    main.innerHTML = `
+      <strong id="superadminSimulationBarTitle">Simulation aktiv</strong>
+      <span id="superadminSimulationBarMeta">Firmenansicht</span>
+    `;
+    simulationBar.appendChild(main);
+
+    const actions = document.createElement("div");
+    actions.className = "superadmin-simulation-actions";
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "ghost-button small-button superadmin-simulation-close";
+    closeButton.textContent = "Vorschau beenden";
+    closeButton.addEventListener("click", () => clearSuperadminPreviewMode());
+    actions.appendChild(closeButton);
+
+    simulationBar.appendChild(actions);
+
+    const insertBeforeTarget = elements.systemAlertBanner && content.contains(elements.systemAlertBanner)
+      ? elements.systemAlertBanner
+      : content.querySelector(".view");
+    if (insertBeforeTarget) {
+      content.insertBefore(simulationBar, insertBeforeTarget);
+    } else {
+      content.appendChild(simulationBar);
+    }
+  }
+
+  simulationBar.classList.remove("simulation-construction", "simulation-industry", "simulation-premium");
+  simulationBar.classList.add(`simulation-${previewPreset}`);
+
+  const titleNode = document.querySelector("#superadminSimulationBarTitle");
+  const metaNode = document.querySelector("#superadminSimulationBarMeta");
+  if (titleNode) {
+    titleNode.textContent = "Simulation aktiv";
+  }
+  if (metaNode) {
+    metaNode.textContent = `Firmenansicht: ${previewCompanyName} (${previewPresetLabel})`;
+  }
+}
+
+function renderSuperadminPreviewSidebarStatus(loggedIn) {
+  const sidebarCard = document.querySelector(".sidebar-card");
+  if (!sidebarCard) {
+    return;
+  }
+
+  let sidebarStatus = document.querySelector("#superadminSidebarPreviewStatus");
+  const previewActive = loggedIn && isSuperadminCompanyPreviewMode();
+  if (!previewActive) {
+    if (sidebarStatus) {
+      sidebarStatus.remove();
+    }
+    return;
+  }
+
+  const previewCompany = state.companies.find((entry) => String(entry?.id || "") === String(superadminUiPreviewCompanyId || ""));
+  const previewCompanyName = String(previewCompany?.name || "Firma");
+  const previewPreset = getCompanyBrandingPreset(previewCompany);
+
+  if (!sidebarStatus) {
+    sidebarStatus = document.createElement("div");
+    sidebarStatus.id = "superadminSidebarPreviewStatus";
+    sidebarStatus.className = "superadmin-sidebar-preview-status";
+    sidebarStatus.innerHTML = `
+      <span class="superadmin-sidebar-preview-dot" aria-hidden="true"></span>
+      <div class="superadmin-sidebar-preview-main">
+        <strong id="superadminSidebarPreviewTitle">Simulation laeuft</strong>
+        <span id="superadminSidebarPreviewMeta">Firmenansicht</span>
+      </div>
+      <button type="button" class="ghost-button small-button superadmin-sidebar-preview-close" id="superadminSidebarPreviewClose">Beenden</button>
+    `;
+    sidebarCard.appendChild(sidebarStatus);
+
+    const closeButton = document.querySelector("#superadminSidebarPreviewClose");
+    if (closeButton) {
+      closeButton.addEventListener("click", () => clearSuperadminPreviewMode());
+    }
+  }
+
+  sidebarStatus.classList.remove("sidebar-simulation-construction", "sidebar-simulation-industry", "sidebar-simulation-premium");
+  sidebarStatus.classList.add(`sidebar-simulation-${previewPreset}`);
+
+  const titleNode = document.querySelector("#superadminSidebarPreviewTitle");
+  const metaNode = document.querySelector("#superadminSidebarPreviewMeta");
+  if (titleNode) {
+    titleNode.textContent = "Simulation laeuft";
+  }
+  if (metaNode) {
+    metaNode.textContent = previewCompanyName;
+  }
+}
+
 function renderStats() {
   if (!elements.statsGrid) return;
   const texts = getRuntimeUiTexts();
+  const visibleWorkers = getUiVisibleWorkers();
+  const visibleLogs = getUiVisibleAccessLogs();
+  const scopedCompanyId = getEffectiveUiCompanyId();
 
-  const totalWorkers = state.workers.filter((w) => !w.deletedAt).length;
-  const activeWorkers = state.workers.filter((w) => !w.deletedAt && w.status === "aktiv").length;
-  const totalVisitors = state.workers.filter((w) => !w.deletedAt && isVisitorWorker(w)).length;
-  const totalCompanies = state.companies.filter((c) => !c.deleted_at).length;
-  const accessToday = state.accessLogs.filter((log) => {
+  const totalWorkers = visibleWorkers.filter((w) => !w.deletedAt).length;
+  const activeWorkers = visibleWorkers.filter((w) => !w.deletedAt && w.status === "aktiv").length;
+  const totalVisitors = visibleWorkers.filter((w) => !w.deletedAt && isVisitorWorker(w)).length;
+  const totalCompanies = scopedCompanyId ? 1 : state.companies.filter((c) => !c.deleted_at).length;
+  const accessToday = visibleLogs.filter((log) => {
     const ts = String(log.timestamp || "").slice(0, 10);
     return ts === new Date().toISOString().slice(0, 10);
   }).length;
@@ -4063,7 +4753,7 @@ function renderReportingPanels() {
     return;
   }
 
-  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  const role = String(getEffectiveUiRole() || "").toLowerCase();
   if (role !== "superadmin") {
     if (reportingPanels) {
       reportingPanels.style.display = "none";
@@ -4149,7 +4839,7 @@ function renderReportingPanels() {
 function renderWorkerList() {
   if (!elements.workerList) return;
   const searchTerm = ((elements.workerSearchInput?.value) || "").trim().toLowerCase();
-  const workers = [...state.workers]
+  const workers = getUiVisibleWorkers()
     .filter((w) => {
       if (!searchTerm) return true;
       const hay = [w.firstName, w.lastName, w.badgeId, w.site, w.role, w.status, w.visitorCompany].join(" ").toLowerCase();
@@ -4312,8 +5002,14 @@ function renderCompanyList() {
     elements.companyList.innerHTML = '<div class="empty-state">Noch keine Firmen vorhanden.</div>';
     return;
   }
-  const userRole = getCurrentUser()?.role || "";
-  const userCompanyId = getCurrentUser()?.company_id || getCurrentUser()?.companyId || "";
+  const userRole = getEffectiveUiRole();
+  const userCompanyId = getEffectiveUiCompanyId();
+  const superadminPreviewEnabled = String(getCurrentUser()?.role || "").toLowerCase() === "superadmin";
+  const previewCompanyId = String(superadminUiPreviewCompanyId || "").trim();
+  const previewCompanyOptions = state.companies
+    .filter((entry) => !entry.deleted_at)
+    .map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === previewCompanyId ? "selected" : ""}>${escapeHtml(entry.name || entry.id)}</option>`)
+    .join("");
   const canRepairAny = userRole === "superadmin";
   const canDeleteAny = userRole === "superadmin";
   const canRepairOwn = userRole === "company-admin";
@@ -4347,6 +5043,7 @@ function renderCompanyList() {
           ? "helper-text helper-text-ok"
           : "helper-text helper-text-info";
       const documentEmail = getCompanyDocumentEmail(company);
+      const brandingPreset = getCompanyBrandingPreset(company);
       const turnstiles = Array.isArray(state.companyTurnstiles?.[companyId]) ? state.companyTurnstiles[companyId] : [];
       const repairHistory = filterRepairHistoryByWindow(state.companyRepairHistory?.[companyId] || []);
       const historyMarkup = repairHistory.length
@@ -4362,7 +5059,22 @@ function renderCompanyList() {
           <strong>${escapeHtml(company.name || "Firma")}</strong>
           <span>${escapeHtml(company.plan || "-")}</span>
           <p class="${statusMeta.className}">Status: ${escapeHtml(statusMeta.label)}</p>
+          <p><strong>Design:</strong> ${escapeHtml(getCompanyBrandingPresetLabel(brandingPreset))}</p>
           <p><strong>Dokument-E-Mail:</strong> ${escapeHtml(documentEmail || "Nicht gesetzt")}</p>
+          <div class="button-row" style="align-items:center; margin-top:2px;">
+            <select data-company-branding-select="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>
+              <option value="construction" ${brandingPreset === "construction" ? "selected" : ""}>Bau</option>
+              <option value="industry" ${brandingPreset === "industry" ? "selected" : ""}>Industrie</option>
+              <option value="premium" ${brandingPreset === "premium" ? "selected" : ""}>Premium</option>
+            </select>
+            <button type="button" class="ghost-button small-button" data-company-branding-save="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Design speichern</button>
+            <button type="button" class="ghost-button small-button" data-company-branding-reset="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Zuruecksetzen</button>
+          </div>
+          <div class="button-row" style="align-items:center; margin-top:2px;">
+            <span class="company-branding-preview preview-${escapeHtml(brandingPreset)}" data-company-branding-preview="${escapeHtml(companyId)}" aria-hidden="true"></span>
+            <span class="helper-text" data-company-branding-preview-label="${escapeHtml(companyId)}">Vorschau: ${escapeHtml(getCompanyBrandingPresetLabel(brandingPreset))}</span>
+            <span class="helper-text" data-company-branding-dirty="${escapeHtml(companyId)}"></span>
+          </div>
           ${turnstileMarkup}
           <div class="meta-box">
             <p><strong>Letzte Reparaturen</strong></p>
@@ -4372,7 +5084,7 @@ function renderCompanyList() {
           <div class="button-row">
             <button type="button" class="ghost-button" data-company-doc-email="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Dokument-Mail setzen</button>
             <button type="button" class="ghost-button" data-company-add-turnstile="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Drehkreuz hinzufügen</button>
-            <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Reparatur laeuft..." : "Firma reparieren"}</button>
+            <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Login wird vorbereitet..." : "Firmen-Login"}</button>
             <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
             <button type="button" class="ghost-button" data-company-delete="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Firma löschen</button>
           </div>
@@ -4404,6 +5116,16 @@ function renderCompanyList() {
           </label>
         </div>
       </div>
+      ${superadminPreviewEnabled ? `
+      <div class="button-row" style="margin-top:10px; align-items:center; gap:10px;">
+        <strong>Firmenvorschau:</strong>
+        <select id="superadminCompanyPreviewSelect">
+          <option value="">Keine Vorschau (Superadmin-Sicht)</option>
+          ${previewCompanyOptions}
+        </select>
+        <button type="button" class="ghost-button small-button" id="superadminCompanyPreviewReset">Vorschau beenden</button>
+      </div>
+      ` : ""}
     </article>
     ${cardsMarkup || '<div class="empty-state">Keine Firmen mit Reparaturen im ausgewaehlten Zeitraum.</div>'}
   `;
@@ -4427,6 +5149,8 @@ function filterRepairHistoryByWindow(entries) {
 function bindCompanyHistoryControls() {
   const filterSelect = document.querySelector("#companyRepairHistoryWindow");
   const onlyProblemsToggle = document.querySelector("#companyOnlyProblems");
+  const previewSelect = document.querySelector("#superadminCompanyPreviewSelect");
+  const previewResetButton = document.querySelector("#superadminCompanyPreviewReset");
   if (!filterSelect) {
     return;
   }
@@ -4443,12 +5167,46 @@ function bindCompanyHistoryControls() {
       renderCompanyList();
     });
   }
+
+  if (previewSelect) {
+    previewSelect.addEventListener("change", () => {
+      setSuperadminPreviewCompany(previewSelect.value);
+    });
+  }
+
+  if (previewResetButton) {
+    previewResetButton.addEventListener("click", () => clearSuperadminPreviewMode());
+  }
 }
 
 function bindCompanyRowActions() {
   if (!elements.companyList || elements.companyList.dataset.repairBound === "1") return;
 
   elements.companyList.dataset.repairBound = "1";
+  elements.companyList.addEventListener("change", (event) => {
+    const presetSelect = event.target.closest("[data-company-branding-select]");
+    if (!presetSelect || !elements.companyList.contains(presetSelect)) {
+      return;
+    }
+    const companyId = String(presetSelect.dataset.companyBrandingSelect || "").trim();
+    const selectedPreset = normalizeCompanyBrandingPresetValue(presetSelect.value);
+    const previewDot = elements.companyList.querySelector(`[data-company-branding-preview="${companyId}"]`);
+    const previewLabel = elements.companyList.querySelector(`[data-company-branding-preview-label="${companyId}"]`);
+    const dirtyLabel = elements.companyList.querySelector(`[data-company-branding-dirty="${companyId}"]`);
+    if (previewDot) {
+      previewDot.classList.remove("preview-construction", "preview-industry", "preview-premium");
+      previewDot.classList.add(`preview-${selectedPreset}`);
+    }
+    if (previewLabel) {
+      previewLabel.textContent = `Vorschau: ${getCompanyBrandingPresetLabel(selectedPreset)}`;
+    }
+    if (dirtyLabel) {
+      dirtyLabel.textContent = "Noch nicht gespeichert";
+    }
+    companyBrandingPreviewOverride = selectedPreset;
+    applyActiveCompanyBrandingPreset();
+  });
+
   elements.companyList.addEventListener("click", async (event) => {
     const docEmailButton = event.target.closest("[data-company-doc-email]");
     if (docEmailButton && !docEmailButton.disabled && elements.companyList.contains(docEmailButton)) {
@@ -4562,6 +5320,71 @@ function bindCompanyRowActions() {
       return;
     }
 
+    const brandingResetButton = event.target.closest("[data-company-branding-reset]");
+    if (brandingResetButton && !brandingResetButton.disabled && elements.companyList.contains(brandingResetButton)) {
+      const companyId = brandingResetButton.dataset.companyBrandingReset;
+      const company = state.companies.find((entry) => entry.id === companyId);
+      if (!companyId || !company) {
+        return;
+      }
+
+      const savedPreset = getCompanyBrandingPreset(company);
+      const presetSelect = elements.companyList.querySelector(`[data-company-branding-select="${companyId}"]`);
+      const previewDot = elements.companyList.querySelector(`[data-company-branding-preview="${companyId}"]`);
+      const previewLabel = elements.companyList.querySelector(`[data-company-branding-preview-label="${companyId}"]`);
+      const dirtyLabel = elements.companyList.querySelector(`[data-company-branding-dirty="${companyId}"]`);
+
+      if (presetSelect) {
+        presetSelect.value = savedPreset;
+      }
+      if (previewDot) {
+        previewDot.classList.remove("preview-construction", "preview-industry", "preview-premium");
+        previewDot.classList.add(`preview-${savedPreset}`);
+      }
+      if (previewLabel) {
+        previewLabel.textContent = `Vorschau: ${getCompanyBrandingPresetLabel(savedPreset)}`;
+      }
+      if (dirtyLabel) {
+        dirtyLabel.textContent = "";
+      }
+
+      companyBrandingPreviewOverride = savedPreset;
+      applyActiveCompanyBrandingPreset();
+      return;
+    }
+
+    const brandingSaveButton = event.target.closest("[data-company-branding-save]");
+    if (brandingSaveButton && !brandingSaveButton.disabled && elements.companyList.contains(brandingSaveButton)) {
+      const companyId = brandingSaveButton.dataset.companyBrandingSave;
+      const company = state.companies.find((entry) => entry.id === companyId);
+      if (!companyId || !company) {
+        return;
+      }
+      const presetSelect = elements.companyList.querySelector(`[data-company-branding-select="${companyId}"]`);
+      const brandingPreset = normalizeCompanyBrandingPresetValue(presetSelect?.value || "construction");
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}`, {
+          method: "PUT",
+          body: {
+            name: company.name,
+            contact: company.contact,
+            billingEmail: getCompanyBillingEmail(company),
+            documentEmail: getCompanyDocumentEmail(company),
+            accessHost: company.accessHost || company.access_host || "",
+            brandingPreset,
+            plan: company.plan,
+            status: company.status,
+          }
+        });
+        companyBrandingPreviewOverride = brandingPreset;
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Design-Preset konnte nicht gespeichert werden: ${error.message}`);
+      }
+      return;
+    }
+
     const addTurnstileButton = event.target.closest("[data-company-add-turnstile]");
     if (addTurnstileButton && !addTurnstileButton.disabled && elements.companyList.contains(addTurnstileButton)) {
       const companyId = addTurnstileButton.dataset.companyAddTurnstile;
@@ -4637,43 +5460,37 @@ function bindCompanyRowActions() {
 
     const company = state.companies.find((entry) => entry.id === companyId);
     const companyName = company?.name || "diese Firma";
-    if (!window.confirm(`Firmen-Reparatur für ${companyName} starten? Dabei werden inkonsistente Einträge automatisch korrigiert.`)) {
+    if (!window.confirm(`${uiT("supportCompanyLoginConfirmPrefix")} ${companyName} ${uiT("supportCompanyLoginConfirmSuffix")}`)) {
       return;
     }
 
-    state.companyRepairBusy[companyId] = true;
-    state.companyRepairStatus[companyId] = {
-      kind: "info",
-      message: "Reparatur wird ausgefuehrt..."
-    };
-    renderCompanyList();
-
-    try {
-      const payload = await apiRequest(`${API_BASE}/api/companies/${companyId}/repair`, { method: "POST", body: {} });
-      const fixed = Array.isArray(payload?.fixed) ? payload.fixed : [];
-      state.companyRepairStatus[companyId] = {
-        kind: "success",
-        message: fixed.length ? fixed[0] : "Firma erfolgreich geprueft."
-      };
-      await loadAllData();
-      refreshAll();
-      if (fixed.length) {
-        window.alert(`Firmen-Reparatur für ${companyName} abgeschlossen:\n- ${fixed.join("\n- ")}`);
-      } else {
-        window.alert(`Firmen-Reparatur für ${companyName} abgeschlossen.`);
+    const actorName = getCurrentUser()?.name || getCurrentUser()?.username || "Admin";
+    state.supportLoginContext = { companyId, companyName, actorName };
+    persistSupportLoginContext(state.supportLoginContext);
+    const companyAccessHost = String(company?.accessHost || company?.access_host || "").trim().toLowerCase();
+    const currentHost = String(window.location.host || "").trim().toLowerCase();
+    if (companyAccessHost && companyAccessHost !== currentHost) {
+      await handleLogout({ preserveSupportContext: true });
+      const targetUrl = new URL(window.location.href);
+      targetUrl.protocol = window.location.protocol;
+      targetUrl.host = companyAccessHost;
+      targetUrl.pathname = "/";
+      targetUrl.search = "";
+      if (API_BASE) {
+        targetUrl.searchParams.set("apiBase", API_BASE);
       }
-    } catch (error) {
-      const repairMessage = mapCompanyRepairError(error);
-      state.companyRepairStatus[companyId] = {
-        kind: "error",
-        message: repairMessage
-      };
-      renderCompanyList();
-      window.alert(`Firmen-Reparatur für ${companyName} fehlgeschlagen: ${repairMessage}`);
-    } finally {
-      delete state.companyRepairBusy[companyId];
-      renderCompanyList();
+      targetUrl.searchParams.set("supportCompanyId", companyId);
+      targetUrl.searchParams.set("supportCompanyName", companyName);
+      targetUrl.searchParams.set("supportActorName", actorName);
+      targetUrl.searchParams.set("loginScope", "company-admin");
+      window.location.assign(targetUrl.toString());
+      return;
     }
+    await handleLogout({ preserveSupportContext: true });
+    syncSupportLoginUi();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    elements.loginUsername?.focus();
+    window.alert(`${uiT("supportCompanyLoginOpenedPrefix")} ${companyName} ${uiT("supportCompanyLoginOpenedSuffix")}`);
   });
 }
 
@@ -4681,7 +5498,7 @@ function populateWorkerSelectOptions() {
   const select = elements.accessWorkerSelect;
   if (!select) return;
   const current = select.value;
-  const options = state.workers
+  const options = getUiVisibleWorkers()
     .filter((w) => !w.deletedAt)
     .map((w) => `<option value="${escapeHtml(w.id)}">${escapeHtml(`${w.firstName} ${w.lastName}`)}${isVisitorWorker(w) ? ` [${runtimeText("visitorTagShort")}]` : ""} (${escapeHtml(w.badgeId || "-")})</option>`)
     .join("");
@@ -4692,7 +5509,10 @@ function populateWorkerSelectOptions() {
 }
 
 function populateCompanySelectOptions() {
-  const companies = state.companies.filter((c) => !c.deleted_at);
+  const scopedCompanyId = getEffectiveUiCompanyId();
+  const companies = scopedCompanyId
+    ? state.companies.filter((c) => !c.deleted_at && String(c.id || "") === scopedCompanyId)
+    : state.companies.filter((c) => !c.deleted_at);
   const syncSelect = (select) => {
     if (!select) return;
     const current = select.value;
@@ -4712,6 +5532,46 @@ function getCompanyBillingEmail(company) {
 
 function getCompanyDocumentEmail(company) {
   return (company?.documentEmail || company?.document_email || "").trim();
+}
+
+function getCompanyBrandingPreset(company) {
+  const preset = String(company?.brandingPreset || company?.branding_preset || "").trim().toLowerCase();
+  return ["construction", "industry", "premium"].includes(preset) ? preset : "construction";
+}
+
+function normalizeCompanyBrandingPresetValue(value) {
+  const preset = String(value || "").trim().toLowerCase();
+  return ["construction", "industry", "premium"].includes(preset) ? preset : "construction";
+}
+
+function getCompanyBrandingPresetLabel(preset) {
+  if (preset === "industry") {
+    return "Industrie";
+  }
+  if (preset === "premium") {
+    return "Premium";
+  }
+  return "Bau";
+}
+
+function applyActiveCompanyBrandingPreset() {
+  if (!document.body) {
+    return;
+  }
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  if (role === "superadmin" && companyBrandingPreviewOverride) {
+    document.body.setAttribute("data-branding-preset", normalizeCompanyBrandingPresetValue(companyBrandingPreviewOverride));
+    return;
+  }
+  if (role === "superadmin" && isSuperadminCompanyPreviewMode()) {
+    const previewCompany = state.companies.find((entry) => String(entry?.id || "") === String(superadminUiPreviewCompanyId || ""));
+    document.body.setAttribute("data-branding-preset", getCompanyBrandingPreset(previewCompany));
+    return;
+  }
+  const companyId = String(getCurrentUser()?.company_id || getCurrentUser()?.companyId || "").trim();
+  const activeCompany = companyId ? state.companies.find((entry) => String(entry?.id || "") === companyId) : null;
+  const activePreset = role === "superadmin" ? "construction" : getCompanyBrandingPreset(activeCompany);
+  document.body.setAttribute("data-branding-preset", activePreset);
 }
 
 function suggestCompanyDocumentEmail(companyName) {
@@ -4754,7 +5614,7 @@ function renderSystemIdentity() {
 function renderAdminSettingsForm() {
   const platformName = document.querySelector("#platformName");
   const operatorName = document.querySelector("#operatorName");
-  const turnstileEndpoint = document.querySelector("#turnstileEndpoint");
+  const turnstileEndpoint = document.querySelector("#companyTurnstileEndpoint");
   const rentalModel = document.querySelector("#rentalModel");
   const invoicePrimaryColor = document.querySelector("#invoicePrimaryColor");
   const invoiceAccentColor = document.querySelector("#invoiceAccentColor");
@@ -4785,9 +5645,15 @@ function renderAdminSettingsForm() {
   if (adminIpWhitelist) adminIpWhitelist.value = state.settings.adminIpWhitelist || "";
   if (enforceTenantDomain) enforceTenantDomain.value = state.settings.enforceTenantDomain ? "1" : "0";
   if (workerAppEnabled) workerAppEnabled.value = state.settings.workerAppEnabled === false ? "0" : "1";
-  if (elements.invoiceLogoData && !elements.invoiceLogoData.value) {
+  if (elements.invoiceLogoData) {
     elements.invoiceLogoData.value = state.settings.invoiceLogoData || "";
   }
+  if (elements.invoiceLogoPreview) {
+    const logoSrc = state.settings.invoiceLogoData || "";
+    elements.invoiceLogoPreview.src = logoSrc;
+    elements.invoiceLogoPreview.classList.toggle("hidden", !logoSrc);
+  }
+  applyWebsiteLogo(state.settings.invoiceLogoData || "");
   // IMAP-Felder
   const imapHost = document.querySelector("#imapHost");
   const imapPort = document.querySelector("#imapPort");
@@ -4809,7 +5675,8 @@ function showWorkerDetailOverlay(worker) {
   const company = state.companies.find((entry) => entry.id === worker.companyId);
   const subcompanyLabel = getSubcompanyLabel(worker);
   const role = String(getCurrentUser()?.role || "").toLowerCase();
-  const canResetPin = !isVisitorWorker(worker) && ["superadmin", "company-admin", "turnstile"].includes(role);
+  const readOnly = isSupportReadOnlyMode();
+  const canResetPin = !readOnly && !isVisitorWorker(worker) && ["superadmin", "company-admin", "turnstile"].includes(role);
   const safePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
   overlay.innerHTML = `
     <div class="worker-detail-card">
@@ -4826,9 +5693,10 @@ function showWorkerDetailOverlay(worker) {
       <p><strong>${uiT("labelWorkerStatus")}:</strong> ${escapeHtml(worker.status)}</p>
       <p><strong>${uiT("appPinLabel")}:</strong> ${isVisitorWorker(worker) ? uiT("pinNotRequired") : (worker.badgePinConfigured ? uiT("pinSet") : uiT("pinMissing"))}</p>
       <p><strong>${uiT("labelPhysicalCard")}:</strong> ${escapeHtml(worker.physicalCardId || uiT("cardUnassigned"))}</p>
+      ${readOnly ? `<p class="helper-text helper-text-info">${escapeHtml(uiT("supportModeReadOnlyLine"))}</p>` : ""}
       <div class="button-row">
-        <button type="button" class="primary-button" id="workerCheckInBtn">${uiT("detailCheckinBtn")}</button>
-        <button type="button" class="ghost-button" id="workerCheckOutBtn">${uiT("detailCheckoutBtn")}</button>
+        <button type="button" class="primary-button" id="workerCheckInBtn" ${readOnly ? "disabled" : ""}>${uiT("detailCheckinBtn")}</button>
+        <button type="button" class="ghost-button" id="workerCheckOutBtn" ${readOnly ? "disabled" : ""}>${uiT("detailCheckoutBtn")}</button>
         ${canResetPin ? `<button type="button" class="ghost-button" id="workerResetPinBtn">${uiT("btnResetPin")}</button>` : ""}
       </div>
       ${!isVisitorWorker(worker) ? `
@@ -5357,7 +6225,7 @@ function renderAccessLog() {
   document.querySelector("#accessFilterDirection").value = state.accessFilter.direction;
   document.querySelector("#accessFilterGate").value = state.accessFilter.gate;
 
-  const entries = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
+  const entries = getUiVisibleAccessLogs().sort((left, right) => right.timestamp.localeCompare(left.timestamp));
 
   if (!entries.length) {
     elements.accessLogList.innerHTML = `<div class="empty-state">${runtimeText("accessFilterEmpty")}</div>`;
@@ -5368,7 +6236,7 @@ function renderAccessLog() {
 }
 
 function renderAccessSummary() {
-  const entries = [...state.accessLogs];
+  const entries = getUiVisibleAccessLogs();
   if (!entries.length) {
     elements.accessSummaryGrid.innerHTML = `<div class="empty-state">${runtimeText("dayReportEmpty")}</div>`;
     return;
@@ -5651,7 +6519,18 @@ function renderTurnstileQuickPanel() {
   elements.turnstileQuickPanel.innerHTML = `
     <div class="quick-panel-card">
       <strong>Drehkreuz-Schnellmodus</strong>
-      <p class="helper-text">Mitarbeiter waehlen und sofort Check-in oder Check-out buchen.</p>
+      <p class="helper-text">Karte auflegen, Enter senden, fertig. Die Richtung wird automatisch gewechselt.</p>
+      <div id="turnstileTapLive" class="turnstile-tap-live is-idle" role="status" aria-live="polite">
+        <span class="turnstile-tap-dot" aria-hidden="true"></span>
+        <strong id="turnstileTapLiveText">Bereit fuer Tap</strong>
+      </div>
+      <input type="search" id="turnstileCardTapInput" class="turnstile-card-input" placeholder="Karten-ID (NFC/RFID)" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <div class="button-row">
+        <button type="button" class="ghost-button" id="turnstileCardTapSubmit">Tap buchen</button>
+      </div>
+      <p id="turnstileCardTapHint" class="helper-text">Bereit fuer den naechsten Tap.</p>
+      <hr style="width:100%; border:none; border-top:1px solid rgba(23,23,23,0.08); margin:8px 0;" />
+      <p class="helper-text">Fallback: Mitarbeiter manuell waehlen und Richtung buchen.</p>
       <input type="search" id="turnstileQuickSearch" placeholder="Mitarbeiter suchen" />
       <div id="turnstileQuickPreview" class="meta-box" style="display:flex; gap:12px; align-items:center; margin:10px 0;"></div>
       <div class="button-row">
@@ -5663,6 +6542,127 @@ function renderTurnstileQuickPanel() {
 
   const searchInput = document.querySelector("#turnstileQuickSearch");
   const preview = document.querySelector("#turnstileQuickPreview");
+  const cardTapInput = document.querySelector("#turnstileCardTapInput");
+  const cardTapSubmit = document.querySelector("#turnstileCardTapSubmit");
+  const cardTapHint = document.querySelector("#turnstileCardTapHint");
+  const cardTapLive = document.querySelector("#turnstileTapLive");
+  const cardTapLiveText = document.querySelector("#turnstileTapLiveText");
+  const normalizeCardId = (value) => String(value || "").trim().toUpperCase();
+
+  const setTapHint = (text) => {
+    if (cardTapHint) {
+      cardTapHint.textContent = text;
+    }
+  };
+
+  const setTapLiveState = (stateName, text) => {
+    if (!cardTapLive) {
+      return;
+    }
+    cardTapLive.classList.remove("is-idle", "is-pending", "is-success", "is-error");
+    cardTapLive.classList.add(stateName);
+    if (cardTapLiveText && text) {
+      cardTapLiveText.textContent = text;
+    }
+  };
+
+  const scheduleTapLiveIdleReset = (delayMs = 2200) => {
+    if (turnstileTapLiveResetTimer) {
+      window.clearTimeout(turnstileTapLiveResetTimer);
+    }
+    turnstileTapLiveResetTimer = window.setTimeout(() => {
+      setTapLiveState("is-idle", "Bereit fuer Tap");
+      turnstileTapLiveResetTimer = null;
+    }, delayMs);
+  };
+
+  const findWorkerByCardId = (cardId) => {
+    const normalized = normalizeCardId(cardId);
+    if (!normalized) {
+      return null;
+    }
+    return state.workers.find(
+      (entry) => normalizeCardId(entry.physicalCardId) === normalized && !entry.deletedAt
+    );
+  };
+
+  const resolveNextDirection = (workerId) => {
+    const latest = [...state.accessLogs]
+      .filter((log) => log.workerId === workerId)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+    return latest?.direction === "check-in" ? "check-out" : "check-in";
+  };
+
+  const submitCardTap = async () => {
+    if (turnstileTapInFlight) {
+      return;
+    }
+    const normalizedCardId = normalizeCardId(cardTapInput?.value);
+    if (!normalizedCardId) {
+      setTapHint("Keine Karten-ID gelesen. Bitte erneut auflegen.");
+      setTapLiveState("is-error", "Keine Karte erkannt");
+      scheduleTapLiveIdleReset();
+      showAccessFeedback(null, "check-in", "Drehkreuz Scanner", new Date().toISOString(), {
+        isError: true,
+        title: "KARTE NICHT ERKANNT",
+        message: "Keine Karten-ID gelesen.",
+        tone: "error"
+      });
+      cardTapInput?.focus();
+      return;
+    }
+
+    const worker = findWorkerByCardId(normalizedCardId);
+    if (!worker) {
+      setTapHint(`Unbekannte Karte: ${normalizedCardId}`);
+      setTapLiveState("is-error", `Unbekannte Karte ${normalizedCardId}`);
+      scheduleTapLiveIdleReset();
+      showAccessFeedback(null, "check-in", "Drehkreuz Scanner", new Date().toISOString(), {
+        isError: true,
+        title: "ZUTRITT ABGELEHNT",
+        message: `Karte ${normalizedCardId} ist keinem Mitarbeiter zugewiesen.`,
+        tone: "error"
+      });
+      if (cardTapInput) {
+        cardTapInput.value = "";
+        cardTapInput.focus();
+      }
+      return;
+    }
+
+    const nextDirection = resolveNextDirection(worker.id);
+    turnstileTapInFlight = true;
+    setTapHint(`Verarbeite ${normalizedCardId} ...`);
+    if (turnstileTapLiveResetTimer) {
+      window.clearTimeout(turnstileTapLiveResetTimer);
+      turnstileTapLiveResetTimer = null;
+    }
+    setTapLiveState("is-pending", `Pruefe Karte ${normalizedCardId}`);
+
+    try {
+      if (elements.accessWorkerSelect) {
+        elements.accessWorkerSelect.value = worker.id;
+      }
+      renderPreview();
+      const booking = await bookAccess(worker.id, nextDirection, "Drehkreuz Scanner", "NFC/RFID Tap");
+      if (booking?.ok) {
+        setTapHint(`Letzter Tap: ${normalizedCardId} (${nextDirection === "check-in" ? "Anmeldung" : "Abmeldung"})`);
+        setTapLiveState("is-success", `${worker.firstName || ""} ${worker.lastName || ""}`.trim() || "Zutritt OK");
+        scheduleTapLiveIdleReset();
+      } else {
+        setTapHint(`Tap abgelehnt: ${booking?.message || "Unbekannter Grund"}`);
+        setTapLiveState("is-error", "Zutritt abgelehnt");
+        scheduleTapLiveIdleReset();
+      }
+    } finally {
+      turnstileTapInFlight = false;
+      if (cardTapInput) {
+        cardTapInput.value = "";
+        window.setTimeout(() => cardTapInput.focus(), 20);
+      }
+    }
+  };
+
   const renderPreview = () => {
     const worker = state.workers.find((entry) => entry.id === elements.accessWorkerSelect.value);
     if (!preview) return;
@@ -5691,6 +6691,26 @@ function renderTurnstileQuickPanel() {
     elements.accessWorkerSelect.addEventListener("change", renderPreview);
   }
   renderPreview();
+
+  if (cardTapInput) {
+    window.setTimeout(() => cardTapInput.focus(), 0);
+    cardTapInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitCardTap();
+      }
+    });
+    cardTapInput.addEventListener("blur", () => {
+      if (getCurrentViewName() === "access" && getCurrentUser()?.role === "turnstile") {
+        window.setTimeout(() => cardTapInput.focus(), 60);
+      }
+    });
+  }
+  if (cardTapSubmit) {
+    cardTapSubmit.addEventListener("click", () => {
+      submitCardTap();
+    });
+  }
 
   elements.turnstileQuickPanel.querySelectorAll("[data-quick-direction]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -5804,6 +6824,10 @@ async function handleAccessSubmit(event) {
 }
 
 async function bookAccess(workerId, direction, gate, note) {
+  if (isSupportReadOnlyMode()) {
+    showSupportReadOnlyAlert();
+    return;
+  }
   if (!workerId) {
     return;
   }
@@ -5813,12 +6837,21 @@ async function bookAccess(workerId, direction, gate, note) {
     .filter((log) => log.workerId === workerId)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
   if (lastEvent && lastEvent.direction === direction) {
-    window.alert(
+    const duplicateMessage =
       direction === "check-in"
-        ? "Der Mitarbeiter ist bereits eingetreten. Erst Austritt buchen, dann wieder Eintritt."
-        : "Der Mitarbeiter ist bereits ausgetreten. Erst Eintritt buchen, dann wieder Austritt."
-    );
-    return;
+        ? "Diese Karte ist bereits angemeldet. Erst abmelden, dann erneut anmelden."
+        : "Diese Karte ist bereits abgemeldet. Erst anmelden, dann erneut abmelden.";
+    if (getCurrentUser()?.role === "turnstile") {
+      showAccessFeedback(workerId, direction, gate, new Date().toISOString(), {
+        isError: true,
+        title: "ZUTRITT ABGELEHNT",
+        message: duplicateMessage,
+        tone: "error"
+      });
+    } else {
+      window.alert(duplicateMessage);
+    }
+    return { ok: false, reason: "duplicate_direction", message: duplicateMessage };
   }
 
   try {
@@ -5834,19 +6867,38 @@ async function bookAccess(workerId, direction, gate, note) {
     });
     state.porterLive.workerId = workerId;
     state.porterLive.lastEvent = normalizeLog(createdLog);
-    showAccessFeedback(workerId, direction, gate, createdLog.timestamp);
+    showAccessFeedback(workerId, direction, gate, createdLog.timestamp, {
+      title: direction === "check-in" ? "ANMELDUNG ERFOLGREICH" : "ABMELDUNG ERFOLGREICH",
+      message: direction === "check-in" ? "Du bist jetzt angemeldet." : "Du bist jetzt abgemeldet.",
+      tone: direction === "check-in" ? "success_in" : "success_out"
+    });
     await loadAllData();
     refreshAll();
+    return { ok: true, direction, timestamp: createdLog.timestamp };
   } catch (error) {
-    window.alert(`Zutritt konnte nicht gebucht werden: ${error.message}`);
+    const denyMessage = error?.message ? String(error.message) : "Unbekannter Fehler";
+    if (getCurrentUser()?.role === "turnstile") {
+      showAccessFeedback(workerId, direction, gate, new Date().toISOString(), {
+        isError: true,
+        title: "ZUTRITT ABGELEHNT",
+        message: `Buchung fehlgeschlagen: ${denyMessage}`,
+        tone: "error"
+      });
+      return { ok: false, reason: denyMessage, message: denyMessage };
+    }
+    window.alert(`Zutritt konnte nicht gebucht werden: ${denyMessage}`);
+    return { ok: false, reason: denyMessage, message: denyMessage };
   }
 }
 
-function showAccessFeedback(workerId, direction, gate, timestamp) {
+function showAccessFeedback(workerId, direction, gate, timestamp, options = {}) {
   const worker = state.workers.find((entry) => entry.id === workerId);
   const company = worker ? state.companies.find((entry) => entry.id === worker.companyId) : null;
   const subcompanyLabel = getSubcompanyLabel(worker);
-  const title = direction === "check-in" ? "EINTRITT ERFASST" : "AUSTRITT ERFASST";
+  const isError = Boolean(options.isError);
+  const title = options.title || (direction === "check-in" ? "ANMELDUNG ERFOLGREICH" : "ABMELDUNG ERFOLGREICH");
+  const primaryMessage =
+    options.message || (direction === "check-in" ? "Du bist jetzt angemeldet." : "Du bist jetzt abgemeldet.");
   const dirLabel = direction === "check-in" ? "Anmeldung" : "Abmeldung";
   const who = worker ? `${worker.firstName} ${worker.lastName}` : "Mitarbeiter";
   const companyLabel = company?.name || "Unbekannte Firma";
@@ -5854,16 +6906,20 @@ function showAccessFeedback(workerId, direction, gate, timestamp) {
   const when = formatTimestamp(timestamp || new Date().toISOString());
 
   elements.accessFeedbackTitle.textContent = title;
-  elements.accessFeedbackMeta.textContent = `${who} | ${companyLabel}${subLabel} | ${dirLabel} | ${gate} | ${when}`;
+  elements.accessFeedbackMeta.textContent = `${primaryMessage} | ${who} | ${companyLabel}${subLabel} | ${dirLabel} | ${gate} | ${when}`;
   elements.accessFeedbackPhoto.src = worker
     ? sanitizeImageSrc(worker.photoData, createAvatar(worker))
     : createAvatar({ firstName: "?", lastName: "?" });
   elements.accessFeedbackPhoto.alt = worker ? `${worker.firstName} ${worker.lastName}` : "Mitarbeiterfoto";
-  elements.accessFeedbackOverlay.classList.remove("hidden", "feedback-in", "feedback-out");
-  elements.accessFeedbackOverlay.classList.add(direction === "check-in" ? "feedback-in" : "feedback-out");
+  elements.accessFeedbackOverlay.classList.remove("hidden", "feedback-in", "feedback-out", "feedback-error");
+  if (isError) {
+    elements.accessFeedbackOverlay.classList.add("feedback-error");
+  } else {
+    elements.accessFeedbackOverlay.classList.add(direction === "check-in" ? "feedback-in" : "feedback-out");
+  }
 
   // Zeige auch den Baustellen-Ausweis mit Foto
-  if (worker) {
+  if (worker && !isError) {
     state.selectedWorkerId = worker.id;
     renderBadge();
     // Schalte zur Badge-Ansicht um
@@ -5871,18 +6927,18 @@ function showAccessFeedback(workerId, direction, gate, timestamp) {
     if (badgeTab) badgeTab.click();
   }
 
-  playAccessTone(direction);
+  playAccessTone(options.tone || (isError ? "error" : direction));
 
   if (accessFeedbackTimer) {
     window.clearTimeout(accessFeedbackTimer);
   }
   accessFeedbackTimer = window.setTimeout(() => {
     elements.accessFeedbackOverlay.classList.add("hidden");
-    elements.accessFeedbackOverlay.classList.remove("feedback-in", "feedback-out");
+    elements.accessFeedbackOverlay.classList.remove("feedback-in", "feedback-out", "feedback-error");
   }, 3500);
 }
 
-function playAccessTone(direction) {
+function playAccessTone(tone) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) {
@@ -5893,14 +6949,20 @@ function playAccessTone(direction) {
     }
 
     const baseTime = accessAudioContext.currentTime;
-    const sequence = direction === "check-in" ? [660, 880] : [440, 330];
+    let sequence = [660, 880];
+    if (tone === "check-out" || tone === "success_out") {
+      sequence = [440, 330];
+    }
+    if (tone === "error") {
+      sequence = [220, 165, 120];
+    }
     sequence.forEach((freq, index) => {
       const osc = accessAudioContext.createOscillator();
       const gain = accessAudioContext.createGain();
-      osc.type = "sine";
+      osc.type = tone === "error" ? "triangle" : "sine";
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, baseTime + index * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.18, baseTime + index * 0.12 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(tone === "error" ? 0.22 : 0.18, baseTime + index * 0.12 + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, baseTime + index * 0.12 + 0.1);
       osc.connect(gain);
       gain.connect(accessAudioContext.destination);
@@ -6110,7 +7172,7 @@ async function handleSettingsSubmit(event) {
     const settingsBody = {
       platformName: document.querySelector("#platformName").value.trim(),
       operatorName: document.querySelector("#operatorName").value.trim(),
-      turnstileEndpoint: document.querySelector("#turnstileEndpoint").value.trim(),
+      turnstileEndpoint: (document.querySelector("#companyTurnstileEndpoint")?.value || "").trim(),
       rentalModel: document.querySelector("#rentalModel").value,
       invoiceLogoData: elements.invoiceLogoData.value,
       invoicePrimaryColor: document.querySelector("#invoicePrimaryColor").value,
@@ -6358,7 +7420,8 @@ function buildInvoiceDraft(options = {}) {
   }
 
   const recipientEmail = elements.invoiceRecipientEmail.value.trim();
-  if (!recipientEmail.includes("@")) {
+  const isValidRecipientEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail);
+  if (!isValidRecipientEmail) {
     if (!silent) {
       window.alert(runtimeText("invoiceRecipientInvalid"));
     }
@@ -6372,6 +7435,13 @@ function buildInvoiceDraft(options = {}) {
   const requestedNetAmount = Number(document.querySelector("#invoiceNetAmount").value || "0");
   const invoiceNumberRaw = document.querySelector("#invoiceNumber").value.trim();
   const invoiceNumber = invoiceNumberRaw || `RE-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+
+  if (invoiceNumber.length < 3 || invoiceNumber.length > 64) {
+    if (!silent) {
+      window.alert("Rechnungsnummer muss zwischen 3 und 64 Zeichen haben.");
+    }
+    return null;
+  }
 
   const duplicateInvoice = (state.invoices || []).some((entry) => {
     const sameCompany = String(entry.company_id || entry.companyId || "") === String(company.id || "");
@@ -6392,6 +7462,22 @@ function buildInvoiceDraft(options = {}) {
     return null;
   }
 
+  const invoiceDateObj = new Date(`${invoiceDate}T00:00:00`);
+  const dueDateObj = new Date(`${invoiceDueDate}T00:00:00`);
+  if (Number.isNaN(invoiceDateObj.getTime()) || Number.isNaN(dueDateObj.getTime())) {
+    if (!silent) {
+      window.alert("Rechnungsdatum oder Fälligkeitsdatum ist ungültig.");
+    }
+    return null;
+  }
+
+  if (dueDateObj < invoiceDateObj) {
+    if (!silent) {
+      window.alert("Fälligkeitsdatum darf nicht vor dem Rechnungsdatum liegen.");
+    }
+    return null;
+  }
+
   // Extrahiere Datumsbereich aus invoicePeriod (z. B. "01.04.2026 - 30.04.2026")
   const accessLineItems = extractAccessLineItems(company.id, invoicePeriod);
 
@@ -6401,6 +7487,12 @@ function buildInvoiceDraft(options = {}) {
     ? requestedNetAmount
     : (lineItemsNet > 0 ? Math.round(lineItemsNet * 100) / 100 : fallbackNetAmount);
   const vatRate = Number(document.querySelector("#invoiceVatRate").value || "0");
+  if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) {
+    if (!silent) {
+      window.alert("MwSt. muss zwischen 0 und 100 liegen.");
+    }
+    return null;
+  }
   const vatAmount = Math.round(netAmount * (vatRate / 100) * 100) / 100;
   const totalAmount = Math.round((netAmount + vatAmount) * 100) / 100;
 
@@ -6691,15 +7783,20 @@ async function handleCompanySubmit(event) {
     return;
   }
 
+  const companyTurnstileEndpointInput = document.querySelector("#companyTurnstileEndpoint");
+  const companyTurnstileEndpoint = (companyTurnstileEndpointInput?.value || "").trim();
+
   try {
     const response = await apiRequest(API_BASE + "/api/companies", {
       method: "POST",
       body: {
+        turnstileEndpoint: companyTurnstileEndpoint || undefined,
         name: document.querySelector("#companyName").value.trim(),
         contact: document.querySelector("#companyContact").value.trim(),
         billingEmail: document.querySelector("#companyBillingEmail").value.trim(),
         documentEmail: document.querySelector("#companyDocumentEmail").value.trim(),
         accessHost: document.querySelector("#companyAccessHost").value.trim().toLowerCase(),
+        brandingPreset: (document.querySelector("#companyBrandingPreset")?.value || "construction").trim(),
         plan: document.querySelector("#companyPlan").value,
         status: document.querySelector("#companyStatus").value,
         adminPassword: document.querySelector("#companyAdminPassword").value.trim() || undefined,
@@ -6709,11 +7806,18 @@ async function handleCompanySubmit(event) {
     });
 
     elements.companyForm.reset();
+    const brandingPresetInput = document.querySelector("#companyBrandingPreset");
+    if (brandingPresetInput) {
+      brandingPresetInput.value = "construction";
+    }
     document.querySelector("#companyPlan").value = "tageskarte";
     document.querySelector("#companyStatus").value = "aktiv";
     const turnstileCountInput = document.querySelector("#companyTurnstileCount");
     if (turnstileCountInput) {
       turnstileCountInput.value = "1";
+    }
+    if (companyTurnstileEndpointInput) {
+      companyTurnstileEndpointInput.value = companyTurnstileEndpoint || state.settings.turnstileEndpoint || "";
     }
 
     await loadAllData();
@@ -6745,26 +7849,467 @@ async function handleCompanySubmit(event) {
   }
 }
 
-async function loadAndRenderInvoices() {
+async function loadAndRenderInvoices(options = {}) {
+  const { silent = false } = options;
   try {
-    const response = await apiRequest(API_BASE + "/api/invoices");
-    state.invoices = response || [];
+    const hadSeenInvoices = Object.keys(state.invoiceSeenIds || {}).length > 0;
+    const previousSeen = { ...(state.invoiceSeenIds || {}) };
+    const [invoiceResponse, opsResponse, deadLetterResponse, approvalResponse] = await Promise.all([
+      apiRequest(API_BASE + "/api/invoices"),
+      apiRequest(API_BASE + "/api/invoices/ops-metrics"),
+      apiRequest(API_BASE + "/api/invoices/dead-letters"),
+      apiRequest(API_BASE + "/api/invoices/approvals/pending"),
+    ]);
+    state.invoices = invoiceResponse || [];
+    state.invoiceOpsMetrics = opsResponse || {
+      avgFirstSuccessMinutes: 0,
+      criticalOver24h: 0,
+      retryVolume7d: [],
+      topErrorReasons: [],
+    };
+    state.invoiceDeadLetters = Array.isArray(deadLetterResponse) ? deadLetterResponse : [];
+    state.invoiceApprovalRequests = Array.isArray(approvalResponse) ? approvalResponse : [];
+
+    const nextSeen = { ...previousSeen };
+    const nextNew = {};
+    state.invoices.forEach((invoice) => {
+      if (!invoice?.id) {
+        return;
+      }
+      if (hadSeenInvoices && !previousSeen[invoice.id]) {
+        nextNew[invoice.id] = true;
+      }
+      nextSeen[invoice.id] = true;
+    });
+    state.invoiceSeenIds = nextSeen;
+    state.invoiceNewIds = nextNew;
+
+    const validIds = new Set(state.invoices.map((invoice) => String(invoice?.id || "")).filter(Boolean));
+    state.invoiceRetrySelectedIds = (state.invoiceRetrySelectedIds || []).filter((id) => validIds.has(id));
+    Object.keys(state.invoiceHistoryExpandedById || {}).forEach((id) => {
+      if (!validIds.has(id)) {
+        delete state.invoiceHistoryExpandedById[id];
+      }
+    });
+
     renderInvoiceManagementList();
   } catch (error) {
-    console.error("Failed to load invoices:", error);
+    if (!silent) {
+      console.error("Failed to load invoices:", error);
+    }
     state.invoices = [];
+    state.invoiceOpsMetrics = {
+      avgFirstSuccessMinutes: 0,
+      criticalOver24h: 0,
+      retryVolume7d: [],
+      topErrorReasons: [],
+    };
+    state.invoiceDeadLetters = [];
+    state.invoiceApprovalRequests = [];
     renderInvoiceManagementList();
   }
 }
 
+function renderInvoiceApprovalQueue() {
+  const container = document.querySelector("#invoiceApprovalList");
+  if (!container) {
+    return;
+  }
+
+  const filterAction = String(document.querySelector("#invoiceApprovalFilterAction")?.value || "all").trim();
+  const maxAgeMinutesValue = Number(document.querySelector("#invoiceApprovalMaxAgeMinutes")?.value || 0);
+  const maxAgeMinutes = Number.isFinite(maxAgeMinutesValue) ? Math.max(0, Math.floor(maxAgeMinutesValue)) : 0;
+  const nowMs = Date.now();
+
+  const rows = (Array.isArray(state.invoiceApprovalRequests) ? state.invoiceApprovalRequests : []).filter((item) => {
+    if (filterAction !== "all" && String(item?.action_type || "") !== filterAction) {
+      return false;
+    }
+    if (maxAgeMinutes <= 0) {
+      return true;
+    }
+    const requestedMs = Date.parse(String(item?.requested_at || ""));
+    if (!Number.isFinite(requestedMs)) {
+      return true;
+    }
+    return ((nowMs - requestedMs) / 60000) <= maxAgeMinutes;
+  });
+
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state">Keine offenen Freigaben.</div>';
+    container.onclick = null;
+    return;
+  }
+
+  const actionLabels = {
+    "invoice.retry_send_bulk": "Bulk-Retry Rechnungsversand",
+    "invoice.dead_letter_resolve": "Dead-Letter auflösen",
+  };
+
+  container.innerHTML = rows.map((item) => {
+    const payload = item?.payload || {};
+    const invoiceCount = Array.isArray(payload.invoiceIds) ? payload.invoiceIds.length : 0;
+    const expiresAt = String(item?.expires_at || "").trim();
+    const expiresMs = Date.parse(expiresAt);
+    const minutesLeft = Number.isFinite(expiresMs) ? Math.max(0, Math.ceil((expiresMs - nowMs) / 60000)) : null;
+    const urgencyClass = minutesLeft !== null && minutesLeft <= 1
+      ? " invoice-approval-item-alert"
+      : (minutesLeft !== null && minutesLeft <= 5 ? " invoice-approval-item-warn" : "");
+    const urgencyChipClass = minutesLeft !== null && minutesLeft <= 1
+      ? "invoice-priority-kritisch"
+      : (minutesLeft !== null && minutesLeft <= 5 ? "invoice-priority-hoch" : "invoice-priority-niedrig");
+    const urgencyChipText = minutesLeft === null
+      ? "offen"
+      : (minutesLeft <= 1 ? "kritisch" : (minutesLeft <= 5 ? "dringend" : "offen"));
+    const expiryLabel = minutesLeft === null
+      ? "Ablauf: -"
+      : (minutesLeft <= 0 ? "Ablauf: abgelaufen" : `Ablauf in: ${minutesLeft} min`);
+    const payloadHint = invoiceCount
+      ? `${invoiceCount} Rechnung(en)`
+      : (payload.invoiceId ? `Rechnung ${escapeHtml(payload.invoiceId)}` : "-");
+    return `
+      <article class="card-item invoice-approval-item${urgencyClass}">
+        <div class="retry-queue-head">
+          <div>
+            <strong>${escapeHtml(actionLabels[item.action_type] || item.action_type || "Freigabe")}</strong>
+            <p class="helper-text">Anfrage: ${escapeHtml(item.id || "-")}</p>
+          </div>
+          <span class="invoice-priority-chip ${urgencyChipClass}">${urgencyChipText}</span>
+        </div>
+        <p class="helper-text">Angefordert von: ${escapeHtml(item.requested_by_name || item.requested_by_username || "Unbekannt")}</p>
+        <p class="helper-text">Zeitpunkt: ${formatTimestamp(item.requested_at || "")}</p>
+        <p class="helper-text">${expiryLabel}</p>
+        <p class="helper-text">Umfang: ${payloadHint}</p>
+        <div class="button-row invoice-management-actions">
+          <button type="button" class="ghost-button" data-approval-decision="approve" data-approval-id="${escapeHtml(item.id || "")}">Freigeben</button>
+          <button type="button" class="ghost-button" data-approval-decision="reject" data-approval-id="${escapeHtml(item.id || "")}">Ablehnen</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  container.onclick = async (event) => {
+    const decisionButton = event.target.closest("[data-approval-id][data-approval-decision]");
+    if (!decisionButton || !container.contains(decisionButton)) {
+      return;
+    }
+
+    const approvalId = String(decisionButton.dataset.approvalId || "").trim();
+    const decision = String(decisionButton.dataset.approvalDecision || "").trim();
+    if (!approvalId || !decision) {
+      return;
+    }
+
+    const decisionText = decision === "approve" ? "freigeben" : "ablehnen";
+    if (!window.confirm(`Freigabe ${approvalId} wirklich ${decisionText}?`)) {
+      return;
+    }
+
+    let note = "";
+    if (decision === "reject") {
+      note = String(window.prompt("Ablehnungsgrund (Pflicht):", "") || "").trim();
+      if (!note) {
+        window.alert("Ablehnung ohne Begründung ist nicht erlaubt.");
+        return;
+      }
+    }
+
+    try {
+      const payload = await apiRequest(`${API_BASE}/api/invoices/approvals/${approvalId}/decision`, {
+        method: "POST",
+        body: { decision, note },
+      });
+      if (payload?.status === "approved") {
+        window.alert("Freigabe bestätigt und Aktion ausgeführt.");
+      } else if (payload?.status === "rejected") {
+        window.alert("Freigabe wurde abgelehnt.");
+      } else {
+        window.alert("Freigabe aktualisiert.");
+      }
+      state.invoiceRetrySelectedIds = [];
+      await loadAndRenderInvoices();
+      await loadAllData();
+      refreshAll();
+    } catch (error) {
+      window.alert(`Freigabe-Aktion fehlgeschlagen: ${error.message}`);
+    }
+  };
+}
+
+function renderInvoiceDeadLetters() {
+  const container = document.querySelector("#invoiceDeadLetterList");
+  if (!container) {
+    return;
+  }
+
+  const rows = Array.isArray(state.invoiceDeadLetters) ? state.invoiceDeadLetters : [];
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state">Keine offenen Dead-Letter-Fälle.</div>';
+    container.onclick = null;
+    return;
+  }
+
+  container.innerHTML = rows.map((item) => `
+    <article class="card-item invoice-dead-letter-item">
+      <div class="retry-queue-head">
+        <div>
+          <strong>${escapeHtml(item.invoice_number || "RE-???")}</strong>
+          <p class="helper-text">${escapeHtml(item.company_name || "Firma")}</p>
+        </div>
+        <span class="invoice-priority-chip invoice-priority-hoch">${escapeHtml(item.reason || "manual_review")}</span>
+      </div>
+      <p class="helper-text">Betrag: ${formatCurrency(item.total_amount)} • Versuche: ${Number(item.send_attempt_count || 0)}</p>
+      <p class="helper-text">Erstellt: ${formatTimestamp(item.created_at || "")} ${item.last_send_attempt_at ? `• Letzter Versuch: ${formatTimestamp(item.last_send_attempt_at)}` : ""}</p>
+      <p class="helper-text invoice-management-error">${item.last_error ? `Letzter Fehler: ${escapeHtml(item.last_error)}` : "Letzter Fehler nicht vorhanden."}</p>
+      <div class="button-row invoice-management-actions">
+        <button type="button" class="ghost-button" data-dead-letter-retry-id="${escapeHtml(item.invoice_id || "")}">Jetzt erneut senden</button>
+        <button type="button" class="ghost-button" data-dead-letter-resolve-id="${escapeHtml(item.invoice_id || "")}">Als erledigt markieren</button>
+      </div>
+    </article>
+  `).join("");
+
+  container.onclick = async (event) => {
+    const retryButton = event.target.closest("[data-dead-letter-retry-id]");
+    if (retryButton && container.contains(retryButton)) {
+      const invoiceId = String(retryButton.dataset.deadLetterRetryId || "").trim();
+      if (!invoiceId || !window.confirm("Dead-Letter-Rechnung jetzt erneut senden?")) {
+        return;
+      }
+      try {
+        const payload = await apiRequest(`${API_BASE}/api/invoices/${invoiceId}/retry-send`, {
+          method: "POST",
+          body: {}
+        });
+        if (payload?.sent) {
+          window.alert("Rechnung wurde erfolgreich erneut versendet und aus Dead-Letter entfernt.");
+        } else {
+          window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+        }
+        await loadAndRenderInvoices();
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+      }
+      return;
+    }
+
+    const resolveButton = event.target.closest("[data-dead-letter-resolve-id]");
+    if (resolveButton && container.contains(resolveButton)) {
+      const invoiceId = String(resolveButton.dataset.deadLetterResolveId || "").trim();
+      if (!invoiceId || !window.confirm("Dead-Letter-Fall als erledigt markieren?")) {
+        return;
+      }
+      try {
+        const payload = await apiRequest(`${API_BASE}/api/invoices/${invoiceId}/dead-letter/resolve`, {
+          method: "PUT",
+          body: {}
+        });
+        if (payload?.approvalRequested) {
+          window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+        }
+        await loadAndRenderInvoices();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Dead-Letter-Fall konnte nicht erledigt werden: ${error.message}`);
+      }
+    }
+  };
+}
+
+function renderInvoiceOpsMetrics() {
+  const kpiContainer = document.querySelector("#invoiceOpsKpiGrid");
+  const trendContainer = document.querySelector("#invoiceOpsTrendList");
+  if (!kpiContainer || !trendContainer) {
+    return;
+  }
+
+  const metrics = state.invoiceOpsMetrics || {};
+  const avgMinutes = Number(metrics.avgFirstSuccessMinutes || 0);
+  const criticalOver24h = Number(metrics.criticalOver24h || 0);
+  const trend = Array.isArray(metrics.retryVolume7d) ? metrics.retryVolume7d : [];
+  const topErrors = Array.isArray(metrics.topErrorReasons) ? metrics.topErrorReasons : [];
+
+  kpiContainer.innerHTML = `
+    <article class="summary-block invoice-kpi-card invoice-kpi-open">
+      <p class="eyebrow">Zeit bis erster Erfolg</p>
+      <strong>${avgMinutes ? `${avgMinutes} min` : "-"}</strong>
+      <p class="meta-text">Durchschnitt über erfolgreiche Sendungen</p>
+    </article>
+    <article class="summary-block invoice-kpi-card invoice-kpi-overdue">
+      <p class="eyebrow">Kritische Fälle >24h</p>
+      <strong>${criticalOver24h}</strong>
+      <p class="meta-text">Score >= 70 und älter als 24h</p>
+    </article>
+    <article class="summary-block invoice-kpi-card invoice-kpi-failed">
+      <p class="eyebrow">Top Fehlergrund</p>
+      <strong>${escapeHtml(topErrors[0]?.label || "-")}</strong>
+      <p class="meta-text">${topErrors[0]?.count || 0} Vorkommen</p>
+    </article>
+  `;
+
+  const trendBars = trend.map((entry) => {
+    const count = Number(entry?.count || 0);
+    const day = String(entry?.day || "").slice(5);
+    return `
+      <article class="card-item invoice-ops-trend-item">
+        <div class="invoice-ops-trend-head">
+          <strong>${escapeHtml(day || "-")}</strong>
+          <span class="meta-text">${count} Retry(s)</span>
+        </div>
+        <div class="invoice-ops-bar-track">
+          <div class="invoice-ops-bar-fill" style="width:${Math.min(100, count * 12)}%"></div>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  const errorRows = topErrors.length
+    ? topErrors.map((item) => `<span class="invoice-ops-error-chip">${escapeHtml(item.label || "-")}: ${Number(item.count || 0)}</span>`).join("")
+    : '<span class="helper-text">Noch keine dominanten Fehlergründe.</span>';
+
+  trendContainer.innerHTML = `
+    <div class="invoice-ops-trend-grid">${trendBars}</div>
+    <div class="invoice-ops-error-row">${errorRows}</div>
+  `;
+}
+
+async function loadInvoiceAttemptHistory(invoiceId, options = {}) {
+  const id = String(invoiceId || "").trim();
+  if (!id) {
+    return [];
+  }
+  const force = Boolean(options.force);
+  const cached = state.invoiceAttemptHistoryById?.[id];
+  if (!force && Array.isArray(cached)) {
+    return cached;
+  }
+
+  state.invoiceAttemptHistoryLoadingById[id] = true;
+  try {
+    const payload = await apiRequest(`${API_BASE}/api/invoices/${id}/attempts`);
+    const attempts = Array.isArray(payload?.attempts) ? payload.attempts : [];
+    state.invoiceAttemptHistoryById[id] = attempts;
+    return attempts;
+  } finally {
+    delete state.invoiceAttemptHistoryLoadingById[id];
+  }
+}
+
+function renderInvoiceAttemptTimelineHtml(invoiceId) {
+  const id = String(invoiceId || "");
+  if (!id || !state.invoiceHistoryExpandedById?.[id]) {
+    return "";
+  }
+
+  if (state.invoiceAttemptHistoryLoadingById?.[id]) {
+    return '<div class="invoice-attempt-timeline"><p class="helper-text">Historie wird geladen...</p></div>';
+  }
+
+  const attempts = Array.isArray(state.invoiceAttemptHistoryById?.[id]) ? state.invoiceAttemptHistoryById[id] : [];
+  if (!attempts.length) {
+    return '<div class="invoice-attempt-timeline"><p class="helper-text">Noch keine Versandversuche protokolliert.</p></div>';
+  }
+
+  const rows = attempts
+    .map((attempt) => {
+      const failed = String(attempt?.outcome || "").toLowerCase() !== "sent";
+      const statusText = failed ? "Fehlgeschlagen" : "Erfolgreich";
+      const statusClass = failed ? "invoice-attempt-status-failed" : "invoice-attempt-status-sent";
+      return `
+        <li class="invoice-attempt-item">
+          <div class="invoice-attempt-row">
+            <p class="helper-text">Versuch ${escapeHtml(String(attempt?.attempt_number || "-"))}</p>
+            <span class="invoice-attempt-status ${statusClass}">${statusText}</span>
+          </div>
+          <p class="meta-text">${escapeHtml(formatTimestamp(attempt?.created_at || ""))} • ${escapeHtml(String(attempt?.actor_label || "system"))}</p>
+          ${attempt?.next_retry_at ? `<p class="helper-text">Nächster Retry: ${escapeHtml(formatTimestamp(attempt.next_retry_at))}</p>` : ""}
+          ${attempt?.error_message ? `<p class="helper-text invoice-management-error">Fehler: ${escapeHtml(String(attempt.error_message || ""))}</p>` : ""}
+        </li>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="invoice-attempt-timeline">
+      <ul class="invoice-attempt-list">
+        ${rows}
+      </ul>
+    </div>
+  `;
+}
+
 function renderInvoiceManagementList() {
   const container = document.querySelector("#invoiceManagementList");
+  const kpiContainer = document.querySelector("#invoiceStatusKpiGrid");
+  const retryQueueContainer = document.querySelector("#invoiceRetryQueue");
   if (!container) return;
+
+  renderInvoiceOpsMetrics();
 
   const filterCompany = (document.querySelector("#invoiceFilterCompany")?.value || "").toLowerCase();
   const filterStatus = (document.querySelector("#invoiceFilterStatus")?.value || "");
 
-  let invoices = state.invoices || [];
+  const allInvoices = state.invoices || [];
+  let invoices = [...allInvoices];
+
+  if (kpiContainer) {
+    const totals = {
+      openCount: 0,
+      openAmount: 0,
+      overdueCount: 0,
+      overdueAmount: 0,
+      paidCount: 0,
+      paidAmount: 0,
+      failedCount: 0,
+      failedAmount: 0
+    };
+
+    allInvoices.forEach((inv) => {
+      const amount = Number(inv.total_amount || 0);
+      const status = String(inv.status || "").toLowerCase();
+      if (status === "bezahlt") {
+        totals.paidCount += 1;
+        totals.paidAmount += amount;
+        return;
+      }
+      if (status === "overdue") {
+        totals.overdueCount += 1;
+        totals.overdueAmount += amount;
+      }
+      if (status === "send_failed") {
+        totals.failedCount += 1;
+        totals.failedAmount += amount;
+      }
+      if (["draft", "sent", "overdue", "send_failed"].includes(status)) {
+        totals.openCount += 1;
+        totals.openAmount += amount;
+      }
+    });
+
+    kpiContainer.innerHTML = `
+      <article class="summary-block invoice-kpi-card invoice-kpi-open">
+        <p class="eyebrow">Offen</p>
+        <strong>${totals.openCount}</strong>
+        <p class="meta-text">${formatCurrency(totals.openAmount)}</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-overdue">
+        <p class="eyebrow">Überfällig</p>
+        <strong>${totals.overdueCount}</strong>
+        <p class="meta-text">${formatCurrency(totals.overdueAmount)}</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-paid">
+        <p class="eyebrow">Bezahlt</p>
+        <strong>${totals.paidCount}</strong>
+        <p class="meta-text">${formatCurrency(totals.paidAmount)}</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-failed">
+        <p class="eyebrow">Fehler</p>
+        <strong>${totals.failedCount}</strong>
+        <p class="meta-text">${formatCurrency(totals.failedAmount)}</p>
+      </article>
+    `;
+  }
   
   // Apply filters
   if (filterCompany) {
@@ -6780,6 +8325,9 @@ function renderInvoiceManagementList() {
 
   if (!invoices.length) {
     container.innerHTML = '<div class="empty-state">Keine Rechnungen vorhanden oder keine Treffer.</div>';
+    renderInvoiceRetryQueue(retryQueueContainer, allInvoices);
+    renderInvoiceApprovalQueue();
+    renderInvoiceDeadLetters();
     renderCollectionsList();
     return;
   }
@@ -6794,6 +8342,15 @@ function renderInvoiceManagementList() {
         send_failed: "Fehler"
       }[inv.status] || inv.status;
 
+      const statusKey = String(inv.status || "draft").toLowerCase();
+      const statusIcon = {
+        draft: "&#9679;",
+        sent: "&#10148;",
+        overdue: "&#9888;",
+        bezahlt: "&#10003;",
+        send_failed: "&#10005;"
+      }[statusKey] || "&#9679;";
+
       const statusClass = {
         draft: "",
         sent: "helper-text-info",
@@ -6804,31 +8361,47 @@ function renderInvoiceManagementList() {
 
       const isPaid = inv.status === "bezahlt" || Boolean(inv.paid_at);
       const canMarkPaid = !isPaid && (getCurrentUser()?.role === "superadmin" || inv.company_id === getCurrentUser()?.company_id);
+      const canRetrySend = !isPaid && statusKey === "send_failed" && (getCurrentUser()?.role === "superadmin");
+      const canViewHistory = getCurrentUser()?.role === "superadmin";
+      const justPaidClass = state.invoiceJustPaidId && state.invoiceJustPaidId === inv.id ? " invoice-status-just-paid" : "";
+      const newBadge = state.invoiceNewIds?.[inv.id] ? '<span class="invoice-new-badge">Neu</span>' : "";
+      const maxRetryAttempts = 5;
+      const retryAttemptCount = Number(inv.send_attempt_count || 0);
+      const retryInfo = canRetrySend
+        ? `<p class="helper-text invoice-retry-meta">Versuch ${Math.max(1, retryAttemptCount)}/${maxRetryAttempts}${inv.next_retry_at ? ` • Nächster Retry: ${formatTimestamp(inv.next_retry_at)}` : ""}</p>`
+        : "";
+      const historyExpanded = Boolean(state.invoiceHistoryExpandedById?.[inv.id]);
+      const historyLabel = historyExpanded ? "Historie ausblenden" : "Versand-Historie";
+      const historyTimeline = canViewHistory ? renderInvoiceAttemptTimelineHtml(inv.id) : "";
 
       return `
-        <article class="card-item">
-          <div style="display:flex; justify-content:space-between; align-items:start;">
-            <div style="flex:1;">
-              <strong>${escapeHtml(inv.invoice_number || "RE-???")}</strong>
+        <article class="card-item invoice-management-item invoice-status-${escapeHtml(statusKey)}${justPaidClass}">
+          <div class="invoice-management-head">
+            <div class="invoice-management-main">
+              <strong>${escapeHtml(inv.invoice_number || "RE-???")} ${newBadge}</strong>
               <p class="helper-text">${escapeHtml(inv.company_name || "Firma")}</p>
               <p class="meta-text">
                 ${inv.invoice_date ? formatTimestamp(inv.invoice_date) : "-"} 
                 ${inv.paid_at ? ` • Bezahlt: ${formatTimestamp(inv.paid_at)}` : ""}
               </p>
             </div>
-            <div style="text-align:right; min-width:140px;">
+            <div class="invoice-management-side">
               <p class="meta-text">${inv.total_amount ? inv.total_amount.toFixed(2) : "0.00"} EUR</p>
-              <p class="helper-text ${statusClass}">Status: ${statusLabel}</p>
+              <p class="helper-text ${statusClass}">Status: <span class="invoice-status-badge invoice-status-badge-${escapeHtml(statusKey)}"><span class="invoice-status-icon" aria-hidden="true">${statusIcon}</span><span>${statusLabel}</span></span></p>
             </div>
           </div>
 
           ${inv.due_date ? `<p class="helper-text">Fälligkeitsdatum: ${formatTimestamp(inv.due_date)}</p>` : ""}
           ${inv.auto_suspend_triggered_at ? `<p class="helper-text helper-text-warning">Auto-Sperrung ausgelöst: ${formatTimestamp(inv.auto_suspend_triggered_at)}</p>` : ""}
 
-          <div class="button-row" style="margin-top:8px;">
+          <div class="button-row invoice-management-actions">
             ${canMarkPaid ? `<button type="button" class="ghost-button invoice-mark-paid" data-invoice-id="${escapeHtml(inv.id)}">Als bezahlt markieren</button>` : ""}
-            <span class="helper-text" style="flex:1; margin:0;">${inv.error_message ? `Fehler: ${escapeHtml(inv.error_message)}` : ""}</span>
+            ${canRetrySend ? `<button type="button" class="ghost-button" data-invoice-retry-id="${escapeHtml(inv.id)}">Erneut senden</button>` : ""}
+            ${canViewHistory ? `<button type="button" class="ghost-button" data-invoice-history-toggle-id="${escapeHtml(inv.id)}">${historyLabel}</button>` : ""}
+            <span class="helper-text invoice-management-error">${inv.error_message ? `Fehler: ${escapeHtml(inv.error_message)}` : ""}</span>
           </div>
+          ${retryInfo}
+          ${historyTimeline}
         </article>
       `;
     })
@@ -6847,6 +8420,14 @@ function renderInvoiceManagementList() {
           method: "PUT",
           body: { paymentDate: new Date().toISOString().split("T")[0] }
         });
+        state.invoiceJustPaidId = invId;
+        if (invoicePaidHighlightTimer) {
+          clearTimeout(invoicePaidHighlightTimer);
+        }
+        invoicePaidHighlightTimer = setTimeout(() => {
+          state.invoiceJustPaidId = "";
+          renderInvoiceManagementList();
+        }, 2200);
         window.alert(runtimeText("invoiceMarkedPaid"));
         await loadAndRenderInvoices();
         await loadAllData();
@@ -6857,7 +8438,301 @@ function renderInvoiceManagementList() {
     });
   });
 
+  container.querySelectorAll("[data-invoice-retry-id]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const retryId = event.target.dataset.invoiceRetryId;
+      if (!retryId) return;
+      if (!window.confirm("Rechnung jetzt erneut senden?")) return;
+
+      try {
+        const payload = await apiRequest(API_BASE + `/api/invoices/${retryId}/retry-send`, {
+          method: "POST",
+          body: {}
+        });
+        if (payload?.sent) {
+          window.alert("Rechnung wurde erfolgreich erneut versendet.");
+        } else {
+          window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+        }
+        await loadAndRenderInvoices();
+        await loadAllData();
+        refreshAll();
+      } catch (error) {
+        window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+      }
+    });
+  });
+
+  container.querySelectorAll("[data-invoice-history-toggle-id]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const invoiceId = String(event.target.dataset.invoiceHistoryToggleId || "").trim();
+      if (!invoiceId) {
+        return;
+      }
+
+      const isExpanded = Boolean(state.invoiceHistoryExpandedById?.[invoiceId]);
+      if (isExpanded) {
+        delete state.invoiceHistoryExpandedById[invoiceId];
+        renderInvoiceManagementList();
+        return;
+      }
+
+      state.invoiceHistoryExpandedById[invoiceId] = true;
+      renderInvoiceManagementList();
+      try {
+        await loadInvoiceAttemptHistory(invoiceId, { force: true });
+      } catch (error) {
+        window.alert(`Historie konnte nicht geladen werden: ${error.message}`);
+      }
+      renderInvoiceManagementList();
+    });
+  });
+
+  renderInvoiceRetryQueue(retryQueueContainer, allInvoices);
+  renderInvoiceApprovalQueue();
+  renderInvoiceDeadLetters();
+
   renderCollectionsList();
+}
+
+function renderInvoiceRetryQueue(container, sourceInvoices) {
+  if (!container) return;
+  const kpiContainer = document.querySelector("#invoiceRetryKpiGrid");
+  const criticalSendButton = document.querySelector("#invoiceRetryCriticalSendBtn");
+  const maxRetryAttempts = 5;
+  const retryFilterMode = String(document.querySelector("#invoiceRetryFilterMode")?.value || "all");
+  const retryFilterCompany = String(document.querySelector("#invoiceRetryFilterCompany")?.value || "").trim().toLowerCase();
+  const topIssuesOnly = Boolean(document.querySelector("#invoiceRetryTopIssuesOnly")?.checked);
+  const allInvoices = Array.isArray(sourceInvoices) ? sourceInvoices : [];
+  const selectedIds = state.invoiceRetrySelectedIds || [];
+  const criticalIds = getCriticalRetryInvoiceIds(sourceInvoices, 50);
+  if (criticalSendButton) {
+    criticalSendButton.textContent = `Nur kritische jetzt senden (${criticalIds.length})`;
+    criticalSendButton.disabled = criticalIds.length === 0;
+    criticalSendButton.classList.remove("invoice-critical-btn-warn", "invoice-critical-btn-alert");
+    if (criticalIds.length >= 20) {
+      criticalSendButton.classList.add("invoice-critical-btn-alert");
+    } else if (criticalIds.length >= 10) {
+      criticalSendButton.classList.add("invoice-critical-btn-warn");
+    }
+  }
+  const failed = (Array.isArray(sourceInvoices) ? sourceInvoices : [])
+    .filter((inv) => String(inv?.status || "").toLowerCase() === "send_failed" && !inv?.paid_at)
+    .sort((a, b) => {
+      const aRetry = String(a?.next_retry_at || "");
+      const bRetry = String(b?.next_retry_at || "");
+      return aRetry.localeCompare(bRetry);
+    });
+
+  const companyFailureCounts = failed.reduce((acc, inv) => {
+    const key = String(inv?.company_id || "").trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const buildRetryPriority = (inv) => calculateRetryPriority(inv, companyFailureCounts);
+
+  if (kpiContainer) {
+    const today = new Date().toISOString().slice(0, 10);
+    const retriedSentToday = allInvoices.filter((inv) => {
+      const isSent = String(inv?.status || "").toLowerCase() === "sent";
+      const hasRetry = Number(inv?.send_attempt_count || 0) > 1;
+      const sentToday = String(inv?.sent_at || "").slice(0, 10) === today;
+      return isSent && hasRetry && sentToday;
+    }).length;
+    const maxedOut = failed.filter((inv) => Number(inv?.send_attempt_count || 0) >= maxRetryAttempts).length;
+    const highPriority = failed.filter((inv) => buildRetryPriority(inv).score >= 70).length;
+
+    kpiContainer.innerHTML = `
+      <article class="summary-block invoice-kpi-card invoice-kpi-failed">
+        <p class="eyebrow">Offen fehlgeschlagen</p>
+        <strong>${failed.length}</strong>
+        <p class="meta-text">In Warteschlange</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-paid">
+        <p class="eyebrow">Heute nach Retry ok</p>
+        <strong>${retriedSentToday}</strong>
+        <p class="meta-text">Erneut zugestellt</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-overdue">
+        <p class="eyebrow">Max Retries erreicht</p>
+        <strong>${maxedOut}</strong>
+        <p class="meta-text">Manuelle Prüfung nötig</p>
+      </article>
+      <article class="summary-block invoice-kpi-card invoice-kpi-overdue">
+        <p class="eyebrow">Kritische Priorität</p>
+        <strong>${highPriority}</strong>
+        <p class="meta-text">Score >= 70</p>
+      </article>
+    `;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  let filteredFailed = [...failed];
+
+  if (topIssuesOnly) {
+    filteredFailed = filteredFailed
+      .filter((inv) => Number(inv?.send_attempt_count || 0) >= maxRetryAttempts)
+      .sort((a, b) => {
+        const aPriority = buildRetryPriority(a);
+        const bPriority = buildRetryPriority(b);
+        if (bPriority.score !== aPriority.score) {
+          return bPriority.score - aPriority.score;
+        }
+        const aCreated = String(a?.created_at || "");
+        const bCreated = String(b?.created_at || "");
+        return aCreated.localeCompare(bCreated);
+      });
+  } else {
+    if (retryFilterMode === "priority") {
+      filteredFailed = filteredFailed.sort((a, b) => {
+        const aPriority = buildRetryPriority(a);
+        const bPriority = buildRetryPriority(b);
+        if (bPriority.score !== aPriority.score) {
+          return bPriority.score - aPriority.score;
+        }
+        const aCreated = String(a?.created_at || "");
+        const bCreated = String(b?.created_at || "");
+        return aCreated.localeCompare(bCreated);
+      });
+    } else if (retryFilterMode === "maxed") {
+      filteredFailed = filteredFailed.filter((inv) => Number(inv?.send_attempt_count || 0) >= maxRetryAttempts);
+    } else if (retryFilterMode === "today_failed") {
+      filteredFailed = filteredFailed.filter((inv) => String(inv?.last_send_attempt_at || "").slice(0, 10) === today);
+    }
+  }
+
+  if (retryFilterCompany) {
+    filteredFailed = filteredFailed.filter((inv) => String(inv?.company_name || "").toLowerCase().includes(retryFilterCompany));
+  }
+
+  if (!filteredFailed.length) {
+    container.innerHTML = '<div class="empty-state">Keine offenen Versand-Fehler in der Warteschlange.</div>';
+    container.onclick = null;
+    return;
+  }
+
+  container.innerHTML = filteredFailed
+    .slice(0, 25)
+    .map((inv) => {
+      const attempts = Number(inv?.send_attempt_count || 0);
+      const checked = selectedIds.includes(inv.id) ? "checked" : "";
+      const priority = buildRetryPriority(inv);
+      const priorityClass = `invoice-priority-${priority.tier}`;
+      return `
+        <article class="card-item retry-queue-item">
+          <div class="retry-queue-head">
+            <div>
+              <label class="invoice-retry-select">
+                <input type="checkbox" data-retry-queue-select="${escapeHtml(inv.id || "")}" ${checked} />
+                <span>Auswählen</span>
+              </label>
+              <strong>${escapeHtml(inv.invoice_number || "RE-???")}</strong>
+              <p class="helper-text">${escapeHtml(inv.company_name || "Firma")}</p>
+            </div>
+            <p class="meta-text">${formatCurrency(inv.total_amount)}</p>
+          </div>
+          <p class="helper-text">
+            <span class="invoice-priority-chip ${priorityClass}">Prio ${priority.score} (${escapeHtml(priority.tier)})</span>
+            • Alter: ${priority.ageDays} Tage
+            • Firma: ${priority.companyIssueCount} offen
+          </p>
+          <p class="helper-text">Versuch ${Math.max(1, attempts)}/${maxRetryAttempts}${inv?.next_retry_at ? ` • Nächster Retry: ${formatTimestamp(inv.next_retry_at)}` : ""}</p>
+          <p class="helper-text invoice-management-error">${inv?.error_message ? `Letzter Fehler: ${escapeHtml(inv.error_message)}` : ""}</p>
+          <div class="button-row invoice-management-actions">
+            <button type="button" class="ghost-button" data-retry-queue-send="${escapeHtml(inv.id || "")}">Jetzt erneut senden</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.onclick = async (event) => {
+    const selectInput = event.target.closest("[data-retry-queue-select]");
+    if (selectInput && container.contains(selectInput)) {
+      const retryId = selectInput.dataset.retryQueueSelect;
+      if (!retryId) return;
+      const set = new Set(state.invoiceRetrySelectedIds || []);
+      if (selectInput.checked) {
+        set.add(retryId);
+      } else {
+        set.delete(retryId);
+      }
+      state.invoiceRetrySelectedIds = Array.from(set);
+      return;
+    }
+
+    const retryButton = event.target.closest("[data-retry-queue-send]");
+    if (!retryButton || !container.contains(retryButton)) return;
+    const retryId = retryButton.dataset.retryQueueSend;
+    if (!retryId) return;
+    if (!window.confirm("Rechnung jetzt erneut senden?")) return;
+
+    try {
+      const payload = await apiRequest(API_BASE + `/api/invoices/${retryId}/retry-send`, {
+        method: "POST",
+        body: {}
+      });
+      if (payload?.sent) {
+        window.alert("Rechnung wurde erfolgreich erneut versendet.");
+      } else {
+        window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+      }
+      await loadAndRenderInvoices();
+      await loadAllData();
+      refreshAll();
+    } catch (error) {
+      window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+    }
+  };
+}
+
+function calculateRetryPriority(inv, companyFailureCounts = {}) {
+  const attemptCount = Number(inv?.send_attempt_count || 0);
+  const amount = Number(inv?.total_amount || 0);
+  const createdAt = String(inv?.created_at || "");
+  const createdMs = Date.parse(createdAt);
+  const ageDays = Number.isFinite(createdMs)
+    ? Math.max(0, Math.floor((Date.now() - createdMs) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const companyIssueCount = Number(companyFailureCounts[String(inv?.company_id || "")] || 1);
+
+  const attemptsScore = Math.min(36, Math.max(1, attemptCount) * 8);
+  const ageScore = Math.min(26, ageDays * 1.5);
+  const amountScore = Math.min(22, amount / 220);
+  const companyScore = Math.min(16, companyIssueCount * 4);
+  const score = Math.round(attemptsScore + ageScore + amountScore + companyScore);
+
+  let tier = "niedrig";
+  if (score >= 70) {
+    tier = "kritisch";
+  } else if (score >= 45) {
+    tier = "hoch";
+  }
+
+  return { score, tier, ageDays, companyIssueCount };
+}
+
+function getCriticalRetryInvoiceIds(sourceInvoices, maxItems = 50) {
+  const failed = (Array.isArray(sourceInvoices) ? sourceInvoices : [])
+    .filter((inv) => String(inv?.status || "").toLowerCase() === "send_failed" && !inv?.paid_at);
+  const companyFailureCounts = failed.reduce((acc, inv) => {
+    const key = String(inv?.company_id || "").trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return failed
+    .filter((inv) => calculateRetryPriority(inv, companyFailureCounts).score >= 70)
+    .map((inv) => String(inv?.id || ""))
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
 
 function toDateOnly(value) {
@@ -7070,6 +8945,8 @@ function renderCollectionsList() {
 
 async function handleLoginSubmit(event) {
   event.preventDefault();
+  const supportContext = state.supportLoginContext || loadSupportLoginContext();
+  const loginScope = elements.loginScope?.value || "auto";
   try {
     const payload = await apiRequest(API_BASE + "/api/login", {
       auth: false,
@@ -7078,7 +8955,9 @@ async function handleLoginSubmit(event) {
         username: elements.loginUsername.value.trim(),
         password: elements.loginPassword.value,
         otpCode: elements.loginOtpCode.value.trim(),
-        loginScope: elements.loginScope?.value || "auto"
+        loginScope,
+        supportCompanyId: loginScope === "company-admin" ? (supportContext?.companyId || "") : "",
+        supportActorName: loginScope === "company-admin" ? (supportContext?.actorName || "") : ""
       }
     });
 
@@ -7092,6 +8971,8 @@ async function handleLoginSubmit(event) {
     token = payload.token;
     persistSessionToken(token);
     state.currentUser = payload.user;
+    clearSupportLoginContext();
+    state.supportLoginContext = null;
     elements.loginForm.reset();
     startHeartbeat();
     startBackendStatusMonitor();
@@ -7123,6 +9004,14 @@ async function handleLoginSubmit(event) {
     }
     if (error.message === "forbidden_tenant_host") {
       window.alert("Dieser Zugang ist nur über die freigegebene Firmen-Domain erlaubt.");
+      return;
+    }
+    if (error.message === "support_session_read_only") {
+      showSupportReadOnlyAlert();
+      return;
+    }
+    if (error.message === "support_company_mismatch") {
+      window.alert("Dieser Login passt nicht zur ausgewählten Firma. Bitte den Firmen-Admin der markierten Firma verwenden.");
       return;
     }
     if (error.message === "company_locked") {
@@ -7196,7 +9085,8 @@ async function maybeHandlePasswordResetToken() {
   }
 }
 
-async function handleLogout() {
+async function handleLogout(options = {}) {
+  const { preserveSupportContext = false } = options;
   try {
     if (token) {
       await apiRequest(API_BASE + "/api/logout", { method: "POST" });
@@ -7205,6 +9095,10 @@ async function handleLogout() {
     // ignore logout call failures
   }
 
+  if (!preserveSupportContext) {
+    clearSupportLoginContext();
+    state.supportLoginContext = null;
+  }
   clearSession();
   setView("dashboard");
   stopCamera();
@@ -7213,6 +9107,10 @@ async function handleLogout() {
 
 async function handlePasswordChange(event) {
   event.preventDefault();
+  if (isSupportReadOnlyMode()) {
+    showSupportReadOnlyAlert();
+    return;
+  }
   const currentPassword = document.querySelector("#currentPassword").value;
   const newPassword = document.querySelector("#newPassword").value;
 
@@ -8646,6 +10544,19 @@ if (elements.systemThemeToggleButton) {
   elements.systemThemeToggleButton.addEventListener("click", toggleSystemTheme);
 }
 
+if (elements.systemAlertActionBtn) {
+  elements.systemAlertActionBtn.addEventListener("click", () => {
+    if (!token) {
+      return;
+    }
+    setView("invoices");
+    const invoicesPanel = document.querySelector(".view[data-view='invoices']");
+    if (invoicesPanel) {
+      invoicesPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+}
+
 const workerCsvButton = document.querySelector("#workerCsvButton");
 if (workerCsvButton) {
   workerCsvButton.addEventListener("click", exportWorkersPdf);
@@ -8709,7 +10620,11 @@ if (accessCsvButton) {
 
 const invoiceRefreshButton = document.querySelector("#invoiceRefreshButton");
 if (invoiceRefreshButton) {
-  invoiceRefreshButton.addEventListener("click", () => loadAndRenderInvoices());
+  invoiceRefreshButton.addEventListener("click", async () => {
+    await loadAndRenderInvoices();
+    markCurrentInvoicesAsSeen();
+    renderInvoiceManagementList();
+  });
 }
 
 const invoiceFilterCompany = document.querySelector("#invoiceFilterCompany");
@@ -8720,6 +10635,160 @@ if (invoiceFilterCompany) {
 const invoiceFilterStatus = document.querySelector("#invoiceFilterStatus");
 if (invoiceFilterStatus) {
   invoiceFilterStatus.addEventListener("change", () => renderInvoiceManagementList());
+}
+
+const invoiceRetryFilterMode = document.querySelector("#invoiceRetryFilterMode");
+if (invoiceRetryFilterMode) {
+  invoiceRetryFilterMode.addEventListener("change", () => renderInvoiceManagementList());
+}
+
+const invoiceRetryFilterCompany = document.querySelector("#invoiceRetryFilterCompany");
+if (invoiceRetryFilterCompany) {
+  invoiceRetryFilterCompany.addEventListener("input", () => renderInvoiceManagementList());
+}
+
+const invoiceRetryTopIssuesOnly = document.querySelector("#invoiceRetryTopIssuesOnly");
+if (invoiceRetryTopIssuesOnly) {
+  invoiceRetryTopIssuesOnly.addEventListener("change", () => renderInvoiceManagementList());
+}
+
+const invoiceApprovalFilterAction = document.querySelector("#invoiceApprovalFilterAction");
+if (invoiceApprovalFilterAction) {
+  invoiceApprovalFilterAction.addEventListener("change", () => renderInvoiceManagementList());
+}
+
+const invoiceApprovalMaxAgeMinutes = document.querySelector("#invoiceApprovalMaxAgeMinutes");
+if (invoiceApprovalMaxAgeMinutes) {
+  invoiceApprovalMaxAgeMinutes.addEventListener("input", () => renderInvoiceManagementList());
+}
+
+async function downloadAuthorizedCsv(url, downloadName) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch {
+      payload = {};
+    }
+    throw new Error(payload?.error || `http_${response.status}`);
+  }
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = downloadName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
+
+const invoiceRetryExportBtn = document.querySelector("#invoiceRetryExportBtn");
+if (invoiceRetryExportBtn) {
+  invoiceRetryExportBtn.addEventListener("click", async () => {
+    if (!token) {
+      handleExpiredControlSession();
+      return;
+    }
+    try {
+      await downloadAuthorizedCsv(
+        `${API_BASE}/api/invoices/retry-queue/export.csv`,
+        `invoice-retry-queue-${new Date().toISOString().slice(0, 10)}.csv`
+      );
+    } catch (error) {
+      window.alert(`CSV-Export fehlgeschlagen: ${error.message}`);
+    }
+  });
+}
+
+const invoiceIncidentExportBtn = document.querySelector("#invoiceIncidentExportBtn");
+if (invoiceIncidentExportBtn) {
+  invoiceIncidentExportBtn.addEventListener("click", async () => {
+    if (!token) {
+      handleExpiredControlSession();
+      return;
+    }
+    try {
+      await downloadAuthorizedCsv(
+        `${API_BASE}/api/invoices/incidents/export.csv`,
+        `invoice-incidents-${new Date().toISOString().slice(0, 10)}.csv`
+      );
+    } catch (error) {
+      window.alert(`Incident-Export fehlgeschlagen: ${error.message}`);
+    }
+  });
+}
+
+const invoiceRetryBulkSendBtn = document.querySelector("#invoiceRetryBulkSendBtn");
+if (invoiceRetryBulkSendBtn) {
+  invoiceRetryBulkSendBtn.addEventListener("click", async () => {
+    const selectedIds = Array.isArray(state.invoiceRetrySelectedIds) ? state.invoiceRetrySelectedIds : [];
+    if (!selectedIds.length) {
+      window.alert("Bitte mindestens eine Rechnung in der Warteschlange auswählen.");
+      return;
+    }
+    if (!window.confirm(`${selectedIds.length} ausgewählte Rechnung(en) jetzt erneut senden?`)) {
+      return;
+    }
+    try {
+      const payload = await apiRequest(`${API_BASE}/api/invoices/retry-send-bulk`, {
+        method: "POST",
+        body: { invoiceIds: selectedIds }
+      });
+      if (payload?.approvalRequested) {
+        window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+      } else {
+        const summary = payload?.summary || {};
+        window.alert(`Bulk-Retry abgeschlossen. Erfolgreich: ${summary.sent || 0}, Fehlgeschlagen: ${summary.failed || 0}, Übersprungen: ${summary.skipped || 0}`);
+      }
+      state.invoiceRetrySelectedIds = [];
+      await loadAndRenderInvoices();
+      await loadAllData();
+      refreshAll();
+    } catch (error) {
+      window.alert(`Bulk-Retry fehlgeschlagen: ${error.message}`);
+    }
+  });
+}
+
+const invoiceRetryCriticalSendBtn = document.querySelector("#invoiceRetryCriticalSendBtn");
+if (invoiceRetryCriticalSendBtn) {
+  invoiceRetryCriticalSendBtn.addEventListener("click", async () => {
+    const criticalIds = getCriticalRetryInvoiceIds(state.invoices, 50);
+
+    if (!criticalIds.length) {
+      window.alert("Aktuell gibt es keine kritischen Fälle (Score >= 70).");
+      return;
+    }
+
+    if (!window.confirm(`${criticalIds.length} kritische Rechnung(en) jetzt erneut senden?`)) {
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(`${API_BASE}/api/invoices/retry-send-bulk`, {
+        method: "POST",
+        body: { invoiceIds: criticalIds }
+      });
+      if (payload?.approvalRequested) {
+        window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+      } else {
+        const summary = payload?.summary || {};
+        window.alert(`Kritischer Bulk-Retry abgeschlossen. Erfolgreich: ${summary.sent || 0}, Fehlgeschlagen: ${summary.failed || 0}, Übersprungen: ${summary.skipped || 0}`);
+      }
+      state.invoiceRetrySelectedIds = [];
+      await loadAndRenderInvoices();
+      await loadAllData();
+      refreshAll();
+    } catch (error) {
+      window.alert(`Kritischer Bulk-Retry fehlgeschlagen: ${error.message}`);
+    }
+  });
 }
 
 const exportCompanyDocEmailsBtn = document.querySelector("#exportCompanyDocEmailsBtn");
@@ -9262,6 +11331,10 @@ function renderDocumentInbox(emails) {
   // Assign-Buttons
   listEl.querySelectorAll("[data-assign-btn]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       openDocAssignPanel(btn.dataset.inboxId, btn.dataset.attachmentId, btn.dataset.filename, btn.dataset.matchedCompanyId || "");
     });
   });
@@ -9269,6 +11342,10 @@ function renderDocumentInbox(emails) {
   // Dismiss-Buttons
   listEl.querySelectorAll("[data-dismiss-email-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       const emailId = btn.dataset.dismissEmailId;
       try {
         await apiRequest(API_BASE + `/api/documents/inbox/${emailId}/dismiss`, { method: "POST" });
@@ -9282,6 +11359,10 @@ function renderDocumentInbox(emails) {
   // Manueller Firmen-Match für Prüfkorb
   listEl.querySelectorAll("[data-manual-company-match]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       const inboxId = btn.dataset.manualCompanyMatch;
       if (!inboxId) return;
       openManualCompanyMatchPanel(inboxId);
@@ -9299,9 +11380,15 @@ function renderDocumentInbox(emails) {
       btn.textContent = isHidden ? "Weniger" : "Details";
     });
   });
+
+  applySupportReadOnlyUiState();
 }
 
 function openDocAssignPanel(inboxId, attachmentId, filename, matchedCompanyId = "") {
+  if (isSupportReadOnlyMode()) {
+    showSupportReadOnlyAlert();
+    return;
+  }
   const panel = document.querySelector("#docAssignPanel");
   const content = document.querySelector("#docAssignContent");
   if (!panel || !content) return;
@@ -9359,6 +11446,10 @@ function openDocAssignPanel(inboxId, attachmentId, filename, matchedCompanyId = 
 
   document.querySelector("#docAssignForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isSupportReadOnlyMode()) {
+      showSupportReadOnlyAlert();
+      return;
+    }
     const workerId = document.querySelector("#docAssignWorkerId").value;
     const docType = document.querySelector("#docAssignType").value;
     const notes = document.querySelector("#docAssignNotes").value.trim();
@@ -9381,6 +11472,10 @@ function openDocAssignPanel(inboxId, attachmentId, filename, matchedCompanyId = 
 }
 
 function openManualCompanyMatchPanel(inboxId) {
+  if (isSupportReadOnlyMode()) {
+    showSupportReadOnlyAlert();
+    return;
+  }
   const panel = document.querySelector("#docAssignPanel");
   const content = document.querySelector("#docAssignContent");
   if (!panel || !content) return;
@@ -9499,6 +11594,10 @@ function openManualCompanyMatchPanel(inboxId) {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isSupportReadOnlyMode()) {
+      showSupportReadOnlyAlert();
+      return;
+    }
     const companyId = String(document.querySelector("#docCompanyMatchSelect")?.value || "").trim();
     const msgEl = document.querySelector("#docCompanyMatchMsg");
     if (!companyId) {
@@ -9535,6 +11634,9 @@ async function loadWorkerDocuments(workerId) {
 }
 
 async function uploadWorkerDocument(workerId, file, docType, notes, expiryDate) {
+  if (isSupportReadOnlyMode()) {
+    throw new Error("support_session_read_only");
+  }
   const fd = new FormData();
   fd.append("file", file);
   fd.append("docType", docType);
@@ -9603,6 +11705,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
 
   containerEl.querySelectorAll("[data-delete-doc-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       if (!window.confirm(uiT("confirmDeleteDoc"))) return;
       try {
         await apiRequest(API_BASE + `/api/workers/${workerId}/documents/${btn.dataset.deleteDocId}`, { method: "DELETE" });
@@ -9618,6 +11724,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   if (uploadFormEl) {
     uploadFormEl.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       const fileInput = uploadFormEl.querySelector(".doc-upload-file");
       const typeSelect = uploadFormEl.querySelector(".doc-upload-type");
       const notesInput = uploadFormEl.querySelector(".doc-upload-notes");
@@ -9637,13 +11747,15 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
         const updatedDocs = await loadWorkerDocuments(workerId);
         renderWorkerDocuments(updatedDocs, workerId, containerEl);
       } catch (err) {
-        msgEl.textContent = err.message;
+        msgEl.textContent = err.message === "support_session_read_only" ? uiT("supportReadOnlyShort") : err.message;
         msgEl.style.color = "var(--color-danger, red)";
         msgEl.style.display = "";
         submitBtn.disabled = false;
       }
     });
   }
+
+  applySupportReadOnlyUiState();
 }
 
 // Dokument-Inbox beim Wechsel zur documents-View laden
@@ -9715,6 +11827,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   document.addEventListener("baupass:settingsLoaded", updateDocEmailInfoBar);
 
   const runDocumentInboxSync = async (buttonEl) => {
+    if (isSupportReadOnlyMode()) {
+      showSupportReadOnlyAlert();
+      return;
+    }
     if (buttonEl) buttonEl.disabled = true;
     try {
       await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
@@ -9741,6 +11857,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   if (rematchBtn) {
     rematchBtn.style.display = String(getCurrentUser()?.role || "").toLowerCase() === "superadmin" ? "" : "none";
     rematchBtn.addEventListener("click", async () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       if (!token) {
         handleExpiredControlSession();
         return;
@@ -9800,6 +11920,10 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
   const imapTestBtn = document.querySelector("#imapTestBtn");
   if (imapTestBtn) {
     imapTestBtn.addEventListener("click", async () => {
+      if (isSupportReadOnlyMode()) {
+        showSupportReadOnlyAlert();
+        return;
+      }
       const resultEl = document.querySelector("#imapTestResult");
       const imapHost = (document.querySelector("#imapHost")?.value || "").trim();
       const imapUsername = (document.querySelector("#imapUsername")?.value || "").trim();

@@ -1,0 +1,257 @@
+const { test, expect } = require('@playwright/test');
+
+async function login(request, { username, password, loginScope, otpCode }) {
+  const response = await request.post('/api/login', {
+    data: { username, password, loginScope, otpCode: otpCode || '' },
+  });
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  if (!payload?.ok) {
+    const errorCode = String(payload?.error || 'unknown_login_error');
+    throw new Error(`login_failed:${errorCode}`);
+  }
+  expect(payload.token).toBeTruthy();
+  return payload;
+}
+
+function authHeaders(token) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+function getEnvOrDefault(name, fallback) {
+  const value = String(process.env[name] || '').trim();
+  return value || fallback;
+}
+
+async function ensureSecondCompany(request, token) {
+  const headers = authHeaders(token);
+  const companiesRes = await request.get('/api/companies', { headers });
+  expect(companiesRes.ok()).toBeTruthy();
+  const companies = (await companiesRes.json()) || [];
+  const active = companies.filter((c) => !c.deleted_at);
+  if (active.length >= 2) {
+    return active.slice(0, 2);
+  }
+
+  const createRes = await request.post('/api/companies', {
+    headers,
+    data: {
+      name: `E2E Preview ${Date.now()}`,
+      contact: 'e2e@baupass.local',
+      adminPassword: '1234',
+      turnstilePassword: '1234',
+      turnstileCount: 1,
+      status: 'aktiv',
+    },
+  });
+  expect(createRes.status(), 'failed to create second company').toBe(201);
+
+  const refreshed = await request.get('/api/companies', { headers });
+  expect(refreshed.ok()).toBeTruthy();
+  const refreshedList = (await refreshed.json()) || [];
+  const refreshedActive = refreshedList.filter((c) => !c.deleted_at);
+  expect(refreshedActive.length).toBeGreaterThanOrEqual(2);
+  return refreshedActive.slice(0, 2);
+}
+
+async function createVisitorWorker(request, token, companyId, suffix) {
+  const headers = authHeaders(token);
+  const visitEnd = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  const response = await request.post('/api/workers', {
+    headers,
+    data: {
+      companyId: companyId,
+      firstName: `E2E${suffix}`,
+      lastName: 'Preview',
+      workerType: 'visitor',
+      role: 'Besucher',
+      site: 'Nordtor',
+      status: 'aktiv',
+      photoData: 'data:image/png;base64,AAA',
+      visitorCompany: 'E2E GmbH',
+      visitPurpose: 'Preview Scope Test',
+      hostName: 'Bauleitung',
+      visitEndAt: visitEnd,
+    },
+  });
+  expect(response.status(), 'failed creating visitor worker').toBe(201);
+  const payload = await response.json();
+  expect(payload.id).toBeTruthy();
+  return payload;
+}
+
+test('superadmin preview session scopes workers and companies, then resets', async ({ request }) => {
+  const otpCode = process.env.E2E_SUPERADMIN_OTP || '';
+  const superadminUsername = getEnvOrDefault('E2E_SUPERADMIN_USERNAME', 'superadmin');
+  const superadminPassword = getEnvOrDefault('E2E_SUPERADMIN_PASSWORD', '1234');
+  let superadmin;
+  try {
+    superadmin = await login(request, {
+      username: superadminUsername,
+      password: superadminPassword,
+      loginScope: 'server-admin',
+      otpCode,
+    });
+  } catch (error) {
+    const message = String(error?.message || '');
+    if (
+      message.includes('login_failed:invalid_credentials')
+      || message.includes('login_failed:otp_required')
+      || message.includes('login_failed:too_many_attempts')
+    ) {
+      test.skip(true, 'Superadmin-Login lokal nicht verfuegbar (Credentials/OTP/Rate-Limit). Setze E2E_SUPERADMIN_USERNAME/E2E_SUPERADMIN_PASSWORD/E2E_SUPERADMIN_OTP.');
+      return;
+    }
+    throw error;
+  }
+
+  const [firstCompany, secondCompany] = await ensureSecondCompany(request, superadmin.token);
+  expect(firstCompany.id).not.toBe(secondCompany.id);
+
+  const workerA = await createVisitorWorker(request, superadmin.token, firstCompany.id, 'A');
+  const workerB = await createVisitorWorker(request, superadmin.token, secondCompany.id, 'B');
+
+  const setPreviewRes = await request.post('/api/superadmin/preview-session', {
+    headers: authHeaders(superadmin.token),
+    data: { company_id: firstCompany.id },
+  });
+  expect(setPreviewRes.status()).toBe(200);
+  const setPreviewPayload = await setPreviewRes.json();
+  expect(setPreviewPayload.preview_company_id).toBe(firstCompany.id);
+
+  const workersScopedRes = await request.get('/api/workers', {
+    headers: authHeaders(superadmin.token),
+  });
+  expect(workersScopedRes.ok()).toBeTruthy();
+  const workersScoped = (await workersScopedRes.json()) || [];
+  const workerIdsScoped = new Set(workersScoped.map((w) => w.id));
+  expect(workerIdsScoped.has(workerA.id)).toBeTruthy();
+  expect(workerIdsScoped.has(workerB.id)).toBeFalsy();
+
+  const companiesScopedRes = await request.get('/api/companies', {
+    headers: authHeaders(superadmin.token),
+  });
+  expect(companiesScopedRes.ok()).toBeTruthy();
+  const companiesScoped = (await companiesScopedRes.json()) || [];
+  expect(companiesScoped).toHaveLength(1);
+  expect(companiesScoped[0].id).toBe(firstCompany.id);
+
+  const clearPreviewRes = await request.post('/api/superadmin/preview-session', {
+    headers: authHeaders(superadmin.token),
+    data: { company_id: null },
+  });
+  expect(clearPreviewRes.status()).toBe(200);
+
+  const workersAfterRes = await request.get('/api/workers', {
+    headers: authHeaders(superadmin.token),
+  });
+  expect(workersAfterRes.ok()).toBeTruthy();
+  const workersAfter = (await workersAfterRes.json()) || [];
+  const workerIdsAfter = new Set(workersAfter.map((w) => w.id));
+  expect(workerIdsAfter.has(workerA.id)).toBeTruthy();
+  expect(workerIdsAfter.has(workerB.id)).toBeTruthy();
+});
+
+test('company-admin can access scoped endpoints and cannot set preview session', async ({ request }) => {
+  const companyAdminUsername = getEnvOrDefault('E2E_COMPANY_ADMIN_USERNAME', 'firma');
+  const companyAdminPassword = getEnvOrDefault('E2E_COMPANY_ADMIN_PASSWORD', '1234');
+  const companyAdmin = await login(request, {
+    username: companyAdminUsername,
+    password: companyAdminPassword,
+    loginScope: 'company-admin',
+  });
+
+  const invoicesRes = await request.get('/api/invoices', {
+    headers: authHeaders(companyAdmin.token),
+  });
+  expect(invoicesRes.status()).toBe(200);
+  const invoices = (await invoicesRes.json()) || [];
+  const adminCompanyId = companyAdmin.user.company_id;
+  expect(adminCompanyId).toBeTruthy();
+  for (const invoice of invoices) {
+    expect(String(invoice.company_id || '')).toBe(adminCompanyId);
+  }
+
+  const reportingRes = await request.get('/api/reporting/summary', {
+    headers: authHeaders(companyAdmin.token),
+  });
+  expect(reportingRes.status()).toBe(200);
+
+  const ownTurnstiles = await request.get(`/api/companies/${adminCompanyId}/turnstiles`, {
+    headers: authHeaders(companyAdmin.token),
+  });
+  expect(ownTurnstiles.status()).toBe(200);
+
+  const previewDenied = await request.post('/api/superadmin/preview-session', {
+    headers: authHeaders(companyAdmin.token),
+    data: { company_id: adminCompanyId },
+  });
+  expect(previewDenied.status()).toBe(403);
+});
+
+test('ui flow: superadmin sets and clears preview mode from admin view', async ({ page, request }) => {
+  const otpCode = process.env.E2E_SUPERADMIN_OTP || '';
+  const superadminUsername = getEnvOrDefault('E2E_SUPERADMIN_USERNAME', 'superadmin');
+  const superadminPassword = getEnvOrDefault('E2E_SUPERADMIN_PASSWORD', '1234');
+
+  let superadmin;
+  try {
+    superadmin = await login(request, {
+      username: superadminUsername,
+      password: superadminPassword,
+      loginScope: 'server-admin',
+      otpCode,
+    });
+  } catch (error) {
+    const message = String(error?.message || '');
+    if (
+      message.includes('login_failed:invalid_credentials')
+      || message.includes('login_failed:otp_required')
+      || message.includes('login_failed:too_many_attempts')
+    ) {
+      test.skip(true, 'Superadmin-Login lokal nicht verfuegbar (Credentials/OTP/Rate-Limit).');
+      return;
+    }
+    throw error;
+  }
+
+  const [companyA, companyB] = await ensureSecondCompany(request, superadmin.token);
+  expect(companyA.id).not.toBe(companyB.id);
+
+  const uniqueSuffix = Date.now();
+  const workerAName = `E2EUIA${uniqueSuffix}`;
+  const workerBName = `E2EUIB${uniqueSuffix}`;
+  await createVisitorWorker(request, superadmin.token, companyA.id, `UIA${uniqueSuffix}`);
+  await createVisitorWorker(request, superadmin.token, companyB.id, `UIB${uniqueSuffix}`);
+
+  await page.goto('/');
+  await page.locator('#loginUsername').fill(superadminUsername);
+  await page.locator('#loginPassword').fill(superadminPassword);
+  await page.locator('#loginScope').selectOption('server-admin');
+  if (otpCode) {
+    await page.locator('#loginOtpCode').fill(otpCode);
+  }
+  await page.locator('#loginForm button[type="submit"]').click();
+
+  await expect(page.locator('#mainShell')).toBeVisible();
+
+  await page.locator('.nav-link[data-view="admin"]').click();
+  await expect(page.locator('#companyList')).toBeVisible();
+  await expect(page.locator('#superadminCompanyPreviewSelect')).toBeVisible();
+
+  await page.locator('#superadminCompanyPreviewSelect').selectOption(companyA.id);
+  await expect(page.locator('#superadminPreviewTopbarPill')).toBeVisible();
+  await expect(page.locator('#superadminPreviewTopbarLabel')).toContainText(companyA.name);
+
+  await page.locator('.nav-link[data-view="workers"]').click();
+  await expect(page.locator('#workerList')).toBeVisible();
+  await expect(page.locator('#workerList')).toContainText(workerAName);
+  await expect(page.locator('#workerList')).not.toContainText(workerBName);
+
+  await page.locator('#superadminPreviewTopbarPill button').click();
+  await expect(page.locator('#superadminPreviewTopbarPill')).toHaveCount(0);
+
+  await page.locator('.nav-link[data-view="workers"]').click();
+  await expect(page.locator('#workerList')).toContainText(workerAName);
+  await expect(page.locator('#workerList')).toContainText(workerBName);
+});

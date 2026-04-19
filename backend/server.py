@@ -4,6 +4,7 @@ import secrets
 import csv
 import io
 import json
+import base64
 import smtplib
 import ipaddress
 import html
@@ -11,13 +12,14 @@ import socket
 import re
 import threading
 import time
+from contextlib import closing
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from email.message import EmailMessage
 from email.utils import getaddresses
-from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.parse import quote, urlsplit, urlunsplit, unquote_to_bytes
 from flask import Flask, jsonify, request, send_from_directory, g, Response, redirect, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -137,11 +139,26 @@ PLAN_NET_PRICE_EUR = {
 }
 
 AUTO_SUSPEND_GRACE_DAYS = 3
-APP_STARTED_AT = datetime.utcnow()
+APP_STARTED_AT = datetime.now(timezone.utc)
 DUNNING_LAST_RUN_AT = None
 DUNNING_LAST_RESULT = {"remindersSent": 0, "reminderFailures": 0, "overdueUpdated": 0, "suspendedCompanies": 0}
 BACKUP_RETENTION_DAYS = max(1, int(os.getenv("BAUPASS_BACKUP_RETENTION_DAYS", "30")))
 ALERT_DEDUP_MINUTES = max(5, int(os.getenv("BAUPASS_ALERT_DEDUP_MINUTES", "30")))
+INVOICE_SEND_MAX_RETRIES = max(1, int(os.getenv("BAUPASS_INVOICE_SEND_MAX_RETRIES", "5")))
+INVOICE_RETRY_CRITICAL_WARN_THRESHOLD = max(1, int(os.getenv("BAUPASS_INVOICE_RETRY_CRITICAL_WARN_THRESHOLD", "10")))
+INVOICE_RETRY_CRITICAL_ALERT_THRESHOLD = max(
+    INVOICE_RETRY_CRITICAL_WARN_THRESHOLD,
+    int(os.getenv("BAUPASS_INVOICE_RETRY_CRITICAL_ALERT_THRESHOLD", "20")),
+)
+INVOICE_RETRY_ALERT_EMAIL_COOLDOWN_MINUTES = max(
+    5,
+    int(os.getenv("BAUPASS_INVOICE_RETRY_ALERT_EMAIL_COOLDOWN_MINUTES", "30")),
+)
+INVOICE_RETRY_ALERT_TOP_ITEMS = max(3, int(os.getenv("BAUPASS_INVOICE_RETRY_ALERT_TOP_ITEMS", "5")))
+INVOICE_SMTP_CIRCUIT_FAIL_THRESHOLD = max(2, int(os.getenv("BAUPASS_INVOICE_SMTP_CIRCUIT_FAIL_THRESHOLD", "3")))
+INVOICE_SMTP_CIRCUIT_OPEN_SECONDS = max(120, int(os.getenv("BAUPASS_INVOICE_SMTP_CIRCUIT_OPEN_SECONDS", "900")))
+INVOICE_SMTP_STUCK_MINUTES = max(5, int(os.getenv("BAUPASS_INVOICE_SMTP_STUCK_MINUTES", "20")))
+OPERATION_APPROVAL_EXPIRY_MINUTES = max(5, int(os.getenv("BAUPASS_OPERATION_APPROVAL_EXPIRY_MINUTES", "30")))
 
 REQUEST_RATE_LIMITS = {
     "import": {"max": 10, "window_seconds": 60},
@@ -153,6 +170,14 @@ _rate_lock = threading.Lock()
 
 _background_started = False
 _background_lock = threading.Lock()
+_invoice_smtp_circuit_lock = threading.Lock()
+_invoice_smtp_circuit = {
+    "consecutive_failures": 0,
+    "open_until": None,
+    "last_error": "",
+}
+_invoice_retry_guard_lock = threading.Lock()
+_invoice_retry_inflight = {}
 
 
 def get_db():
@@ -169,8 +194,19 @@ def close_db(_exc):
         db.close()
 
 
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+def utc_iso(value=None):
+    dt = value or utc_now()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat() + "Z"
+
+
 def now_iso():
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return utc_iso()
 
 
 def parse_iso_date(value):
@@ -261,7 +297,7 @@ def require_rate_limit(scope):
 
 
 def expiry_iso(hours=SESSION_TTL_HOURS):
-    return (datetime.utcnow() + timedelta(hours=hours)).replace(microsecond=0).isoformat() + "Z"
+    return utc_iso(utc_now() + timedelta(hours=hours))
 
 
 def _next_local_midnight_utc():
@@ -315,6 +351,11 @@ def purge_expired_worker_app_sessions(db, now_value=None):
 def normalize_company_plan(plan_value):
     plan = str(plan_value or "").strip().lower()
     return plan if plan in PLAN_NET_PRICE_EUR else "tageskarte"
+
+
+def normalize_branding_preset(value):
+    preset = str(value or "").strip().lower()
+    return preset if preset in {"construction", "industry", "premium"} else "construction"
 
 
 def slugify_company_alias(value):
@@ -559,7 +600,7 @@ def can_attempt_login(throttle_key):
     locked_until = state.get("locked_until")
     if not locked_until:
         return True, 0
-    now = datetime.utcnow()
+    now = utc_now()
     if now >= locked_until:
         failed_login_attempts.pop(throttle_key, None)
         return True, 0
@@ -568,7 +609,7 @@ def can_attempt_login(throttle_key):
 
 
 def register_login_failure(throttle_key):
-    now = datetime.utcnow()
+    now = utc_now()
     state = failed_login_attempts.get(throttle_key, {"count": 0, "locked_until": None})
     state["count"] = int(state.get("count", 0)) + 1
     if state["count"] >= LOGIN_MAX_ATTEMPTS:
@@ -593,7 +634,10 @@ def get_user_from_session_token(token_value):
     if not token_value:
         return None
     db = get_db()
-    session = db.execute("SELECT user_id, expires_at FROM sessions WHERE token = ?", (token_value,)).fetchone()
+    session = db.execute(
+        "SELECT user_id, expires_at, support_read_only, support_company_name, support_actor_name, preview_company_id FROM sessions WHERE token = ?",
+        (token_value,),
+    ).fetchone()
     if not session:
         return None
     if session["expires_at"] < now_iso():
@@ -601,7 +645,14 @@ def get_user_from_session_token(token_value):
         db.commit()
         return None
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-    return row_to_dict(user) if user else None
+    if not user:
+        return None
+    payload = row_to_dict(user)
+    payload["support_read_only"] = is_read_only_support_session(session)
+    payload["support_company_name"] = session["support_company_name"] or ""
+    payload["support_actor_name"] = session["support_actor_name"] or ""
+    payload["preview_company_id"] = session["preview_company_id"] or ""
+    return payload
 
 
 def render_login_page():
@@ -825,6 +876,14 @@ def render_login_page():
                             showError('Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswählen.');
                             return;
                         }
+                        if (code === 'support_company_mismatch') {
+                            showError('Dieser Login passt nicht zur ausgewaehlten Firma. Bitte den Firmen-Admin der markierten Firma verwenden.');
+                            return;
+                        }
+                        if (code === 'support_session_read_only') {
+                            showError('Dieser Support-Login ist nur lesend. Aenderungen sind in dieser Sitzung gesperrt.');
+                            return;
+                        }
                         showError('Login fehlgeschlagen: ' + code);
                         return;
                     }
@@ -993,6 +1052,7 @@ def init_db():
             billing_email TEXT NOT NULL DEFAULT '',
             document_email TEXT NOT NULL DEFAULT '',
             access_host TEXT NOT NULL DEFAULT '',
+            branding_preset TEXT NOT NULL DEFAULT 'construction',
             plan TEXT NOT NULL,
             status TEXT NOT NULL,
             deleted_at TEXT
@@ -1132,6 +1192,44 @@ def init_db():
             FOREIGN KEY(created_by_user_id) REFERENCES users(id)
         );
 
+        CREATE TABLE IF NOT EXISTS invoice_send_attempts (
+            id TEXT PRIMARY KEY,
+            invoice_id TEXT NOT NULL,
+            attempt_number INTEGER NOT NULL,
+            outcome TEXT NOT NULL,
+            error_message TEXT NOT NULL DEFAULT '',
+            actor_label TEXT NOT NULL DEFAULT 'system',
+            next_retry_at TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(invoice_id) REFERENCES invoices(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS invoice_dead_letters (
+            id TEXT PRIMARY KEY,
+            invoice_id TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            last_error TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            resolved_at TEXT,
+            FOREIGN KEY(invoice_id) REFERENCES invoices(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS operation_approvals (
+            id TEXT PRIMARY KEY,
+            action_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            requested_by_user_id TEXT NOT NULL,
+            requested_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            decided_by_user_id TEXT,
+            decided_at TEXT,
+            decision_note TEXT NOT NULL DEFAULT '',
+            execution_result_json TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(requested_by_user_id) REFERENCES users(id),
+            FOREIGN KEY(decided_by_user_id) REFERENCES users(id)
+        );
+
         CREATE TABLE IF NOT EXISTS email_inbox (
             id TEXT PRIMARY KEY,
             message_id TEXT NOT NULL DEFAULT '',
@@ -1264,6 +1362,8 @@ def init_db():
         cur.execute("ALTER TABLE companies ADD COLUMN access_host TEXT NOT NULL DEFAULT ''")
     if "document_email" not in company_columns:
         cur.execute("ALTER TABLE companies ADD COLUMN document_email TEXT NOT NULL DEFAULT ''")
+    if "branding_preset" not in company_columns:
+        cur.execute("ALTER TABLE companies ADD COLUMN branding_preset TEXT NOT NULL DEFAULT 'construction'")
 
     worker_columns = [row[1] for row in cur.execute("PRAGMA table_info(workers)").fetchall()]
     if "deleted_at" not in worker_columns:
@@ -1311,6 +1411,14 @@ def init_db():
     session_columns = [row[1] for row in cur.execute("PRAGMA table_info(sessions)").fetchall()]
     if "last_seen" not in session_columns:
         cur.execute("ALTER TABLE sessions ADD COLUMN last_seen TEXT")
+    if "support_read_only" not in session_columns:
+        cur.execute("ALTER TABLE sessions ADD COLUMN support_read_only INTEGER NOT NULL DEFAULT 0")
+    if "support_company_name" not in session_columns:
+        cur.execute("ALTER TABLE sessions ADD COLUMN support_company_name TEXT NOT NULL DEFAULT ''")
+    if "support_actor_name" not in session_columns:
+        cur.execute("ALTER TABLE sessions ADD COLUMN support_actor_name TEXT NOT NULL DEFAULT ''")
+    if "preview_company_id" not in session_columns:
+        cur.execute("ALTER TABLE sessions ADD COLUMN preview_company_id TEXT")
 
     invoice_columns = [row[1] for row in cur.execute("PRAGMA table_info(invoices)").fetchall()]
     if "due_date" not in invoice_columns:
@@ -1325,6 +1433,20 @@ def init_db():
         cur.execute("ALTER TABLE invoices ADD COLUMN last_reminder_sent_at TEXT")
     if "last_reminder_error" not in invoice_columns:
         cur.execute("ALTER TABLE invoices ADD COLUMN last_reminder_error TEXT")
+    if "send_attempt_count" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN send_attempt_count INTEGER NOT NULL DEFAULT 0")
+    if "last_send_attempt_at" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN last_send_attempt_at TEXT")
+    if "next_retry_at" not in invoice_columns:
+        cur.execute("ALTER TABLE invoices ADD COLUMN next_retry_at TEXT")
+
+    operation_approval_columns = [row[1] for row in cur.execute("PRAGMA table_info(operation_approvals)").fetchall()]
+    if "expires_at" not in operation_approval_columns:
+        cur.execute("ALTER TABLE operation_approvals ADD COLUMN expires_at TEXT")
+        cur.execute(
+            "UPDATE operation_approvals SET expires_at = ? WHERE COALESCE(TRIM(expires_at), '') = ''",
+            ((utc_now() + timedelta(minutes=OPERATION_APPROVAL_EXPIRY_MINUTES)).replace(microsecond=0).isoformat().replace("+00:00", "Z"),),
+        )
 
     # Rechnungsnummern pro Firma eindeutig halten: Alt-Duplikate bereinigen und Unique-Index setzen.
     duplicates = cur.execute(
@@ -1401,6 +1523,17 @@ def row_to_dict(row):
 def serialize_user(user_row):
     if not user_row:
         return None
+    support_read_only = False
+    support_company_name = ""
+    support_actor_name = ""
+    if hasattr(user_row, "keys"):
+        keys = set(user_row.keys())
+        support_read_only = "support_read_only" in keys and bool(user_row["support_read_only"])
+        support_company_name = user_row["support_company_name"] if "support_company_name" in keys and user_row["support_company_name"] else ""
+        support_actor_name = user_row["support_actor_name"] if "support_actor_name" in keys and user_row["support_actor_name"] else ""
+    preview_company_id = ""
+    if hasattr(user_row, "keys") and "preview_company_id" in user_row.keys():
+        preview_company_id = user_row["preview_company_id"] or ""
     return {
         "id": user_row["id"],
         "username": user_row["username"],
@@ -1408,6 +1541,10 @@ def serialize_user(user_row):
         "role": user_row["role"],
         "company_id": user_row["company_id"],
         "twofa_enabled": int(user_row["twofa_enabled"]),
+        "support_read_only": support_read_only,
+        "support_company_name": support_company_name,
+        "support_actor_name": support_actor_name,
+        "preview_company_id": preview_company_id,
     }
 
 
@@ -1436,6 +1573,20 @@ def log_audit(event_type, message, target_type=None, target_id=None, company_id=
     db.commit()
 
 
+def is_read_only_support_session(session_row):
+    if not session_row:
+        return False
+    if hasattr(session_row, "keys") and "support_read_only" in session_row.keys():
+        return bool(session_row["support_read_only"])
+    return False
+
+
+def is_read_only_support_request_allowed():
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return True
+    return request.path in {"/api/logout", "/api/me/heartbeat"}
+
+
 def is_tenant_host_valid(db, user):
     if not user or user.get("role") == "superadmin":
         return True
@@ -1459,7 +1610,10 @@ def require_auth(handler):
         if not token:
             return jsonify({"error": "unauthorized"}), 401
         db = get_db()
-        session = db.execute("SELECT user_id, expires_at FROM sessions WHERE token = ?", (token,)).fetchone()
+        session = db.execute(
+            "SELECT user_id, expires_at, support_read_only, support_company_name, support_actor_name, preview_company_id FROM sessions WHERE token = ?",
+            (token,),
+        ).fetchone()
         if not session:
             return jsonify({"error": "invalid_session"}), 401
 
@@ -1476,6 +1630,10 @@ def require_auth(handler):
             return jsonify({"error": "account_disabled"}), 403
 
         user_payload = row_to_dict(user)
+        user_payload["support_read_only"] = is_read_only_support_session(session)
+        user_payload["support_company_name"] = session["support_company_name"] or ""
+        user_payload["support_actor_name"] = session["support_actor_name"] or ""
+        user_payload["preview_company_id"] = session["preview_company_id"] or ""
 
         if not is_tenant_host_valid(db, user_payload):
             return jsonify({"error": "forbidden_tenant_host"}), 403
@@ -1493,11 +1651,16 @@ def require_auth(handler):
             if whitelist and not ip_allowed(get_client_ip(), whitelist):
                 return jsonify({"error": "admin_ip_not_allowed"}), 403
 
+        if is_read_only_support_session(session) and not is_read_only_support_request_allowed():
+            return jsonify({"error": "support_session_read_only"}), 403
+
         db.execute("UPDATE sessions SET expires_at = ? WHERE token = ?", (expiry_iso(), token))
         db.commit()
 
         g.current_user = user_payload
         g.token = token
+        g.current_session = row_to_dict(session)
+        g.preview_company_id = user_payload["preview_company_id"] if user_payload.get("role") == "superadmin" else ""
         return handler(*args, **kwargs)
 
     return wrapper
@@ -1571,6 +1734,9 @@ def update_worker_photo():
 
 def visible_company_clause(user):
     if user["role"] == "superadmin":
+        preview_id = getattr(g, "preview_company_id", "") if has_request_context() else ""
+        if preview_id:
+            return " WHERE id = ?", [preview_id]
         return "", []
     return " WHERE id = ?", [user["company_id"]]
 
@@ -1664,7 +1830,7 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
 
 def run_invoice_dunning_cycle(db):
     """Update overdue status and send staged reminders before automatic suspension."""
-    today = datetime.utcnow().date()
+    today = utc_now().date()
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
     rows = db.execute(
         """
@@ -1754,7 +1920,7 @@ def run_invoice_dunning_cycle(db):
 
 def create_system_alert(db, code, severity, message, details="", dedup_minutes=ALERT_DEDUP_MINUTES):
     details_text = details if isinstance(details, str) else json.dumps(details, ensure_ascii=False)
-    threshold = (datetime.utcnow() - timedelta(minutes=dedup_minutes)).replace(microsecond=0).isoformat() + "Z"
+    threshold = utc_iso(utc_now() - timedelta(minutes=dedup_minutes))
     recent = db.execute(
         """
         SELECT id
@@ -1778,14 +1944,14 @@ def create_system_alert(db, code, severity, message, details="", dedup_minutes=A
 
 
 def rotate_import_backups(backup_dir):
-    now_dt = datetime.utcnow()
+    now_dt = utc_now()
     removed = 0
     kept = 0
     errors = 0
 
     for path in backup_dir.glob("import-backup-*.json"):
         try:
-            mtime = datetime.utcfromtimestamp(path.stat().st_mtime)
+            mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
             age_days = (now_dt - mtime).days
             if age_days >= BACKUP_RETENTION_DAYS:
                 path.unlink(missing_ok=True)
@@ -1856,7 +2022,7 @@ def create_import_rollback_backup(db, role, target_company_id):
             ).fetchall()
         ]
 
-    filename = f"import-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}.json"
+    filename = f"import-backup-{utc_now().strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}.json"
     backup_path = backup_dir / filename
     backup_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     if rotation.get("errors"):
@@ -1879,8 +2045,8 @@ def check_visitor_card_expiry_notifications(db):
     if not smtp_host or not smtp_sender:
         return  # SMTP not configured, nothing to do
 
-    now = datetime.utcnow()
-    cutoff = (now + timedelta(hours=24)).isoformat()
+    now = utc_now()
+    cutoff = utc_iso(now + timedelta(hours=24))
     today_str = now.date().isoformat()
 
     expiring = db.execute(
@@ -1982,6 +2148,7 @@ def start_background_jobs():
 
     interval_hours = max(1, int(os.getenv("BAUPASS_DUNNING_INTERVAL_HOURS", "24")))
     session_cleanup_seconds = max(60, int(os.getenv("BAUPASS_WORKER_SESSION_CLEANUP_SECONDS", "300")))
+    invoice_retry_seconds = max(60, int(os.getenv("BAUPASS_INVOICE_RETRY_SECONDS", "180")))
 
     def scheduler_loop():
         while True:
@@ -2018,7 +2185,7 @@ def start_background_jobs():
             with app.app_context():
                 db = get_db()
                 today = now_iso()[:10]
-                warn_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
+                warn_date = (utc_now() + timedelta(days=30)).strftime("%Y-%m-%d")
                 rows = db.execute(
                     """SELECT wd.id, wd.doc_type, wd.expiry_date, wd.worker_id,
                               w.first_name, w.last_name, w.badge_id, w.company_id,
@@ -2062,7 +2229,7 @@ def start_background_jobs():
                     return
 
                 today = now_iso()[:10]
-                yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+                yesterday = (utc_now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
                 total_entries = db.execute(
                     "SELECT COUNT(*) AS c FROM access_logs WHERE DATE(check_in_time) = ?", (yesterday,)
@@ -2126,8 +2293,99 @@ def start_background_jobs():
                 pass
             time.sleep(session_cleanup_seconds)
 
+    def invoice_retry_loop():
+        while True:
+            try:
+                with app.app_context():
+                    db = get_db()
+                    result = retry_failed_invoice_deliveries(db)
+                    if int(result.get("failed", 0)) > 0:
+                        create_system_alert(
+                            db,
+                            code="invoice_retry_failures",
+                            severity="warning",
+                            message=f"Automatische Rechnungs-Retries hatten {int(result.get('failed', 0))} Fehlschläge.",
+                            details=result,
+                            dedup_minutes=15,
+                        )
+
+                    summary = get_critical_invoice_retry_summary(
+                        db,
+                        min_score=70,
+                        top_items=INVOICE_RETRY_ALERT_TOP_ITEMS,
+                    )
+                    critical_count = int(summary.get("criticalCount", 0))
+                    if critical_count >= INVOICE_RETRY_CRITICAL_WARN_THRESHOLD:
+                        severity = "critical" if critical_count >= INVOICE_RETRY_CRITICAL_ALERT_THRESHOLD else "warning"
+                        create_system_alert(
+                            db,
+                            code=f"invoice_retry_backlog_{severity}",
+                            severity=severity,
+                            message=(
+                                f"Rechnungs-Retry-Queue hat {critical_count} kritische Faelle "
+                                f"(Score >= 70)."
+                            ),
+                            details=summary,
+                            dedup_minutes=20,
+                        )
+
+                        mail_sent, reason = send_invoice_retry_backlog_alert_email(db, summary, severity)
+                        if (not mail_sent) and reason not in {"cooldown", "smtp_not_configured", "no_recipients", "settings_missing"}:
+                            create_system_alert(
+                                db,
+                                code="invoice_retry_backlog_email_failed",
+                                severity="warning",
+                                message="E-Mail-Alarm fuer kritische Retry-Faelle konnte nicht gesendet werden.",
+                                details={"error": reason, "severity": severity, "criticalCount": critical_count},
+                                dedup_minutes=30,
+                            )
+
+                    smtp_stuck_threshold = utc_iso(
+                        utc_now() - timedelta(minutes=INVOICE_SMTP_STUCK_MINUTES)
+                    )
+                    smtp_stuck_count = db.execute(
+                        """
+                        SELECT COUNT(*) AS c
+                        FROM invoices
+                        WHERE status = 'send_failed'
+                          AND paid_at IS NULL
+                          AND COALESCE(error_message, '') <> ''
+                          AND (
+                              LOWER(error_message) LIKE '%smtp%'
+                              OR LOWER(error_message) LIKE '%timeout%'
+                              OR LOWER(error_message) LIKE '%connection refused%'
+                              OR LOWER(error_message) LIKE '%network is unreachable%'
+                              OR LOWER(error_message) LIKE '%getaddrinfo%'
+                              OR LOWER(error_message) LIKE '%name or service%'
+                              OR LOWER(error_message) LIKE '%authentication%'
+                              OR LOWER(error_message) LIKE '%535%'
+                          )
+                          AND COALESCE(last_send_attempt_at, created_at) <= ?
+                        """,
+                        (smtp_stuck_threshold,),
+                    ).fetchone()["c"]
+                    if int(smtp_stuck_count or 0) > 0:
+                        create_system_alert(
+                            db,
+                            code="invoice_smtp_stuck_failures",
+                            severity="critical",
+                            message=(
+                                f"SMTP-Fehler dauern bereits laenger als {INVOICE_SMTP_STUCK_MINUTES} Minuten an "
+                                f"({int(smtp_stuck_count)} Rechnung(en))."
+                            ),
+                            details={
+                                "thresholdMinutes": INVOICE_SMTP_STUCK_MINUTES,
+                                "affectedInvoices": int(smtp_stuck_count),
+                            },
+                            dedup_minutes=15,
+                        )
+            except Exception:
+                pass
+            time.sleep(invoice_retry_seconds)
+
     threading.Thread(target=scheduler_loop, name="baupass-dunning-scheduler", daemon=True).start()
     threading.Thread(target=worker_session_cleanup_loop, name="baupass-worker-session-cleanup", daemon=True).start()
+    threading.Thread(target=invoice_retry_loop, name="baupass-invoice-retry", daemon=True).start()
 
 
 def get_company_access_error(db, company_id):
@@ -2153,12 +2411,18 @@ def get_company_access_error(db, company_id):
 
 def visible_worker_clause(user, prefix=""):
     if user["role"] == "superadmin":
+        preview_id = getattr(g, "preview_company_id", "") if has_request_context() else ""
+        if preview_id:
+            return f" WHERE {prefix}company_id = ?", [preview_id]
         return "", []
     return f" WHERE {prefix}company_id = ?", [user["company_id"]]
 
 
 def visible_log_clause(user):
     if user["role"] == "superadmin":
+        preview_id = getattr(g, "preview_company_id", "") if has_request_context() else ""
+        if preview_id:
+            return " WHERE workers.company_id = ?", [preview_id]
         return "", []
     return " WHERE workers.company_id = ?", [user["company_id"]]
 
@@ -2576,6 +2840,8 @@ def login():
     password = payload.get("password") or ""
     otp_code = (payload.get("otpCode") or "").strip()
     login_scope = (payload.get("loginScope") or "auto").strip().lower()
+    support_company_id = (payload.get("supportCompanyId") or "").strip()
+    support_actor_name = (payload.get("supportActorName") or "").strip()
 
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE lower(username) = ?", (username,)).fetchone()
@@ -2615,19 +2881,43 @@ def login():
             log_audit("login.blocked", f"Login fuer {user['username']} wegen Firmensperre blockiert", target_type="company", target_id=user["company_id"])
             return login_error(company_error["error"], companyStatus=company_error["companyStatus"], companyName=company_error["companyName"], message=company_error.get("message", ""))
 
+    support_read_only = 0
+    support_company_name = ""
+    if support_company_id:
+        if user["role"] != "company-admin" or user["company_id"] != support_company_id:
+            register_login_failure(throttle_key)
+            return login_error("support_company_mismatch")
+        company_row = db.execute("SELECT id, name FROM companies WHERE id = ?", (support_company_id,)).fetchone()
+        if not company_row:
+            register_login_failure(throttle_key)
+            return login_error("company_not_found")
+        support_read_only = 1
+        support_company_name = company_row["name"] or ""
+
     clear_login_failures(throttle_key)
 
     token = secrets.token_urlsafe(24)
     db.execute("DELETE FROM sessions WHERE user_id = ?", (user["id"],))
     db.execute(
-        "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
-        (token, user["id"], expiry_iso()),
+        """
+        INSERT INTO sessions (token, user_id, expires_at, support_read_only, support_company_name, support_actor_name)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (token, user["id"], expiry_iso(), support_read_only, support_company_name, support_actor_name),
     )
     db.commit()
 
-    log_audit("login.success", f"Benutzer {user['username']} angemeldet", target_type="user", target_id=user["id"], actor=row_to_dict(user))
+    login_message = f"Benutzer {user['username']} angemeldet"
+    if support_read_only:
+        actor_label = support_actor_name or "Support"
+        login_message = f"Support-Login fuer {support_company_name or user['username']} gestartet durch {actor_label} (nur lesen)"
+    log_audit("login.success", login_message, target_type="user", target_id=user["id"], actor=row_to_dict(user), company_id=user["company_id"])
 
-    response = jsonify({"ok": True, "token": token, "user": serialize_user(user)})
+    response_user = row_to_dict(user)
+    response_user["support_read_only"] = bool(support_read_only)
+    response_user["support_company_name"] = support_company_name
+    response_user["support_actor_name"] = support_actor_name
+    response = jsonify({"ok": True, "token": token, "user": serialize_user(response_user)})
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
@@ -2721,7 +3011,7 @@ def system_status():
     ).fetchall()
 
     locks = []
-    now = datetime.utcnow()
+    now = utc_now()
     for key, state in list(failed_login_attempts.items()):
         locked_until = state.get("locked_until")
         if not locked_until:
@@ -2817,6 +3107,33 @@ def system_recover_admin():
         target_id=user["id"],
     )
     return jsonify({"ok": True, "username": username, "role": user["role"]})
+
+
+@app.post("/api/superadmin/preview-session")
+@require_auth
+@require_roles("superadmin")
+def set_superadmin_preview_session():
+    data = request.json or {}
+    company_id = (data.get("company_id") or "").strip()
+    db = get_db()
+    if company_id:
+        company = db.execute("SELECT id, name FROM companies WHERE id = ? AND deleted_at IS NULL", (company_id,)).fetchone()
+        if not company:
+            return jsonify({"error": "company_not_found"}), 404
+        db.execute("UPDATE sessions SET preview_company_id = ? WHERE token = ?", (company_id, g.token))
+        db.commit()
+        log_audit(
+            "superadmin.preview_session.start",
+            f"Superadmin-Vorschau gestartet fuer Unternehmen: {company['name']} ({company_id})",
+            target_type="company",
+            target_id=company_id,
+            actor=g.current_user,
+        )
+        return jsonify({"ok": True, "preview_company_id": company_id})
+    else:
+        db.execute("UPDATE sessions SET preview_company_id = NULL WHERE token = ?", (g.token,))
+        db.commit()
+        return jsonify({"ok": True, "preview_company_id": None})
 
 
 @app.post("/api/system/repair")
@@ -3101,7 +3418,7 @@ def export_company_document_emails_csv():
 
     csv_text = output.getvalue()
     output.close()
-    filename = f"company-document-emails-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.csv"
+    filename = f"company-document-emails-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
     return Response(
         csv_text,
         mimetype="text/csv; charset=utf-8",
@@ -3192,6 +3509,7 @@ def create_subcompany():
 def create_company():
     payload = request.get_json(silent=True) or {}
     company_id = f"cmp-{secrets.token_hex(6)}"
+    turnstile_endpoint = clean_text_input(payload.get("turnstileEndpoint", ""), max_len=320)
     company_name = clean_text_input(payload.get("name", "Neue Firma"), max_len=120) or "Neue Firma"
     company_contact = clean_text_input(payload.get("contact", ""), max_len=180)
     billing_email = clean_text_input(payload.get("billingEmail", ""), max_len=160)
@@ -3199,6 +3517,7 @@ def create_company():
     if not document_email:
         document_email = suggest_company_document_email(company_name)
     access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or "").strip().lower(), max_len=180)
+    branding_preset = normalize_branding_preset(payload.get("brandingPreset") or payload.get("branding_preset"))
     company_status = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
     admin_password = (payload.get("adminPassword") or "").strip() or "1234"
     turnstile_password = (payload.get("turnstilePassword") or "").strip() or admin_password
@@ -3216,8 +3535,10 @@ def create_company():
         return jsonify({"error": "turnstile_password_too_short", "message": "Drehkreuz-Passwort muss mindestens 4 Zeichen haben."}), 400
 
     db = get_db()
+    if turnstile_endpoint:
+        db.execute("UPDATE settings SET turnstile_endpoint = ? WHERE id = 1", (turnstile_endpoint,))
     db.execute(
-        "INSERT INTO companies (id, name, contact, billing_email, document_email, access_host, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO companies (id, name, contact, billing_email, document_email, access_host, branding_preset, plan, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             company_id,
             company_name,
@@ -3225,6 +3546,7 @@ def create_company():
             billing_email,
             document_email,
             access_host,
+            branding_preset,
             normalize_company_plan(payload.get("plan", "tageskarte")),
             company_status,
         ),
@@ -3433,7 +3755,7 @@ def demo_seed():
     if include_invoices:
         company = db.execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
         created_by = g.current_user["id"]
-        base_date = datetime.utcnow().date()
+        base_date = utc_now().date()
         invoice_examples = [
             {
                 "number": f"RE-{base_date.year}-{secrets.token_hex(2).upper()}",
@@ -4292,16 +4614,18 @@ def update_company(company_id):
     if not company_document_email:
         company_document_email = suggest_company_document_email(company_name)
     company_access_host = clean_text_input((payload.get("accessHost") or payload.get("access_host") or company["access_host"]), max_len=180)
+    company_branding_preset = normalize_branding_preset(payload.get("brandingPreset") or payload.get("branding_preset") or company["branding_preset"])
     company_status = clean_text_input(payload.get("status", company["status"]), max_len=32) or company["status"]
 
     db.execute(
-        "UPDATE companies SET name = ?, contact = ?, billing_email = ?, document_email = ?, access_host = ?, plan = ?, status = ? WHERE id = ?",
+        "UPDATE companies SET name = ?, contact = ?, billing_email = ?, document_email = ?, access_host = ?, branding_preset = ?, plan = ?, status = ? WHERE id = ?",
         (
             company_name,
             company_contact,
             company_billing_email,
             company_document_email,
             company_access_host,
+            company_branding_preset,
             payload.get("plan", company["plan"]),
             company_status,
             company_id,
@@ -4444,8 +4768,12 @@ def add_company_turnstile(company_id):
 
 @app.get("/api/companies/<company_id>/turnstiles")
 @require_auth
-@require_roles("superadmin")
+@require_roles("superadmin", "company-admin")
 def list_company_turnstiles(company_id):
+    user = g.current_user
+    # Company-Admins duerfen nur ihre eigene Firma einsehen
+    if user["role"] == "company-admin" and user.get("company_id") != company_id:
+        return jsonify({"error": "forbidden"}), 403
     db = get_db()
     company = db.execute("SELECT id FROM companies WHERE id = ? AND deleted_at IS NULL", (company_id,)).fetchone()
     if not company:
@@ -4561,7 +4889,7 @@ def compliance_overview():
                         if overall != "red":
                             overall = "yellow"
                     elif expiry:
-                        days_left = (datetime.strptime(expiry, "%Y-%m-%d") - datetime.utcnow()).days
+                        days_left = (datetime.strptime(expiry, "%Y-%m-%d").date() - utc_now().date()).days
                         if days_left <= 30:
                             worker_status[req] = "expiring_soon"
                             if overall == "ok":
@@ -4616,7 +4944,7 @@ def request_password_reset():
     raw_token = secrets.token_urlsafe(32)
     token_hash = __import__("hashlib").sha256(raw_token.encode()).hexdigest()
     token_id = f"rst-{secrets.token_hex(8)}"
-    expires_at = (datetime.utcnow() + timedelta(hours=2)).replace(microsecond=0).isoformat() + "Z"
+    expires_at = utc_iso(utc_now() + timedelta(hours=2))
 
     db.execute(
         "INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, created_at) VALUES (?,?,?,?,?)",
@@ -4876,7 +5204,7 @@ def access_summary():
 
 @app.get("/api/reporting/summary")
 @require_auth
-@require_roles("superadmin")
+@require_roles("superadmin", "company-admin")
 def reporting_summary():
     db = get_db()
     user = g.current_user
@@ -5225,8 +5553,9 @@ def gate_tap():
     if not physical_card_id:
         return jsonify({"error": "missing_physical_card_id"}), 400
 
-    direction = (payload.get("direction") or "check-in").strip().lower()
-    if direction not in {"check-in", "check-out"}:
+    requested_direction = (payload.get("direction") or "").strip().lower()
+    direction = requested_direction
+    if requested_direction and requested_direction not in {"check-in", "check-out", "auto", "toggle"}:
         return jsonify({"error": "invalid_direction"}), 400
 
     gate_name = (payload.get("gate") or "NFC Gate").strip() or "NFC Gate"
@@ -5250,6 +5579,22 @@ def gate_tap():
         return jsonify({"error": "duplicate_physical_card_id"}), 409
 
     worker = workers[0]
+
+    if requested_direction in {"", "auto", "toggle"}:
+        latest_log = db.execute(
+            """
+            SELECT direction
+            FROM access_logs
+            WHERE worker_id = ?
+            ORDER BY timestamp DESC, id DESC
+            LIMIT 1
+            """,
+            (worker["id"],),
+        ).fetchone()
+        direction = "check-out" if latest_log and str(latest_log["direction"] or "").lower() == "check-in" else "check-in"
+    elif requested_direction in {"check-in", "check-out"}:
+        direction = requested_direction
+
     company_error = get_company_access_error(db, worker["company_id"])
     if company_error:
         return jsonify(company_error), 403
@@ -5269,6 +5614,10 @@ def gate_tap():
         actor=None,
     )
 
+    feedback_message = "Du bist jetzt angemeldet." if direction == "check-in" else "Du bist jetzt abgemeldet."
+    feedback_title = "ANMELDUNG ERFOLGREICH" if direction == "check-in" else "ABMELDUNG ERFOLGREICH"
+    feedback_tone = "success_in" if direction == "check-in" else "success_out"
+
     return jsonify(
         {
             "ok": True,
@@ -5283,6 +5632,9 @@ def gate_tap():
             "direction": direction,
             "gate": gate_name,
             "timestamp": timestamp_value,
+            "feedbackTitle": feedback_title,
+            "feedbackMessage": feedback_message,
+            "feedbackTone": feedback_tone,
         }
     ), 201
 
@@ -5321,9 +5673,983 @@ def send_invoice_email(invoice_row, company_row, settings_row):
         return False, str(exc)
 
 
+def get_invoice_retry_delay_seconds(attempt_count):
+    # 1. Fehler: 5 min, 2. Fehler: 15 min, danach 30 min
+    if attempt_count <= 1:
+        return 5 * 60
+    if attempt_count == 2:
+        return 15 * 60
+    return 30 * 60
+
+
+def is_smtp_related_error(error_message):
+    msg = str(error_message or "").strip().lower()
+    if not msg:
+        return False
+    smtp_markers = [
+        "smtp",
+        "timed out",
+        "timeout",
+        "connection refused",
+        "network is unreachable",
+        "getaddrinfo",
+        "name or service not known",
+        "authentication",
+        "535",
+        "mail server",
+    ]
+    return any(marker in msg for marker in smtp_markers)
+
+
+def classify_invoice_send_error(error_message):
+    msg = str(error_message or "").strip().lower()
+    if not msg:
+        return "unknown"
+    if any(token in msg for token in ["535", "authentication", "username", "password", "auth"]):
+        return "auth"
+    if any(token in msg for token in ["429", "rate", "too many", "421"]):
+        return "rate_limit"
+    if any(token in msg for token in ["timeout", "timed out", "connection refused", "network is unreachable", "getaddrinfo", "name or service"]):
+        return "network"
+    if any(token in msg for token in ["550", "mailbox", "recipient", "user unknown"]):
+        return "recipient"
+    if "smtp ist nicht konfiguriert" in msg:
+        return "config"
+    return "other"
+
+
+def get_adaptive_invoice_retry_delay_seconds(attempt_count, error_message):
+    base = get_invoice_retry_delay_seconds(attempt_count)
+    category = classify_invoice_send_error(error_message)
+    if category == "network":
+        return int(base * 2)
+    if category == "auth":
+        return max(60 * 30, int(base * 3))
+    if category == "rate_limit":
+        return max(60 * 20, int(base * 2.5))
+    if category == "config":
+        return max(60 * 30, int(base * 3))
+    return int(base)
+
+
+def get_invoice_smtp_circuit_open_until():
+    with _invoice_smtp_circuit_lock:
+        value = _invoice_smtp_circuit.get("open_until")
+        if isinstance(value, datetime):
+            return value
+        return None
+
+
+def is_invoice_smtp_circuit_open():
+    open_until = get_invoice_smtp_circuit_open_until()
+    if not open_until:
+        return False
+    return datetime.now(timezone.utc) < open_until
+
+
+def on_invoice_send_success_reset_circuit():
+    with _invoice_smtp_circuit_lock:
+        _invoice_smtp_circuit["consecutive_failures"] = 0
+        _invoice_smtp_circuit["open_until"] = None
+        _invoice_smtp_circuit["last_error"] = ""
+
+
+def on_invoice_send_failure_update_circuit(error_message):
+    if not is_smtp_related_error(error_message):
+        return
+    with _invoice_smtp_circuit_lock:
+        failures = int(_invoice_smtp_circuit.get("consecutive_failures") or 0) + 1
+        _invoice_smtp_circuit["consecutive_failures"] = failures
+        _invoice_smtp_circuit["last_error"] = str(error_message or "")
+        if failures >= INVOICE_SMTP_CIRCUIT_FAIL_THRESHOLD:
+            _invoice_smtp_circuit["open_until"] = datetime.now(timezone.utc) + timedelta(seconds=INVOICE_SMTP_CIRCUIT_OPEN_SECONDS)
+
+
+def create_invoice_dead_letter(db, invoice_id, reason, last_error=""):
+    existing = db.execute(
+        "SELECT id FROM invoice_dead_letters WHERE invoice_id = ? AND resolved_at IS NULL ORDER BY created_at DESC LIMIT 1",
+        (invoice_id,),
+    ).fetchone()
+    if existing:
+        return existing["id"]
+
+    dead_id = f"idl-{secrets.token_hex(6)}"
+    db.execute(
+        """
+        INSERT INTO invoice_dead_letters (id, invoice_id, reason, last_error, created_at, resolved_at)
+        VALUES (?, ?, ?, ?, ?, NULL)
+        """,
+        (dead_id, invoice_id, str(reason or "manual_review"), str(last_error or ""), now_iso()),
+    )
+    return dead_id
+
+
+def resolve_invoice_dead_letters(db, invoice_id):
+    db.execute(
+        """
+        UPDATE invoice_dead_letters
+        SET resolved_at = ?
+        WHERE invoice_id = ? AND resolved_at IS NULL
+        """,
+        (now_iso(), invoice_id),
+    )
+
+
+def get_invoice_dead_letters(db):
+    rows = db.execute(
+        """
+        SELECT
+            invoice_dead_letters.*,
+            invoices.invoice_number,
+            invoices.company_id,
+            invoices.recipient_email,
+            invoices.total_amount,
+            invoices.status AS invoice_status,
+            invoices.send_attempt_count,
+            invoices.last_send_attempt_at,
+            invoices.next_retry_at,
+            companies.name AS company_name
+        FROM invoice_dead_letters
+        JOIN invoices ON invoices.id = invoice_dead_letters.invoice_id
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoice_dead_letters.resolved_at IS NULL
+        ORDER BY invoice_dead_letters.created_at DESC
+        LIMIT 100
+        """
+    ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def sanitize_invoice_id_list(raw_invoice_ids, max_items=50):
+    if not isinstance(raw_invoice_ids, list):
+        return []
+    cleaned_ids = []
+    seen_ids = set()
+    for raw in raw_invoice_ids[:max_items]:
+        candidate = clean_id_input(raw)
+        if not candidate or candidate in seen_ids:
+            continue
+        seen_ids.add(candidate)
+        cleaned_ids.append(candidate)
+    return cleaned_ids
+
+
+def execute_invoice_retry_send_bulk(db, cleaned_ids, actor, success_event, failed_event):
+    results = []
+    sent_count = 0
+    failed_count = 0
+    skipped_count = 0
+
+    for invoice_id in cleaned_ids:
+        invoice = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+        if not invoice:
+            skipped_count += 1
+            results.append({"id": invoice_id, "sent": False, "error": "invoice_not_found"})
+            continue
+        if invoice["paid_at"]:
+            skipped_count += 1
+            results.append({"id": invoice_id, "sent": False, "error": "invoice_already_paid"})
+            continue
+        if str(invoice["status"] or "").lower() != "send_failed":
+            skipped_count += 1
+            results.append({"id": invoice_id, "sent": False, "error": "invoice_not_in_retry_state"})
+            continue
+
+        sent_ok, error_message, updated = attempt_invoice_delivery(
+            db,
+            invoice_id,
+            actor=actor,
+            audit_event_success=success_event,
+            audit_event_failed=failed_event,
+        )
+        if sent_ok:
+            sent_count += 1
+        else:
+            failed_count += 1
+        results.append({"id": invoice_id, "sent": sent_ok, "error": error_message if not sent_ok else "", "invoice": updated})
+
+    return {
+        "requested": len(cleaned_ids),
+        "sent": sent_count,
+        "failed": failed_count,
+        "skipped": skipped_count,
+        "results": results,
+    }
+
+
+def resolve_invoice_dead_letter_case(db, invoice_id, actor):
+    invoice = db.execute("SELECT id, invoice_number, company_id FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice:
+        return False, "invoice_not_found"
+
+    open_dead_letter = db.execute(
+        "SELECT id FROM invoice_dead_letters WHERE invoice_id = ? AND resolved_at IS NULL LIMIT 1",
+        (invoice_id,),
+    ).fetchone()
+    if not open_dead_letter:
+        return False, "dead_letter_not_found"
+
+    resolve_invoice_dead_letters(db, invoice_id)
+    log_audit(
+        "invoice.dead_letter_resolved",
+        f"Dead-Letter-Fall für Rechnung {invoice['invoice_number']} als erledigt markiert",
+        target_type="invoice",
+        target_id=invoice_id,
+        company_id=invoice["company_id"],
+        actor=actor,
+    )
+    db.commit()
+    return True, ""
+
+
+def create_operation_approval(db, action_type, payload, actor, target_type=None, target_id=None, company_id=None):
+    approval_id = f"apr-{secrets.token_hex(8)}"
+    expires_at = (utc_now() + timedelta(minutes=OPERATION_APPROVAL_EXPIRY_MINUTES)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    db.execute(
+        """
+        INSERT INTO operation_approvals (
+            id, action_type, payload_json, status, requested_by_user_id,
+            requested_at, expires_at, decided_by_user_id, decided_at, decision_note, execution_result_json
+        ) VALUES (?, ?, ?, 'pending', ?, ?, ?, NULL, NULL, '', '')
+        """,
+        (
+            approval_id,
+            str(action_type or ""),
+            json.dumps(payload or {}, ensure_ascii=True),
+            actor["id"],
+            now_iso(),
+            expires_at,
+        ),
+    )
+    db.commit()
+    log_audit(
+        "approval.requested",
+        f"Freigabe für Aktion {action_type} angefordert",
+        target_type=target_type,
+        target_id=target_id,
+        company_id=company_id,
+        actor=actor,
+    )
+    return approval_id
+
+
+def mark_expired_operation_approvals(db):
+    now_value = now_iso()
+    db.execute(
+        """
+        UPDATE operation_approvals
+        SET status = 'expired', decided_at = ?, decision_note = CASE
+            WHEN COALESCE(TRIM(decision_note), '') = '' THEN 'expired_by_timeout'
+            ELSE decision_note
+        END
+        WHERE status = 'pending' AND COALESCE(expires_at, '') <> '' AND expires_at <= ?
+        """,
+        (now_value, now_value),
+    )
+
+
+def list_pending_operation_approvals(db, limit=50, action_type="", max_age_minutes=0):
+    mark_expired_operation_approvals(db)
+
+    conditions = ["operation_approvals.status = 'pending'"]
+    params = []
+    cleaned_action = str(action_type or "").strip().lower()
+    if cleaned_action:
+        conditions.append("LOWER(operation_approvals.action_type) = ?")
+        params.append(cleaned_action)
+
+    max_age = max(0, int(max_age_minutes or 0))
+    if max_age > 0:
+        age_cutoff = (utc_now() - timedelta(minutes=max_age)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        conditions.append("operation_approvals.requested_at >= ?")
+        params.append(age_cutoff)
+
+    where_clause = " AND ".join(conditions)
+    rows = db.execute(
+        f"""
+        SELECT
+            operation_approvals.*,
+            requester.username AS requested_by_username,
+            requester.name AS requested_by_name,
+            decider.username AS decided_by_username,
+            decider.name AS decided_by_name
+        FROM operation_approvals
+        LEFT JOIN users AS requester ON requester.id = operation_approvals.requested_by_user_id
+        LEFT JOIN users AS decider ON decider.id = operation_approvals.decided_by_user_id
+        WHERE {where_clause}
+        ORDER BY operation_approvals.requested_at DESC
+        LIMIT ?
+        """,
+        (*params, max(1, min(int(limit), 200))),
+    ).fetchall()
+
+    result = []
+    for row in rows:
+        item = row_to_dict(row)
+        try:
+            item["payload"] = json.loads(item.get("payload_json") or "{}")
+        except Exception:
+            item["payload"] = {}
+        result.append(item)
+    return result
+
+
+def execute_approved_operation(db, approval_row, actor):
+    action_type = str(approval_row["action_type"] or "").strip().lower()
+    try:
+        payload = json.loads(approval_row["payload_json"] or "{}")
+    except Exception as exc:
+        raise ValueError("invalid_approval_payload") from exc
+
+    if action_type == "invoice.retry_send_bulk":
+        cleaned_ids = sanitize_invoice_id_list(payload.get("invoiceIds") or [])
+        if not cleaned_ids:
+            raise ValueError("missing_invoice_ids")
+        summary = execute_invoice_retry_send_bulk(
+            db,
+            cleaned_ids,
+            actor=actor,
+            success_event="invoice.approved_bulk_retry_sent",
+            failed_event="invoice.approved_bulk_retry_failed",
+        )
+        return {"action": action_type, "summary": summary}
+
+    if action_type == "invoice.dead_letter_resolve":
+        invoice_id = clean_id_input((payload or {}).get("invoiceId"))
+        if not invoice_id:
+            raise ValueError("missing_invoice_id")
+        resolved_ok, error_code = resolve_invoice_dead_letter_case(db, invoice_id, actor=actor)
+        if not resolved_ok:
+            raise ValueError(error_code)
+        return {"action": action_type, "invoiceId": invoice_id, "resolved": True}
+
+    raise ValueError("unsupported_approval_action")
+
+
+def build_invoice_incident_export_csv(db):
+    retry_rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoices.status = 'send_failed' AND invoices.paid_at IS NULL
+        ORDER BY COALESCE(invoices.next_retry_at, invoices.created_at) ASC
+        """
+    ).fetchall()
+    dead_letter_rows = get_invoice_dead_letters(db)
+    alert_rows = db.execute(
+        """
+        SELECT code, severity, message, details, created_at
+        FROM system_alerts
+        ORDER BY created_at DESC
+        LIMIT 25
+        """
+    ).fetchall()
+    metrics = get_invoice_ops_metrics(db)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow([
+        "record_type",
+        "key",
+        "label",
+        "invoice_id",
+        "invoice_number",
+        "company_id",
+        "company_name",
+        "severity",
+        "status",
+        "reason",
+        "recipient_email",
+        "total_amount",
+        "send_attempt_count",
+        "next_retry_at",
+        "created_at",
+        "message",
+        "details",
+    ])
+
+    summary_rows = [
+        ("critical_over_24h", "Kritische Fehlversände >24h", metrics.get("criticalOver24h", 0)),
+        ("avg_first_success_minutes", "Ø Minuten bis erster Erfolg", metrics.get("avgFirstSuccessMinutes", 0)),
+        ("open_retry_queue", "Offene Retry-Fälle", len(retry_rows)),
+        ("open_dead_letters", "Offene Dead-Letter-Fälle", len(dead_letter_rows)),
+        ("open_system_alerts", "Offene System-Alerts", len(alert_rows)),
+    ]
+    for key, label, value in summary_rows:
+        writer.writerow(["summary", key, label, "", "", "", "", "", "", "", "", value, "", "", utc_iso(), "", ""])
+
+    for error_item in metrics.get("topErrorReasons", []):
+        writer.writerow([
+            "summary_error_reason",
+            error_item.get("label") or "unknown",
+            "Top Error Reason",
+            "",
+            "",
+            "",
+            "",
+            "warning",
+            "",
+            "",
+            "",
+            error_item.get("count", 0),
+            "",
+            "",
+            utc_iso(),
+            "",
+            "",
+        ])
+
+    for row in retry_rows:
+        writer.writerow([
+            "retry_queue",
+            row["id"],
+            "Retry Queue",
+            row["id"],
+            row["invoice_number"],
+            row["company_id"],
+            row["company_name"] or "",
+            "warning",
+            row["status"] or "",
+            classify_invoice_send_error(row["error_message"] or ""),
+            row["recipient_email"] or "",
+            float(row["total_amount"] or 0),
+            int(row["send_attempt_count"] or 0),
+            row["next_retry_at"] or "",
+            row["created_at"] or "",
+            row["error_message"] or "",
+            "",
+        ])
+
+    for row in dead_letter_rows:
+        writer.writerow([
+            "dead_letter",
+            row["id"],
+            "Dead Letter",
+            row["invoice_id"],
+            row["invoice_number"],
+            row["company_id"],
+            row["company_name"] or "",
+            "critical",
+            row["invoice_status"] or "",
+            row["reason"] or "",
+            row["recipient_email"] or "",
+            float(row["total_amount"] or 0),
+            int(row["send_attempt_count"] or 0),
+            row["next_retry_at"] or "",
+            row["created_at"] or "",
+            row["last_error"] or "",
+            "",
+        ])
+
+    for row in alert_rows:
+        writer.writerow([
+            "system_alert",
+            row["code"] or "",
+            "System Alert",
+            "",
+            "",
+            "",
+            "",
+            row["severity"] or "",
+            "open",
+            row["code"] or "",
+            "",
+            "",
+            "",
+            "",
+            row["created_at"] or "",
+            row["message"] or "",
+            json.dumps(row_to_dict(row).get("details") or "", ensure_ascii=True),
+        ])
+
+    csv_text = output.getvalue()
+    output.close()
+    return csv_text
+
+
+def acquire_invoice_retry_guard(invoice_id, ttl_seconds=90):
+    now_dt = datetime.now(timezone.utc)
+    with _invoice_retry_guard_lock:
+        expired_ids = [
+            key for key, expires_at in _invoice_retry_inflight.items()
+            if not isinstance(expires_at, datetime) or expires_at <= now_dt
+        ]
+        for key in expired_ids:
+            _invoice_retry_inflight.pop(key, None)
+
+        current = _invoice_retry_inflight.get(invoice_id)
+        if isinstance(current, datetime) and current > now_dt:
+            return False
+
+        _invoice_retry_inflight[invoice_id] = now_dt + timedelta(seconds=max(15, int(ttl_seconds or 90)))
+        return True
+
+
+def release_invoice_retry_guard(invoice_id):
+    with _invoice_retry_guard_lock:
+        _invoice_retry_inflight.pop(invoice_id, None)
+
+
+def parse_iso_datetime_utc(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def calculate_invoice_retry_priority(invoice_row, company_issue_count=1):
+    attempt_count = int(invoice_row["send_attempt_count"] or 0)
+    amount = float(invoice_row["total_amount"] or 0)
+    created_dt = parse_iso_datetime_utc(invoice_row["created_at"]) or datetime.now(timezone.utc)
+    age_days = max(0, (datetime.now(timezone.utc) - created_dt).days)
+
+    attempts_score = min(36, max(1, attempt_count) * 8)
+    age_score = min(26, age_days * 1.5)
+    amount_score = min(22, amount / 220)
+    company_score = min(16, max(1, int(company_issue_count or 1)) * 4)
+    score = int(round(attempts_score + age_score + amount_score + company_score))
+
+    tier = "niedrig"
+    if score >= 70:
+        tier = "kritisch"
+    elif score >= 45:
+        tier = "hoch"
+
+    return {
+        "score": score,
+        "tier": tier,
+        "ageDays": age_days,
+        "attemptCount": attempt_count,
+        "amount": round(amount, 2),
+        "companyIssueCount": max(1, int(company_issue_count or 1)),
+    }
+
+
+def get_critical_invoice_retry_summary(db, min_score=70, top_items=INVOICE_RETRY_ALERT_TOP_ITEMS):
+    rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoices.status = 'send_failed'
+          AND invoices.paid_at IS NULL
+        """
+    ).fetchall()
+
+    company_counts = {}
+    for row in rows:
+        key = str(row["company_id"] or "").strip()
+        if key:
+            company_counts[key] = int(company_counts.get(key, 0)) + 1
+
+    critical_rows = []
+    for row in rows:
+        issue_count = company_counts.get(str(row["company_id"] or ""), 1)
+        priority = calculate_invoice_retry_priority(row, issue_count)
+        if int(priority["score"]) < int(min_score):
+            continue
+        critical_rows.append(
+            {
+                "id": row["id"],
+                "invoiceNumber": row["invoice_number"],
+                "companyName": row["company_name"] or "Firma",
+                "companyId": row["company_id"],
+                "score": priority["score"],
+                "tier": priority["tier"],
+                "amount": priority["amount"],
+                "ageDays": priority["ageDays"],
+                "attemptCount": priority["attemptCount"],
+                "nextRetryAt": row["next_retry_at"] or "",
+                "lastError": row["error_message"] or "",
+            }
+        )
+
+    critical_rows.sort(key=lambda item: (-int(item["score"]), -int(item["ageDays"]), item["invoiceNumber"] or ""))
+    return {
+        "criticalCount": len(critical_rows),
+        "maxScore": int(critical_rows[0]["score"]) if critical_rows else 0,
+        "top": critical_rows[: max(1, int(top_items))],
+    }
+
+
+def get_ops_alert_recipients(settings_row):
+    env_recipients = [item.strip() for item in (os.getenv("BAUPASS_ALERT_EMAIL_RECIPIENTS") or "").split(",") if item.strip()]
+    admin_summary = ""
+    if settings_row and "admin_summary_email" in settings_row.keys():
+        admin_summary = (settings_row["admin_summary_email"] or "").strip()
+    smtp_sender = (settings_row["smtp_sender_email"] or "").strip() if settings_row else ""
+
+    merged = []
+    for candidate in env_recipients + ([admin_summary] if admin_summary else []) + ([smtp_sender] if smtp_sender else []):
+        if candidate and candidate not in merged:
+            merged.append(candidate)
+    return merged
+
+
+def should_send_ops_alert_email(db, event_type, cooldown_minutes=INVOICE_RETRY_ALERT_EMAIL_COOLDOWN_MINUTES):
+    threshold = utc_iso(utc_now() - timedelta(minutes=max(1, int(cooldown_minutes))))
+    recent = db.execute(
+        "SELECT id FROM audit_logs WHERE event_type = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 1",
+        (event_type, threshold),
+    ).fetchone()
+    return recent is None
+
+
+def record_ops_alert_email_sent(db, event_type, message):
+    db.execute(
+        """
+        INSERT INTO audit_logs (id, event_type, actor_user_id, actor_role, company_id, target_type, target_id, message, created_at)
+        VALUES (?, ?, NULL, NULL, NULL, ?, ?, ?, ?)
+        """,
+        (f"aud-{secrets.token_hex(8)}", event_type, "system", "invoice-retry", message, now_iso()),
+    )
+    db.commit()
+
+
+def send_invoice_retry_backlog_alert_email(db, summary, severity):
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    if not settings:
+        return False, "settings_missing"
+
+    smtp_host = (settings["smtp_host"] or "").strip()
+    smtp_sender = (settings["smtp_sender_email"] or "").strip()
+    if not smtp_host or not smtp_sender:
+        return False, "smtp_not_configured"
+
+    recipients = get_ops_alert_recipients(settings)
+    if not recipients:
+        return False, "no_recipients"
+
+    event_type = f"ops.invoice_retry_backlog_email.{severity}"
+    if not should_send_ops_alert_email(db, event_type):
+        return False, "cooldown"
+
+    critical_count = int(summary.get("criticalCount", 0))
+    top_rows = summary.get("top", [])
+    top_lines = []
+    for idx, item in enumerate(top_rows, start=1):
+        top_lines.append(
+            f"{idx}. {item.get('invoiceNumber') or '-'} | {item.get('companyName') or '-'} | "
+            f"Score {item.get('score', 0)} | Versuch {item.get('attemptCount', 0)} | "
+            f"{float(item.get('amount', 0)):.2f} EUR | Alter {item.get('ageDays', 0)} Tage"
+        )
+
+    message = EmailMessage()
+    message["Subject"] = f"[BauPass] {'KRITISCH' if severity == 'critical' else 'Warnung'}: {critical_count} kritische Retry-Faelle"
+    message["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
+    message["To"] = ", ".join(recipients)
+    message.set_content(
+        "BauPass hat eine kritische Lage in der Rechnungs-Retry-Queue erkannt.\n\n"
+        f"Schweregrad: {severity}\n"
+        f"Kritische Faelle (Score >= 70): {critical_count}\n"
+        f"Hoechster Score: {int(summary.get('maxScore', 0))}\n\n"
+        "Top-Faelle:\n"
+        f"{chr(10).join(top_lines) if top_lines else 'Keine Top-Faelle.'}\n\n"
+        "Bitte im Admin-Panel den Rechnungsbereich oeffnen und die Queue pruefen."
+    )
+
+    try:
+        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=20) as smtp:
+            if int(settings["smtp_use_tls"] or 0) == 1:
+                smtp.starttls()
+            smtp_username = (settings["smtp_username"] or "").strip()
+            if smtp_username:
+                smtp.login(smtp_username, settings["smtp_password"] or "")
+            smtp.send_message(message)
+        record_ops_alert_email_sent(
+            db,
+            event_type,
+            f"Retry-Backlog Alert versendet ({severity}) an {', '.join(recipients)} bei {critical_count} kritischen Faellen.",
+        )
+        return True, "sent"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def resolve_invoice_attempt_actor_label(actor):
+    if not actor:
+        return "system"
+    if isinstance(actor, dict):
+        name = str(actor.get("name") or "").strip()
+        email = str(actor.get("email") or "").strip()
+        user_id = str(actor.get("id") or "").strip()
+        return name or email or user_id or "system"
+    return str(actor).strip() or "system"
+
+
+def log_invoice_send_attempt(db, invoice_id, attempt_number, outcome, error_message="", actor=None, next_retry_at=None):
+    db.execute(
+        """
+        INSERT INTO invoice_send_attempts (
+            id, invoice_id, attempt_number, outcome, error_message, actor_label, next_retry_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"isat-{secrets.token_hex(6)}",
+            invoice_id,
+            int(attempt_number or 1),
+            str(outcome or "failed"),
+            str(error_message or ""),
+            resolve_invoice_attempt_actor_label(actor),
+            next_retry_at,
+            now_iso(),
+        ),
+    )
+
+
+def attempt_invoice_delivery(db, invoice_id, actor=None, audit_event_success="invoice.sent", audit_event_failed="invoice.send_failed"):
+    invoice_row = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice_row:
+        return False, "invoice_not_found", None
+
+    if not acquire_invoice_retry_guard(invoice_id):
+        return False, "retry_in_progress", row_to_dict(invoice_row)
+
+    try:
+        previous_attempts = int(invoice_row["send_attempt_count"] or 0)
+        next_attempts = previous_attempts + 1
+        attempt_at = now_iso()
+
+        company = db.execute("SELECT * FROM companies WHERE id = ?", (invoice_row["company_id"],)).fetchone()
+        if not company or company["deleted_at"]:
+            dead_letter_id = None
+            if next_attempts >= INVOICE_SEND_MAX_RETRIES:
+                dead_letter_id = create_invoice_dead_letter(db, invoice_id, "company_not_available", "company_not_available")
+            db.execute(
+                "UPDATE invoices SET status = ?, error_message = ?, send_attempt_count = send_attempt_count + 1, last_send_attempt_at = ?, next_retry_at = NULL WHERE id = ?",
+                ("send_failed", "company_not_available", attempt_at, invoice_id),
+            )
+            log_invoice_send_attempt(
+                db,
+                invoice_id,
+                next_attempts,
+                outcome="failed",
+                error_message="company_not_available",
+                actor=actor,
+                next_retry_at=None,
+            )
+            if dead_letter_id:
+                create_system_alert(
+                    db,
+                    code="invoice_dead_letter_created",
+                    severity="warning",
+                    message=f"Rechnung {invoice_row['invoice_number']} wurde in die Dead-Letter-Queue verschoben.",
+                    details={"invoiceId": invoice_id, "deadLetterId": dead_letter_id, "reason": "company_not_available"},
+                    dedup_minutes=10,
+                )
+            db.commit()
+            return False, "company_not_available", row_to_dict(invoice_row)
+
+        settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+
+        if is_invoice_smtp_circuit_open():
+            open_until = get_invoice_smtp_circuit_open_until()
+            if open_until:
+                delay_seconds = max(60, int((open_until - datetime.now(timezone.utc)).total_seconds()))
+            else:
+                delay_seconds = INVOICE_SMTP_CIRCUIT_OPEN_SECONDS
+            next_retry = utc_iso(utc_now() + timedelta(seconds=delay_seconds))
+            db.execute(
+                "UPDATE invoices SET status = ?, error_message = ?, last_send_attempt_at = ?, next_retry_at = ? WHERE id = ?",
+                ("send_failed", "smtp_circuit_open", attempt_at, next_retry, invoice_id),
+            )
+            log_invoice_send_attempt(
+                db,
+                invoice_id,
+                max(1, previous_attempts),
+                outcome="skipped",
+                error_message="smtp_circuit_open",
+                actor=actor,
+                next_retry_at=next_retry,
+            )
+            db.commit()
+            refreshed = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+            return False, "smtp_circuit_open", row_to_dict(refreshed)
+
+        sent_ok, error_message = send_invoice_email(invoice_row, company, settings)
+
+        if sent_ok:
+            on_invoice_send_success_reset_circuit()
+            db.execute(
+                "UPDATE invoices SET status = ?, sent_at = ?, error_message = '', send_attempt_count = ?, last_send_attempt_at = ?, next_retry_at = NULL WHERE id = ?",
+                ("sent", attempt_at, next_attempts, attempt_at, invoice_id),
+            )
+            resolve_invoice_dead_letters(db, invoice_id)
+            log_invoice_send_attempt(
+                db,
+                invoice_id,
+                next_attempts,
+                outcome="sent",
+                error_message="",
+                actor=actor,
+                next_retry_at=None,
+            )
+            log_audit(
+                audit_event_success,
+                f"Rechnung {invoice_row['invoice_number']} an {invoice_row['recipient_email']} versendet",
+                target_type="invoice",
+                target_id=invoice_id,
+                company_id=invoice_row["company_id"],
+                actor=actor,
+            )
+        else:
+            on_invoice_send_failure_update_circuit(error_message)
+            retry_delay = get_adaptive_invoice_retry_delay_seconds(next_attempts, error_message)
+            has_retry_budget = next_attempts < INVOICE_SEND_MAX_RETRIES
+            next_retry = utc_iso(utc_now() + timedelta(seconds=retry_delay)) if has_retry_budget else None
+            db.execute(
+                "UPDATE invoices SET status = ?, error_message = ?, send_attempt_count = ?, last_send_attempt_at = ?, next_retry_at = ? WHERE id = ?",
+                ("send_failed", error_message, next_attempts, attempt_at, next_retry, invoice_id),
+            )
+            log_invoice_send_attempt(
+                db,
+                invoice_id,
+                next_attempts,
+                outcome="failed",
+                error_message=error_message,
+                actor=actor,
+                next_retry_at=next_retry,
+            )
+            log_audit(
+                audit_event_failed,
+                f"Rechnung {invoice_row['invoice_number']} konnte nicht versendet werden: {error_message}",
+                target_type="invoice",
+                target_id=invoice_id,
+                company_id=invoice_row["company_id"],
+                actor=actor,
+            )
+            if not has_retry_budget:
+                dead_letter_id = create_invoice_dead_letter(db, invoice_id, "max_retries_exhausted", error_message)
+                create_system_alert(
+                    db,
+                    code="invoice_dead_letter_created",
+                    severity="warning",
+                    message=f"Rechnung {invoice_row['invoice_number']} wurde in die Dead-Letter-Queue verschoben.",
+                    details={"invoiceId": invoice_id, "deadLetterId": dead_letter_id, "reason": "max_retries_exhausted"},
+                    dedup_minutes=10,
+                )
+
+        db.commit()
+        refreshed = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+        return sent_ok, ("" if sent_ok else error_message), row_to_dict(refreshed)
+    finally:
+        release_invoice_retry_guard(invoice_id)
+
+
+def retry_failed_invoice_deliveries(db):
+    due_rows = db.execute(
+        """
+        SELECT id
+        FROM invoices
+        WHERE status = 'send_failed'
+          AND sent_at IS NULL
+          AND COALESCE(send_attempt_count, 0) < ?
+          AND (next_retry_at IS NULL OR next_retry_at <= ?)
+        ORDER BY created_at ASC
+        LIMIT 25
+        """,
+        (INVOICE_SEND_MAX_RETRIES, now_iso()),
+    ).fetchall()
+
+    result = {"attempted": 0, "sent": 0, "failed": 0}
+    for row in due_rows:
+        result["attempted"] += 1
+        sent_ok, _error, _invoice = attempt_invoice_delivery(
+            db,
+            row["id"],
+            actor=None,
+            audit_event_success="invoice.retry_sent",
+            audit_event_failed="invoice.retry_failed",
+        )
+        if sent_ok:
+            result["sent"] += 1
+        else:
+            result["failed"] += 1
+    return result
+
+
+def get_invoice_ops_metrics(db):
+    invoice_rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        ORDER BY invoices.created_at DESC
+        """
+    ).fetchall()
+    attempt_rows = db.execute(
+        """
+        SELECT invoice_id, outcome, error_message, created_at
+        FROM invoice_send_attempts
+        ORDER BY created_at DESC
+        """
+    ).fetchall()
+
+    attempts_by_invoice = {}
+    for row in attempt_rows:
+        attempts_by_invoice.setdefault(row["invoice_id"], []).append(row)
+
+    first_success_minutes = []
+    critical_over_24h = 0
+    trend_buckets = {}
+    error_buckets = {}
+    now_dt = utc_now()
+    window_start = now_dt - timedelta(days=6)
+
+    for invoice in invoice_rows:
+        invoice_attempts = attempts_by_invoice.get(invoice["id"], [])
+        created_dt = parse_iso_datetime_utc(invoice["created_at"])
+        if created_dt and invoice_attempts:
+            success_attempts = [row for row in invoice_attempts if str(row["outcome"] or "").lower() == "sent"]
+            if success_attempts:
+                earliest_success = min(
+                    (parse_iso_datetime_utc(row["created_at"]) for row in success_attempts),
+                    key=lambda value: value or datetime.max.replace(tzinfo=timezone.utc),
+                )
+                if earliest_success:
+                    first_success_minutes.append(max(0, int((earliest_success - created_dt).total_seconds() // 60)))
+
+        if str(invoice["status"] or "").lower() == "send_failed":
+            issue_count = 1
+            company_id = str(invoice["company_id"] or "")
+            if company_id:
+                issue_count = sum(1 for row in invoice_rows if str(row["company_id"] or "") == company_id and str(row["status"] or "").lower() == "send_failed" and not row["paid_at"])
+            priority = calculate_invoice_retry_priority(invoice, issue_count)
+            if priority["score"] >= 70 and created_dt and (now_dt - created_dt).total_seconds() >= 24 * 3600:
+                critical_over_24h += 1
+
+        for row in invoice_attempts:
+            attempt_dt = parse_iso_datetime_utc(row["created_at"])
+            if attempt_dt and attempt_dt >= window_start:
+                day_key = attempt_dt.strftime("%Y-%m-%d")
+                trend_buckets[day_key] = int(trend_buckets.get(day_key, 0)) + 1
+            if str(row["outcome"] or "").lower() == "failed":
+                label = classify_invoice_send_error(row["error_message"] or "")
+                error_buckets[label] = int(error_buckets.get(label, 0)) + 1
+
+    trend = []
+    for offset in range(7):
+        day = (window_start + timedelta(days=offset)).strftime("%Y-%m-%d")
+        trend.append({"day": day, "count": int(trend_buckets.get(day, 0))})
+
+    sorted_errors = sorted(error_buckets.items(), key=lambda item: (-int(item[1]), item[0]))[:5]
+    avg_first_success_minutes = round(sum(first_success_minutes) / len(first_success_minutes), 1) if first_success_minutes else 0
+
+    return {
+        "avgFirstSuccessMinutes": avg_first_success_minutes,
+        "criticalOver24h": critical_over_24h,
+        "retryVolume7d": trend,
+        "topErrorReasons": [{"label": label, "count": count} for label, count in sorted_errors],
+    }
+
+
 @app.get("/api/invoices")
 @require_auth
-@require_roles("superadmin")
+@require_roles("superadmin", "company-admin")
 def list_invoices():
     db = get_db()
     if g.current_user["role"] == "superadmin":
@@ -5351,6 +6677,22 @@ def list_invoices():
     return jsonify([row_to_dict(row) for row in rows])
 
 
+@app.get("/api/invoices/ops-metrics")
+@require_auth
+@require_roles("superadmin")
+def get_invoice_ops_metrics_endpoint():
+    db = get_db()
+    return jsonify(get_invoice_ops_metrics(db))
+
+
+@app.get("/api/invoices/dead-letters")
+@require_auth
+@require_roles("superadmin")
+def list_invoice_dead_letters():
+    db = get_db()
+    return jsonify(get_invoice_dead_letters(db))
+
+
 @app.post("/api/invoices/send")
 @require_auth
 @require_roles("superadmin")
@@ -5358,7 +6700,7 @@ def send_invoice():
     payload = request.get_json(silent=True) or {}
     company_id = payload.get("companyId")
     recipient_email = (payload.get("recipientEmail") or "").strip()
-    if "@" not in recipient_email:
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", recipient_email):
         return jsonify({"error": "invalid_recipient_email"}), 400
 
     db = get_db()
@@ -5370,6 +6712,8 @@ def send_invoice():
         return jsonify({"error": "forbidden_company"}), 403
 
     invoice_number = (payload.get("invoiceNumber") or "").strip() or f"RE-{datetime.now().year}-{secrets.token_hex(3).upper()}"
+    if len(invoice_number) < 3 or len(invoice_number) > 64:
+        return jsonify({"error": "invalid_invoice_number_length", "message": "Rechnungsnummer muss zwischen 3 und 64 Zeichen haben."}), 400
     duplicate_invoice = db.execute(
         "SELECT id FROM invoices WHERE company_id = ? AND invoice_number = ? LIMIT 1",
         (company_id, invoice_number),
@@ -5377,16 +6721,20 @@ def send_invoice():
     if duplicate_invoice:
         return jsonify({"error": "duplicate_invoice_number", "message": "Rechnungsnummer ist bereits vergeben."}), 409
 
-    invoice_date = (payload.get("invoiceDate") or datetime.now().date().isoformat()).strip()
+    invoice_date = (payload.get("invoiceDate") or utc_now().date().isoformat()).strip()
     due_date_input = (payload.get("dueDate") or "").strip()
-    invoice_date_obj = parse_iso_date(invoice_date) or datetime.utcnow().date()
+    invoice_date_obj = parse_iso_date(invoice_date) or utc_now().date()
     due_date_obj = parse_iso_date(due_date_input) or (invoice_date_obj + timedelta(days=14))
+    if due_date_obj < invoice_date_obj:
+        return jsonify({"error": "invalid_due_date", "message": "Fälligkeitsdatum darf nicht vor dem Rechnungsdatum liegen."}), 400
     due_date = due_date_obj.isoformat()
     invoice_period = (payload.get("invoicePeriod") or "").strip()
     description = (payload.get("description") or "").strip()
     rendered_html = payload.get("renderedHtml") or ""
     net_amount = calculate_net_amount_by_plan(company["plan"], payload.get("netAmount"))
     vat_rate = float(payload.get("vatRate") or 0)
+    if vat_rate < 0 or vat_rate > 100:
+        return jsonify({"error": "invalid_vat_rate", "message": "MwSt. muss zwischen 0 und 100 liegen."}), 400
     vat_amount = round(net_amount * (vat_rate / 100), 2)
     total_amount = round(net_amount + vat_amount, 2)
 
@@ -5399,8 +6747,9 @@ def send_invoice():
         INSERT INTO invoices (
             id, invoice_number, company_id, recipient_email, invoice_date, invoice_period, description,
             net_amount, vat_rate, vat_amount, total_amount, status, error_message, sent_at,
-            rendered_html, created_by_user_id, created_at, due_date, reminder_stage, last_reminder_sent_at, last_reminder_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            rendered_html, created_by_user_id, created_at, due_date, reminder_stage, last_reminder_sent_at, last_reminder_error,
+            send_attempt_count, last_send_attempt_at, next_retry_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             invoice_id,
@@ -5424,23 +6773,291 @@ def send_invoice():
             0,
             None,
             "",
+            0,
+            None,
+            None,
         ),
     )
-
-    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
-    invoice_row = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
-    sent_ok, error_message = send_invoice_email(invoice_row, company, settings)
-
-    if sent_ok:
-        db.execute("UPDATE invoices SET status = ?, sent_at = ?, error_message = '' WHERE id = ?", ("sent", now_iso(), invoice_id))
-        log_audit("invoice.sent", f"Rechnung {invoice_number} an {recipient_email} versendet", target_type="invoice", target_id=invoice_id, company_id=company_id, actor=g.current_user)
-    else:
-        db.execute("UPDATE invoices SET status = ?, error_message = ? WHERE id = ?", ("send_failed", error_message, invoice_id))
-        log_audit("invoice.send_failed", f"Rechnung {invoice_number} konnte nicht versendet werden: {error_message}", target_type="invoice", target_id=invoice_id, company_id=company_id, actor=g.current_user)
     db.commit()
 
-    result = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
-    return jsonify({"invoice": row_to_dict(result), "sent": sent_ok, "error": error_message if not sent_ok else ""})
+    sent_ok, error_message, result = attempt_invoice_delivery(db, invoice_id, actor=g.current_user)
+    return jsonify({"invoice": result, "sent": sent_ok, "error": error_message if not sent_ok else ""})
+
+
+@app.post("/api/invoices/<invoice_id>/retry-send")
+@require_auth
+@require_roles("superadmin")
+def retry_send_invoice(invoice_id):
+    db = get_db()
+    invoice = db.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice:
+        return jsonify({"error": "invoice_not_found"}), 404
+    if invoice["paid_at"]:
+        return jsonify({"error": "invoice_already_paid"}), 400
+
+    sent_ok, error_message, updated = attempt_invoice_delivery(
+        db,
+        invoice_id,
+        actor=g.current_user,
+        audit_event_success="invoice.manual_retry_sent",
+        audit_event_failed="invoice.manual_retry_failed",
+    )
+    return jsonify({"invoice": updated, "sent": sent_ok, "error": error_message if not sent_ok else ""})
+
+
+@app.get("/api/invoices/<invoice_id>/attempts")
+@require_auth
+@require_roles("superadmin")
+def get_invoice_send_attempts(invoice_id):
+    db = get_db()
+    invoice = db.execute("SELECT id FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice:
+        return jsonify({"error": "invoice_not_found"}), 404
+
+    rows = db.execute(
+        """
+        SELECT id, invoice_id, attempt_number, outcome, error_message, actor_label, next_retry_at, created_at
+        FROM invoice_send_attempts
+        WHERE invoice_id = ?
+        ORDER BY created_at DESC
+        LIMIT 40
+        """,
+        (invoice_id,),
+    ).fetchall()
+    return jsonify({"invoiceId": invoice_id, "attempts": [row_to_dict(row) for row in rows]})
+
+
+@app.put("/api/invoices/<invoice_id>/dead-letter/resolve")
+@require_auth
+@require_roles("superadmin")
+def resolve_invoice_dead_letter(invoice_id):
+    db = get_db()
+    invoice = db.execute("SELECT id, invoice_number, company_id FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if not invoice:
+        return jsonify({"error": "invoice_not_found"}), 404
+
+    open_dead_letter = db.execute(
+        "SELECT id FROM invoice_dead_letters WHERE invoice_id = ? AND resolved_at IS NULL LIMIT 1",
+        (invoice_id,),
+    ).fetchone()
+    if not open_dead_letter:
+        return jsonify({"error": "dead_letter_not_found"}), 404
+
+    approval_id = create_operation_approval(
+        db,
+        "invoice.dead_letter_resolve",
+        {"invoiceId": invoice_id},
+        actor=g.current_user,
+        target_type="invoice",
+        target_id=invoice_id,
+        company_id=invoice["company_id"],
+    )
+    return jsonify({"ok": True, "approvalRequested": True, "approvalId": approval_id, "invoiceId": invoice_id}), 202
+
+
+@app.post("/api/invoices/retry-send-bulk")
+@require_auth
+@require_roles("superadmin")
+def retry_send_invoices_bulk():
+    payload = request.get_json(silent=True) or {}
+    cleaned_ids = sanitize_invoice_id_list(payload.get("invoiceIds") or [])
+    if not cleaned_ids:
+        return jsonify({"error": "missing_invoice_ids"}), 400
+
+    db = get_db()
+    approval_id = create_operation_approval(
+        db,
+        "invoice.retry_send_bulk",
+        {"invoiceIds": cleaned_ids},
+        actor=g.current_user,
+        target_type="invoice",
+        target_id=cleaned_ids[0],
+    )
+    return jsonify({"ok": True, "approvalRequested": True, "approvalId": approval_id, "requested": len(cleaned_ids)}), 202
+
+
+@app.get("/api/invoices/approvals/pending")
+@require_auth
+@require_roles("superadmin")
+def list_pending_invoice_approvals_endpoint():
+    db = get_db()
+    limit = min(max(int(request.args.get("limit", "50")), 1), 200)
+    action_type = (request.args.get("actionType") or "").strip().lower()
+    max_age_minutes = max(0, int(request.args.get("maxAgeMinutes", "0")))
+    return jsonify(list_pending_operation_approvals(db, limit=limit, action_type=action_type, max_age_minutes=max_age_minutes))
+
+
+@app.post("/api/invoices/approvals/<approval_id>/decision")
+@require_auth
+@require_roles("superadmin")
+def decide_invoice_approval(approval_id):
+    decision_payload = request.get_json(silent=True) or {}
+    decision = str(decision_payload.get("decision") or "").strip().lower()
+    if decision not in {"approve", "reject"}:
+        return jsonify({"error": "invalid_decision"}), 400
+
+    db = get_db()
+    mark_expired_operation_approvals(db)
+    db.commit()
+    approval = db.execute(
+        "SELECT * FROM operation_approvals WHERE id = ?",
+        (approval_id,),
+    ).fetchone()
+    if not approval:
+        return jsonify({"error": "approval_not_found"}), 404
+
+    status_value = str(approval["status"] or "").strip().lower()
+    if status_value == "expired":
+        return jsonify({"error": "approval_expired"}), 410
+    if status_value != "pending":
+        return jsonify({"error": "approval_not_pending"}), 409
+
+    expires_at = parse_iso_datetime_utc(approval["expires_at"])
+    if expires_at and expires_at <= utc_now():
+        db.execute(
+            """
+            UPDATE operation_approvals
+            SET status = 'expired', decided_at = ?, decision_note = 'expired_by_timeout'
+            WHERE id = ?
+            """,
+            (now_iso(), approval_id),
+        )
+        db.commit()
+        return jsonify({"error": "approval_expired"}), 410
+
+    if approval["requested_by_user_id"] == g.current_user["id"]:
+        return jsonify({"error": "approver_must_be_different_user"}), 403
+
+    note = str(decision_payload.get("note") or "").strip()[:400]
+    if decision == "reject":
+        if not note:
+            return jsonify({"error": "decision_note_required"}), 400
+        db.execute(
+            """
+            UPDATE operation_approvals
+            SET status = 'rejected', decided_by_user_id = ?, decided_at = ?, decision_note = ?
+            WHERE id = ?
+            """,
+            (g.current_user["id"], now_iso(), note, approval_id),
+        )
+        db.commit()
+        log_audit(
+            "approval.rejected",
+            f"Freigabe {approval_id} wurde abgelehnt",
+            target_type="approval",
+            target_id=approval_id,
+            actor=g.current_user,
+        )
+        return jsonify({"ok": True, "approvalId": approval_id, "status": "rejected"})
+
+    try:
+        execution_result = execute_approved_operation(db, approval, actor=g.current_user)
+    except ValueError as exc:
+        error_text = str(exc)
+        db.execute(
+            """
+            UPDATE operation_approvals
+            SET status = 'rejected', decided_by_user_id = ?, decided_at = ?, decision_note = ?
+            WHERE id = ?
+            """,
+            (g.current_user["id"], now_iso(), f"execution_failed:{error_text}", approval_id),
+        )
+        db.commit()
+        return jsonify({"error": "approval_execution_failed", "details": error_text}), 400
+
+    db.execute(
+        """
+        UPDATE operation_approvals
+        SET status = 'approved', decided_by_user_id = ?, decided_at = ?, decision_note = ?, execution_result_json = ?
+        WHERE id = ?
+        """,
+        (
+            g.current_user["id"],
+            now_iso(),
+            note,
+            json.dumps(execution_result or {}, ensure_ascii=True),
+            approval_id,
+        ),
+    )
+    db.commit()
+    log_audit(
+        "approval.approved",
+        f"Freigabe {approval_id} wurde bestätigt und ausgeführt",
+        target_type="approval",
+        target_id=approval_id,
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "approvalId": approval_id, "status": "approved", "execution": execution_result})
+
+
+@app.get("/api/invoices/retry-queue/export.csv")
+@require_auth
+@require_roles("superadmin")
+def export_invoice_retry_queue_csv():
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoices.status = 'send_failed' AND invoices.paid_at IS NULL
+        ORDER BY COALESCE(invoices.next_retry_at, invoices.created_at) ASC
+        """
+    ).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow([
+        "invoice_id",
+        "invoice_number",
+        "company_id",
+        "company_name",
+        "recipient_email",
+        "total_amount",
+        "send_attempt_count",
+        "last_send_attempt_at",
+        "next_retry_at",
+        "last_error",
+        "created_at",
+    ])
+
+    for row in rows:
+        writer.writerow([
+            row["id"],
+            row["invoice_number"],
+            row["company_id"],
+            row["company_name"] or "",
+            row["recipient_email"] or "",
+            float(row["total_amount"] or 0),
+            int(row["send_attempt_count"] or 0),
+            row["last_send_attempt_at"] or "",
+            row["next_retry_at"] or "",
+            row["error_message"] or "",
+            row["created_at"] or "",
+        ])
+
+    csv_text = output.getvalue()
+    output.close()
+    filename = f"invoice-retry-queue-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/api/invoices/incidents/export.csv")
+@require_auth
+@require_roles("superadmin")
+def export_invoice_incidents_csv():
+    db = get_db()
+    csv_text = build_invoice_incident_export_csv(db)
+    filename = f"invoice-incidents-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.put("/api/invoices/<invoice_id>/pay")
@@ -5864,7 +7481,7 @@ def import_payload():
                     "SELECT * FROM companies WHERE id = ?",
                     (cid,),
                 ).fetchone()
-                if current and current["name"] == item.get("name", "") and current["contact"] == item.get("contact", "") and current["billing_email"] == item.get("billing_email", item.get("billingEmail", "")) and current["access_host"] == item.get("access_host", item.get("accessHost", "")) and normalize_company_plan(current["plan"]) == normalize_company_plan(item.get("plan")) and current["status"] == item.get("status", "aktiv"):
+                if current and current["name"] == item.get("name", "") and current["contact"] == item.get("contact", "") and current["billing_email"] == item.get("billing_email", item.get("billingEmail", "")) and current["document_email"] == item.get("document_email", item.get("documentEmail", "")) and current["access_host"] == item.get("access_host", item.get("accessHost", "")) and normalize_branding_preset(current["branding_preset"]) == normalize_branding_preset(item.get("branding_preset", item.get("brandingPreset"))) and normalize_company_plan(current["plan"]) == normalize_company_plan(item.get("plan")) and current["status"] == item.get("status", "aktiv"):
                     summary["unchanged"]["companies"] += 1
                     continue
         prepared_companies.append(
@@ -5873,7 +7490,9 @@ def import_payload():
                 item.get("name", ""),
                 item.get("contact", ""),
                 item.get("billing_email", item.get("billingEmail", "")),
+                item.get("document_email", item.get("documentEmail", "")),
                 item.get("access_host", item.get("accessHost", "")),
+                normalize_branding_preset(item.get("branding_preset", item.get("brandingPreset"))),
                 normalize_company_plan(item.get("plan")),
                 item.get("status", "aktiv"),
                 item.get("deleted_at", item.get("deletedAt")),
@@ -6046,7 +7665,7 @@ def import_payload():
 
     if role == "superadmin":
         db.executemany(
-            "INSERT OR REPLACE INTO companies (id, name, contact, billing_email, access_host, plan, status, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO companies (id, name, contact, billing_email, document_email, access_host, branding_preset, plan, status, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             prepared_companies,
         )
 
@@ -6097,26 +7716,24 @@ def api_health():
     db_ok = True
     db_error = ""
     try:
-        db = sqlite3.connect(DB_PATH)
-        db.execute("SELECT 1").fetchone()
-        db.close()
+        with closing(sqlite3.connect(DB_PATH)) as db:
+            db.execute("SELECT 1").fetchone()
     except Exception as exc:
         db_ok = False
         db_error = str(exc)
 
-    uptime_seconds = int((datetime.utcnow() - APP_STARTED_AT).total_seconds())
+    uptime_seconds = int((utc_now() - APP_STARTED_AT).total_seconds())
     diagnostics = get_runtime_diagnostics()
     status = "ok" if db_ok else "degraded"
 
     alerts = []
     try:
-        alerts_db = sqlite3.connect(DB_PATH)
-        alerts_db.row_factory = sqlite3.Row
-        alert_rows = alerts_db.execute(
-            "SELECT * FROM system_alerts ORDER BY created_at DESC LIMIT 20"
-        ).fetchall()
-        alerts = [row_to_dict(row) for row in alert_rows]
-        alerts_db.close()
+        with closing(sqlite3.connect(DB_PATH)) as alerts_db:
+            alerts_db.row_factory = sqlite3.Row
+            alert_rows = alerts_db.execute(
+                "SELECT * FROM system_alerts ORDER BY created_at DESC LIMIT 20"
+            ).fetchall()
+            alerts = [row_to_dict(row) for row in alert_rows]
     except Exception:
         alerts = []
 
@@ -6165,9 +7782,8 @@ def api_health_live():
 @app.get("/api/health/ready")
 def api_health_ready():
     try:
-        db = sqlite3.connect(DB_PATH)
-        db.execute("SELECT 1").fetchone()
-        db.close()
+        with closing(sqlite3.connect(DB_PATH)) as db:
+            db.execute("SELECT 1").fetchone()
         return jsonify({"status": "ready"}), 200
     except Exception as exc:
         return jsonify({"status": "not_ready", "error": str(exc)}), 503
@@ -6589,7 +8205,7 @@ def assign_attachment_to_worker(inbox_id, attachment_id):
     except Exception as exc:
         return jsonify({"error": "storage_error", "detail": str(exc)}), 500
 
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = utc_now().strftime("%Y%m%d_%H%M%S")
     safe_name = _sanitize_attachment_filename(att["filename"] or "anhang.bin")
     file_path = (worker_doc_dir / f"{doc_type}_{ts}_{safe_name}").resolve()
     if worker_doc_dir not in file_path.parents:
@@ -6733,7 +8349,7 @@ def upload_worker_document(worker_id):
     except Exception as exc:
         return jsonify({"error": "storage_error", "detail": str(exc)}), 500
 
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = utc_now().strftime("%Y%m%d_%H%M%S")
     file_path = (worker_doc_dir / f"{doc_type}_{ts}_{safe_name}").resolve()
     if worker_doc_dir not in file_path.parents:
         return jsonify({"error": "invalid_target_path"}), 400
@@ -6867,10 +8483,64 @@ def worker_entry_redirect():
     return send_from_directory(BASE_DIR, "worker.html")
 
 
+def _load_invoice_logo_data_url():
+    try:
+        with closing(sqlite3.connect(DB_PATH)) as db:
+            db.row_factory = sqlite3.Row
+            row = db.execute("SELECT invoice_logo_data FROM settings WHERE id = 1").fetchone()
+    except Exception:
+        return ""
+    if not row:
+        return ""
+    return (row["invoice_logo_data"] or "").strip()
+
+
+def _build_worker_icon_svg(icon_size: int) -> str:
+    logo_data_url = _load_invoice_logo_data_url()
+    if logo_data_url.startswith("data:image/"):
+        logo_href = html.escape(logo_data_url, quote=True)
+        return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{icon_size}\" height=\"{icon_size}\" viewBox=\"0 0 {icon_size} {icon_size}\">\n  <defs>\n    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d95d39\" />\n      <stop offset=\"100%\" stop-color=\"#121417\" />\n    </linearGradient>\n    <clipPath id=\"clip\">\n      <rect x=\"0\" y=\"0\" width=\"{icon_size}\" height=\"{icon_size}\" rx=\"{max(14, icon_size // 6)}\" ry=\"{max(14, icon_size // 6)}\" />\n    </clipPath>\n  </defs>\n  <rect width=\"{icon_size}\" height=\"{icon_size}\" fill=\"url(#bg)\" />\n  <g clip-path=\"url(#clip)\">\n    <image href=\"{logo_href}\" x=\"{int(icon_size * 0.09)}\" y=\"{int(icon_size * 0.09)}\" width=\"{int(icon_size * 0.82)}\" height=\"{int(icon_size * 0.82)}\" preserveAspectRatio=\"xMidYMid meet\" />\n  </g>\n</svg>"""
+
+    font_size = max(56, icon_size // 2)
+    return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{icon_size}\" height=\"{icon_size}\" viewBox=\"0 0 {icon_size} {icon_size}\">\n  <defs>\n    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d95d39\" />\n      <stop offset=\"100%\" stop-color=\"#121417\" />\n    </linearGradient>\n  </defs>\n  <rect width=\"{icon_size}\" height=\"{icon_size}\" rx=\"{max(14, icon_size // 6)}\" ry=\"{max(14, icon_size // 6)}\" fill=\"url(#bg)\" />\n  <text x=\"50%\" y=\"53%\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Barlow, Arial, sans-serif\" font-size=\"{font_size}\" font-weight=\"700\" fill=\"#fff7ef\">BP</text>\n</svg>"""
+
+
+@app.get("/worker-icon-<int:icon_size>.svg")
+def worker_icon_svg(icon_size: int):
+    if icon_size not in (192, 512):
+        return jsonify({"error": "not_found"}), 404
+    svg = _build_worker_icon_svg(icon_size)
+    response = Response(svg.encode("utf-8"), mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
+
 @app.get("/worker-icon-<int:icon_size>.png")
 def worker_icon_png(icon_size: int):
     if icon_size not in (192, 512):
         return jsonify({"error": "not_found"}), 404
+
+    logo_data_url = _load_invoice_logo_data_url()
+    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+)(;base64)?,(.*)$", logo_data_url, re.DOTALL)
+    if match:
+        mime_type = match.group(1).lower()
+        is_base64 = bool(match.group(2))
+        raw_payload = match.group(3)
+        if mime_type in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+            try:
+                binary = base64.b64decode(raw_payload) if is_base64 else unquote_to_bytes(raw_payload)
+                from PIL import Image
+
+                with Image.open(io.BytesIO(binary)) as img:
+                    rendered = img.convert("RGBA").resize((icon_size, icon_size))
+                    out = io.BytesIO()
+                    rendered.save(out, format="PNG")
+                    response = Response(out.getvalue(), mimetype="image/png")
+                    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                    return response
+            except Exception:
+                pass
+
     data = _generate_icon_png(icon_size)
     if not data:
         return jsonify({"error": "icon_generation_failed"}), 500
