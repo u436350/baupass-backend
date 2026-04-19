@@ -1066,6 +1066,7 @@ def init_db():
             role TEXT NOT NULL,
             company_id TEXT,
             twofa_enabled INTEGER NOT NULL DEFAULT 0,
+            api_key_hash TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(company_id) REFERENCES companies(id)
         );
 
@@ -1488,6 +1489,9 @@ def init_db():
     user_columns = [row[1] for row in cur.execute("PRAGMA table_info(users)").fetchall()]
     if "is_active" not in user_columns:
         cur.execute("ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1")
+        user_columns = [row[1] for row in cur.execute("PRAGMA table_info(users)").fetchall()]
+    if "api_key_hash" not in user_columns:
+        cur.execute("ALTER TABLE users ADD COLUMN api_key_hash TEXT NOT NULL DEFAULT ''")
 
     # ── Neu: Ablaufdatum fuer Mitarbeiterdokumente ──
     doc_columns = [row[1] for row in cur.execute("PRAGMA table_info(worker_documents)").fetchall()]
@@ -1518,6 +1522,26 @@ init_db()
 
 def row_to_dict(row):
     return dict(row) if row is not None else None
+
+
+def create_turnstile_api_key():
+    return secrets.token_urlsafe(32)
+
+
+def hash_turnstile_api_key(raw_key):
+    return generate_password_hash(raw_key)
+
+
+def find_turnstile_by_api_key(db, raw_key):
+    if not raw_key:
+        return None
+    candidates = db.execute(
+        "SELECT * FROM users WHERE role = 'turnstile' AND COALESCE(api_key_hash, '') != '' AND COALESCE(is_active, 1) = 1"
+    ).fetchall()
+    for candidate in candidates:
+        if check_password_hash(candidate["api_key_hash"], raw_key):
+            return candidate
+    return None
 
 
 def serialize_user(user_row):
@@ -3586,8 +3610,9 @@ def create_company():
             turnstile_username = f"{turnstile_username_base}{turnstile_suffix}"
             turnstile_suffix += 1
 
+        turnstile_api_key = create_turnstile_api_key()
         db.execute(
-            "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO users (id, username, password_hash, name, role, company_id, api_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 f"usr-{secrets.token_hex(6)}",
                 turnstile_username,
@@ -3595,12 +3620,14 @@ def create_company():
                 turnstile_display_name,
                 "turnstile",
                 company_id,
+                hash_turnstile_api_key(turnstile_api_key),
             ),
         )
         turnstile_credentials.append(
             {
                 "username": turnstile_username,
                 "password": turnstile_password,
+                "apiKey": turnstile_api_key,
             }
         )
 
@@ -3619,6 +3646,7 @@ def create_company():
                 "turnstileCredentials": {
                     "username": turnstile_credentials[0]["username"],
                     "password": turnstile_credentials[0]["password"],
+                    "apiKey": turnstile_credentials[0]["apiKey"],
                 },
                 "turnstileCredentialsList": turnstile_credentials,
             }
@@ -4748,9 +4776,10 @@ def add_company_turnstile(company_id):
 
     display_name = f"{company['name']} Drehkreuz {existing_count + 1}"
     user_id = f"usr-{secrets.token_hex(6)}"
+    api_key = create_turnstile_api_key()
     db.execute(
-        "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-        (user_id, username, generate_password_hash(password), display_name, "turnstile", company_id),
+        "INSERT INTO users (id, username, password_hash, name, role, company_id, api_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (user_id, username, generate_password_hash(password), display_name, "turnstile", company_id, hash_turnstile_api_key(api_key)),
     )
     db.commit()
     log_audit(
@@ -4761,7 +4790,7 @@ def add_company_turnstile(company_id):
         company_id=company_id,
         actor=g.current_user,
     )
-    return jsonify({"ok": True, "username": username, "password": password}), 201
+    return jsonify({"ok": True, "username": username, "password": password, "apiKey": api_key}), 201
 
 
 # ── Drehkreuz-User Verwaltung ──────────────────────────────────────────────
@@ -4780,6 +4809,7 @@ def list_company_turnstiles(company_id):
         return jsonify({"error": "company_not_found"}), 404
     rows = db.execute(
         """SELECT u.id, u.username, u.name, u.is_active,
+                  CASE WHEN COALESCE(u.api_key_hash, '') != '' THEN 1 ELSE 0 END AS has_api_key,
                   MAX(s.last_seen) AS last_seen
            FROM users u
            LEFT JOIN sessions s ON s.user_id = u.id
@@ -4789,7 +4819,7 @@ def list_company_turnstiles(company_id):
     ).fetchall()
     return jsonify([
         {"id": r["id"], "username": r["username"], "name": r["name"],
-         "isActive": int(r["is_active"] or 1) == 1, "lastSeen": r["last_seen"]}
+         "isActive": int(r["is_active"] or 1) == 1, "lastSeen": r["last_seen"], "hasApiKey": int(r["has_api_key"] or 0) == 1}
         for r in rows
     ])
 
@@ -4814,6 +4844,32 @@ def reset_turnstile_password(company_id, user_id):
     log_audit("security.turnstile_password_reset", f"Passwort für Drehkreuz '{user['username']}' zurückgesetzt",
               target_type="user", target_id=user_id, company_id=company_id, actor=g.current_user)
     return jsonify({"ok": True})
+
+
+@app.post("/api/companies/<company_id>/turnstiles/<user_id>/rotate-api-key")
+@require_auth
+@require_roles("superadmin")
+def rotate_turnstile_api_key(company_id, user_id):
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE id = ? AND company_id = ? AND role = 'turnstile'",
+        (user_id, company_id),
+    ).fetchone()
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+
+    api_key = create_turnstile_api_key()
+    db.execute("UPDATE users SET api_key_hash = ? WHERE id = ?", (hash_turnstile_api_key(api_key), user_id))
+    db.commit()
+    log_audit(
+        "security.turnstile_api_key_rotated",
+        f"API-Key für Drehkreuz '{user['username']}' rotiert",
+        target_type="user",
+        target_id=user_id,
+        company_id=company_id,
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "apiKey": api_key})
 
 
 @app.post("/api/companies/<company_id>/turnstiles/<user_id>/toggle-active")
@@ -5540,12 +5596,13 @@ def create_access_log():
 def gate_tap():
     auto_close_expired_visitor_entries(get_db())
     auto_close_open_entries_after_midnight(get_db())
-    expected_key = (os.getenv("BAUPASS_GATE_API_KEY") or "").strip()
-    if not expected_key:
-        return jsonify({"error": "gate_key_not_configured"}), 503
-
     provided_key = (request.headers.get("X-Gate-Key") or "").strip()
-    if not provided_key or not secrets.compare_digest(provided_key, expected_key):
+    if not provided_key:
+        return jsonify({"error": "gate_unauthorized"}), 401
+
+    db = get_db()
+    turnstile_user = find_turnstile_by_api_key(db, provided_key)
+    if not turnstile_user:
         return jsonify({"error": "gate_unauthorized"}), 401
 
     payload = request.get_json(silent=True) or {}
@@ -5562,7 +5619,6 @@ def gate_tap():
     gate_note = (payload.get("note") or "NFC Tap").strip()
     timestamp_value = (payload.get("timestamp") or now_iso()).strip() or now_iso()
 
-    db = get_db()
     workers = db.execute(
         """
         SELECT *
@@ -5579,6 +5635,9 @@ def gate_tap():
         return jsonify({"error": "duplicate_physical_card_id"}), 409
 
     worker = workers[0]
+
+    if turnstile_user["company_id"] != worker["company_id"]:
+        return jsonify({"error": "forbidden_worker_company"}), 403
 
     if requested_direction in {"", "auto", "toggle"}:
         latest_log = db.execute(
@@ -5598,6 +5657,9 @@ def gate_tap():
     company_error = get_company_access_error(db, worker["company_id"])
     if company_error:
         return jsonify(company_error), 403
+    company_access_error = get_company_access_error(db, turnstile_user["company_id"])
+    if company_access_error:
+        return jsonify(company_access_error), 403
     if worker_visit_has_expired(worker):
         return jsonify({"error": "visitor_visit_expired", "message": "Diese Besucherkarte ist zeitlich abgelaufen."}), 403
     if worker["status"] != "aktiv":
@@ -5611,7 +5673,7 @@ def gate_tap():
         target_type="worker",
         target_id=worker["id"],
         company_id=worker["company_id"],
-        actor=None,
+        actor=row_to_dict(turnstile_user),
     )
 
     feedback_message = "Du bist jetzt angemeldet." if direction == "check-in" else "Du bist jetzt abgemeldet."

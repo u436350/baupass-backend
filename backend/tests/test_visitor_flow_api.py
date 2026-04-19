@@ -73,6 +73,36 @@ def _visitor_payload(visit_end_at, **overrides):
     return payload
 
 
+def _worker_payload(company_id, physical_card_id, **overrides):
+    payload = {
+        "companyId": company_id,
+        "firstName": "Max",
+        "lastName": "Muster",
+        "insuranceNumber": "A123456789",
+        "workerType": "worker",
+        "role": "Monteur",
+        "site": "Nordtor",
+        "validUntil": "2026-12-31",
+        "status": "aktiv",
+        "photoData": "data:image/png;base64,AAA",
+        "badgePin": "1234",
+        "physicalCardId": physical_card_id,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _issue_turnstile_api_key(db_path, user_id="usr-turnstile"):
+    api_key = server.create_turnstile_api_key()
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            "UPDATE users SET api_key_hash = ? WHERE id = ?",
+            (server.hash_turnstile_api_key(api_key), user_id),
+        )
+        db.commit()
+    return api_key
+
+
 def _local_datetime_string(delta_hours):
     target = datetime.now() + timedelta(hours=delta_hours)
     return target.strftime("%Y-%m-%dT%H:%M")
@@ -254,6 +284,58 @@ def test_visitor_end_to_end_lifecycle(client_and_db):
     expired_session_response = client.get("/api/worker-app/me", headers=worker_headers)
     assert expired_session_response.status_code == 401
     assert expired_session_response.get_json()["error"] in {"worker_session_expired", "invalid_worker_session"}
+
+
+def test_gate_api_key_is_scoped_to_turnstile_company(client_and_db):
+    client, _ = client_and_db
+    headers = _auth_headers(client)
+
+    first_company_response = client.post(
+        "/api/companies",
+        json={"name": "Firma Eins", "contact": "A", "adminPassword": "1234", "turnstilePassword": "1234", "turnstileCount": 1},
+        headers=headers,
+    )
+    assert first_company_response.status_code == 201
+    first_company_payload = first_company_response.get_json()
+
+    second_company_response = client.post(
+        "/api/companies",
+        json={"name": "Firma Zwei", "contact": "B", "adminPassword": "1234", "turnstilePassword": "1234", "turnstileCount": 1},
+        headers=headers,
+    )
+    assert second_company_response.status_code == 201
+    second_company_payload = second_company_response.get_json()
+
+    own_worker_response = client.post(
+        "/api/workers",
+        json=_worker_payload(first_company_payload["company"]["id"], "CARD-OWN-1"),
+        headers=headers,
+    )
+    assert own_worker_response.status_code == 201
+
+    foreign_worker_response = client.post(
+        "/api/workers",
+        json=_worker_payload(second_company_payload["company"]["id"], "CARD-OTHER-1"),
+        headers=headers,
+    )
+    assert foreign_worker_response.status_code == 201
+
+    gate_headers = {"X-Gate-Key": first_company_payload["turnstileCredentials"]["apiKey"]}
+
+    own_gate_response = client.post(
+        "/api/gates/tap",
+        json={"physicalCardId": "CARD-OWN-1", "direction": "check-in", "gate": "Gate 1"},
+        headers=gate_headers,
+    )
+    assert own_gate_response.status_code == 201
+
+    foreign_gate_response = client.post(
+        "/api/gates/tap",
+        json={"physicalCardId": "CARD-OTHER-1", "direction": "check-in", "gate": "Gate 1"},
+        headers=gate_headers,
+    )
+    assert foreign_gate_response.status_code == 403
+    assert foreign_gate_response.get_json()["error"] == "forbidden_worker_company"
 
 
 def test_support_login_requires_matching_company(client_and_db):
@@ -738,9 +820,9 @@ def test_invoice_approval_reject_requires_note_and_expired_approval_cannot_be_de
     assert approve_expired.get_json().get("error") == "approval_expired"
 
 
-def test_gate_tap_returns_contactless_feedback_for_checkin_and_checkout(client_and_db, monkeypatch):
+def test_gate_tap_returns_contactless_feedback_for_checkin_and_checkout(client_and_db):
     client, db_path = client_and_db
-    monkeypatch.setenv("BAUPASS_GATE_API_KEY", "gate-secret")
+    api_key = _issue_turnstile_api_key(db_path)
 
     with closing(sqlite3.connect(db_path)) as db:
         db.execute(
@@ -776,7 +858,7 @@ def test_gate_tap_returns_contactless_feedback_for_checkin_and_checkout(client_a
         )
         db.commit()
 
-    headers = {"X-Gate-Key": "gate-secret"}
+    headers = {"X-Gate-Key": api_key}
 
     checkin_response = client.post(
         "/api/gates/tap",
@@ -801,9 +883,9 @@ def test_gate_tap_returns_contactless_feedback_for_checkin_and_checkout(client_a
     assert checkout_payload.get("feedbackTone") == "success_out"
 
 
-def test_gate_tap_auto_toggles_direction_when_not_provided(client_and_db, monkeypatch):
+def test_gate_tap_auto_toggles_direction_when_not_provided(client_and_db):
     client, db_path = client_and_db
-    monkeypatch.setenv("BAUPASS_GATE_API_KEY", "gate-secret")
+    api_key = _issue_turnstile_api_key(db_path)
 
     with closing(sqlite3.connect(db_path)) as db:
         db.execute(
@@ -839,7 +921,7 @@ def test_gate_tap_auto_toggles_direction_when_not_provided(client_and_db, monkey
         )
         db.commit()
 
-    headers = {"X-Gate-Key": "gate-secret"}
+    headers = {"X-Gate-Key": api_key}
 
     first_tap = client.post(
         "/api/gates/tap",

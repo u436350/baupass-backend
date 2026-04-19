@@ -5052,7 +5052,7 @@ function renderCompanyList() {
             .join("")
         : "<span>Keine Reparaturen im gewaelten Zeitraum.</span>";
       const turnstileMarkup = turnstiles.length
-        ? `<div class="meta-box"><p><strong>Drehkreuz-Accounts</strong></p>${turnstiles.map((entry) => `<span>• ${escapeHtml(entry.username || entry.name || "Drehkreuz")} | ${entry.isActive ? "aktiv" : "deaktiviert"} <button type="button" class="ghost-button small-button" data-turnstile-reset="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">Passwort neu</button> <button type="button" class="ghost-button small-button" data-turnstile-toggle="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">${entry.isActive ? "Deaktivieren" : "Aktivieren"}</button></span>`).join("")}</div>`
+        ? `<div class="meta-box"><p><strong>Drehkreuz-Accounts</strong></p>${turnstiles.map((entry) => `<span>• ${escapeHtml(entry.username || entry.name || "Drehkreuz")} | ${entry.isActive ? "aktiv" : "deaktiviert"} | ${entry.hasApiKey ? "API-Key aktiv" : "kein API-Key"} <button type="button" class="ghost-button small-button" data-turnstile-reset="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">Passwort neu</button>${userRole === "superadmin" ? ` <button type="button" class="ghost-button small-button" data-turnstile-rotate-key="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">API-Key neu</button>` : ""} <button type="button" class="ghost-button small-button" data-turnstile-toggle="${escapeHtml(entry.id)}" data-turnstile-company="${escapeHtml(companyId)}">${entry.isActive ? "Deaktivieren" : "Aktivieren"}</button></span>`).join("")}</div>`
         : '<div class="meta-box"><span>Keine Drehkreuz-Accounts vorhanden.</span></div>';
       return `
         <article class="card-item ${deleted ? "is-deleted" : ""}">
@@ -5405,7 +5405,18 @@ function bindCompanyRowActions() {
         });
         await loadAllData();
         refreshAll();
-        window.alert(`Drehkreuz-Zugang angelegt:\nBenutzername: ${result.username}\nPasswort: ${result.password}`);
+        showSecretDialog(
+          "Drehkreuz-Zugang angelegt",
+          [
+            `Benutzername: ${result.username}`,
+            `Passwort: ${result.password}`,
+            `API-Key: ${result.apiKey || "nicht verfuegbar"}`,
+          ],
+          {
+            copyLabel: "API-Key kopieren",
+            copyValue: result.apiKey || `Benutzername: ${result.username}\nPasswort: ${result.password}`,
+          }
+        );
       } catch (error) {
         window.alert(`Drehkreuz konnte nicht angelegt werden: ${error.message}`);
       }
@@ -5430,6 +5441,33 @@ function bindCompanyRowActions() {
         window.alert("Drehkreuz-Passwort wurde aktualisiert.");
       } catch (error) {
         window.alert(`Passwort-Reset fehlgeschlagen: ${error.message}`);
+      }
+      return;
+    }
+
+    const rotateTurnstileKeyButton = event.target.closest("[data-turnstile-rotate-key]");
+    if (rotateTurnstileKeyButton && elements.companyList.contains(rotateTurnstileKeyButton)) {
+      const companyId = rotateTurnstileKeyButton.dataset.turnstileCompany;
+      const userId = rotateTurnstileKeyButton.dataset.turnstileRotateKey;
+      if (!window.confirm("API-Key fuer dieses Drehkreuz jetzt neu erzeugen? Der bisherige Key verliert sofort seine Gueltigkeit.")) {
+        return;
+      }
+      try {
+        const result = await apiRequest(`${API_BASE}/api/companies/${companyId}/turnstiles/${userId}/rotate-api-key`, {
+          method: "POST"
+        });
+        await loadAllData();
+        refreshAll();
+        showSecretDialog(
+          "Neuer Drehkreuz-API-Key",
+          [result.apiKey || "Kein API-Key erhalten"],
+          {
+            copyLabel: "API-Key kopieren",
+            copyValue: result.apiKey || "",
+          }
+        );
+      } catch (error) {
+        window.alert(`API-Key-Rotation fehlgeschlagen: ${error.message}`);
       }
       return;
     }
@@ -5857,6 +5895,59 @@ function closeWorkerAppQrDialog() {
   if (existing) {
     existing.remove();
   }
+}
+
+function closeSecretDialog() {
+  const existing = document.querySelector(".turnstile-secret-overlay");
+  if (existing) {
+    existing.remove();
+  }
+}
+
+function showSecretDialog(title, lines, options = {}) {
+  closeSecretDialog();
+
+  const intro = options.intro || "Diese Daten werden nur jetzt angezeigt.";
+  const copyLabel = options.copyLabel || "Daten kopieren";
+  const copyValue = options.copyValue || lines.join("\n");
+  const dialog = document.createElement("div");
+  dialog.className = "worker-app-qr-overlay turnstile-secret-overlay";
+  dialog.innerHTML = `
+    <div class="worker-app-qr-card turnstile-secret-card">
+      <h3>${escapeHtml(title || "Geheimer Schluessel")}</h3>
+      <p>${escapeHtml(intro)}</p>
+      <div class="turnstile-secret-copy">${lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}</div>
+      <div class="button-row">
+        <button type="button" class="primary-button" data-secret-copy>${escapeHtml(copyLabel)}</button>
+        <button type="button" class="ghost-button" data-secret-close>Schliessen</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  dialog.querySelector("[data-secret-close]")?.addEventListener("click", () => {
+    closeSecretDialog();
+  });
+
+  dialog.querySelector("[data-secret-copy]")?.addEventListener("click", async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(copyValue);
+        window.alert("Daten kopiert.");
+      } else {
+        window.prompt("Daten zum Kopieren:", copyValue);
+      }
+    } catch {
+      window.prompt("Daten zum Kopieren:", copyValue);
+    }
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      closeSecretDialog();
+    }
+  });
 }
 
 function printWorkerAppQr(workerName, qrSrc) {
@@ -7836,13 +7927,27 @@ async function handleCompanySubmit(event) {
 
       turnstileCredentials.forEach((credential, index) => {
         accessLines.push(`Drehkreuz-Zugang ${index + 1}: ${credential.username} / ${credential.password}`);
+        if (credential.apiKey) {
+          accessLines.push(`Drehkreuz-API-Key ${index + 1}: ${credential.apiKey}`);
+        }
       });
 
       if (!turnstileCredentials.length && response.turnstileCredentials?.username) {
         accessLines.push(`Drehkreuz-Zugang: ${response.turnstileCredentials.username} / ${response.turnstileCredentials.password}`);
+        if (response.turnstileCredentials.apiKey) {
+          accessLines.push(`Drehkreuz-API-Key: ${response.turnstileCredentials.apiKey}`);
+        }
       }
 
-      window.alert(`Firma angelegt.\n${accessLines.join("\n")}`);
+      showSecretDialog(
+        "Firma angelegt",
+        accessLines,
+        {
+          intro: "Zugangsdaten und API-Keys werden nur jetzt vollstaendig angezeigt.",
+          copyLabel: "Zugangsdaten kopieren",
+          copyValue: accessLines.join("\n"),
+        }
+      );
     }
   } catch (error) {
     window.alert(`Firma konnte nicht angelegt werden: ${error.message}`);
