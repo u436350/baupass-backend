@@ -3412,40 +3412,59 @@ def export_company_document_emails_csv():
         """
     ).fetchall()
 
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=";")
-    writer.writerow([
-        "company_id",
-        "company_name",
-        "document_email",
-        "status",
-        "contact",
-        "billing_email",
-        "deleted",
-        "last_inbox_activity_at",
-        "open_inbox_count",
-        "unresolved_inbox_count",
-    ])
-    for row in rows:
-        writer.writerow([
-            row["id"],
-            row["name"],
-            row["document_email"] or "",
-            row["status"] or "",
-            row["contact"] or "",
-            row["billing_email"] or "",
-            "1" if row["deleted_at"] else "0",
-            row["last_inbox_activity_at"] or "",
-            int(row["open_inbox_count"] or 0),
-            int(row["unresolved_inbox_count"] or 0),
-        ])
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.pdfgen import canvas as rl_canvas
+    except Exception:
+        return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
 
-    csv_text = output.getvalue()
-    output.close()
-    filename = f"company-document-emails-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
+    buffer = io.BytesIO()
+    pw, ph = landscape(A4)
+    pdf = rl_canvas.Canvas(buffer, pagesize=landscape(A4))
+    col_x = [36, 186, 326, 402, 512, 640, 688, 736]
+    headers = ["Firma", "Dokument-Email", "Status", "Rechnungs-Email", "Letzter Eingang", "Offen", "Ungelöst", "Gelöscht"]
+
+    def draw_doc_email_hdr(y):
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(36, y, "BauPass - Firmen Dokument-E-Mails")
+        y -= 14
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+        y -= 16
+        pdf.setFont("Helvetica-Bold", 7)
+        for i, h in enumerate(headers):
+            pdf.drawString(col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 10
+        return y
+
+    y = ph - 36
+    y = draw_doc_email_hdr(y)
+    pdf.setFont("Helvetica", 7)
+    for row in rows:
+        if y < 48:
+            pdf.showPage()
+            y = ph - 36
+            y = draw_doc_email_hdr(y)
+            pdf.setFont("Helvetica", 7)
+        pdf.drawString(col_x[0], y, str(row["name"] or "")[:24])
+        pdf.drawString(col_x[1], y, str(row["document_email"] or "")[:24])
+        pdf.drawString(col_x[2], y, str(row["status"] or "")[:12])
+        pdf.drawString(col_x[3], y, str(row["billing_email"] or "")[:24])
+        pdf.drawString(col_x[4], y, str(row["last_inbox_activity_at"] or "")[:18])
+        pdf.drawString(col_x[5], y, str(int(row["open_inbox_count"] or 0)))
+        pdf.drawString(col_x[6], y, str(int(row["unresolved_inbox_count"] or 0)))
+        pdf.drawString(col_x[7], y, "Ja" if row["deleted_at"] else "Nein")
+        y -= 11
+    if not rows:
+        pdf.drawString(36, y, "Keine Firmen gefunden.")
+    pdf.save()
+    buffer.seek(0)
+    filename = f"firmen-dokument-emails-{datetime.now().strftime('%Y-%m-%d')}.pdf"
     return Response(
-        csv_text,
-        mimetype="text/csv; charset=utf-8",
+        buffer.getvalue(),
+        mimetype="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -3965,13 +3984,39 @@ def export_workers_csv():
 @require_roles("superadmin", "company-admin", "turnstile")
 def export_workers_pdf():
     include_deleted = request.args.get("includeDeleted", "0") == "1"
+    include_photos = request.args.get("includePhotos", "0") == "1"
+    period = (request.args.get("period") or "all").strip().lower()
+    date_param = (request.args.get("date") or datetime.now().strftime("%Y-%m-%d")).strip()
+
+    # Validate date_param to prevent injection
+    try:
+        period_date = datetime.strptime(date_param, "%Y-%m-%d").date()
+    except ValueError:
+        period_date = datetime.now().date()
+
+    db = get_db()
     where_clause, params = visible_worker_clause(g.current_user, prefix="workers.")
     if not include_deleted:
         where_clause = f"{where_clause}{' AND' if where_clause else ' WHERE'} workers.deleted_at IS NULL"
 
-    rows = get_db().execute(
+    period_label = ""
+    if period == "day":
+        day_str = period_date.isoformat()
+        where_clause = f"{where_clause}{' AND' if where_clause else ' WHERE'} workers.id IN (SELECT DISTINCT worker_id FROM access_logs WHERE date(timestamp) = ?)"
+        params = list(params) + [day_str]
+        period_label = f" | Tag: {day_str}"
+    elif period == "week":
+        week_start = (period_date - timedelta(days=period_date.weekday())).isoformat()
+        week_end = (period_date - timedelta(days=period_date.weekday()) + timedelta(days=6)).isoformat()
+        where_clause = f"{where_clause}{' AND' if where_clause else ' WHERE'} workers.id IN (SELECT DISTINCT worker_id FROM access_logs WHERE date(timestamp) >= ? AND date(timestamp) <= ?)"
+        params = list(params) + [week_start, week_end]
+        period_label = f" | Woche: {week_start} – {week_end}"
+
+    rows = db.execute(
         f"""
-        SELECT workers.*, companies.name AS company_name, subcompanies.name AS subcompany_name
+        SELECT workers.id, workers.first_name, workers.last_name, workers.status,
+               workers.photo_data, workers.badge_id, workers.site,
+               companies.name AS company_name, subcompanies.name AS subcompany_name
         FROM workers
         JOIN companies ON companies.id = workers.company_id
         LEFT JOIN subcompanies ON subcompanies.id = workers.subcompany_id
@@ -3983,51 +4028,73 @@ def export_workers_pdf():
 
     try:
         from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
+        from reportlab.pdfgen import canvas as rl_canvas
+        from reportlab.lib.utils import ImageReader
     except Exception:
         return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
 
     buffer = io.BytesIO()
     page_width, page_height = A4
-    pdf = canvas.Canvas(buffer, pagesize=A4)
+    pdf = rl_canvas.Canvas(buffer, pagesize=A4)
+
+    row_height = 44 if include_photos else 13
+    photo_size = 36
+
+    def draw_worker_page_header(y):
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(36, y, "BauPass - Mitarbeiterliste")
+        y -= 16
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')}{period_label} | {len(rows)} Mitarbeiter")
+        y -= 20
+        pdf.setFont("Helvetica-Bold", 9)
+        x_name = 36 + (photo_size + 6 if include_photos else 0)
+        pdf.drawString(x_name, y, "Name")
+        pdf.drawString(x_name + 170, y, "Firma")
+        pdf.drawString(x_name + 310, y, "Subunternehmen")
+        pdf.drawString(x_name + 430, y, "Status")
+        y -= 10
+        pdf.line(36, y, page_width - 36, y)
+        y -= 12
+        return y
 
     y = page_height - 42
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(36, y, "BauPass - Mitarbeiterliste")
-    y -= 16
+    y = draw_worker_page_header(y)
     pdf.setFont("Helvetica", 9)
-    pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
-    y -= 22
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(36, y, "Name")
-    pdf.drawString(200, y, "Firma")
-    pdf.drawString(340, y, "Subunternehmen")
-    pdf.drawString(470, y, "Status")
-    y -= 12
-    pdf.line(36, y, page_width - 36, y)
-    y -= 14
 
-    pdf.setFont("Helvetica", 9)
     for row in rows:
-        if y < 48:
+        if y < (row_height + 12):
             pdf.showPage()
-            y = page_height - 44
-            pdf.setFont("Helvetica-Bold", 9)
-            pdf.drawString(36, y, "Name")
-            pdf.drawString(200, y, "Firma")
-            pdf.drawString(340, y, "Subunternehmen")
-            pdf.drawString(470, y, "Status")
-            y -= 12
-            pdf.line(36, y, page_width - 36, y)
-            y -= 14
+            y = page_height - 42
+            y = draw_worker_page_header(y)
             pdf.setFont("Helvetica", 9)
 
+        x_text = 36
+        if include_photos:
+            photo_bytes = None
+            pd = row["photo_data"] or ""
+            if pd.startswith("data:image/") and "," in pd:
+                try:
+                    b64 = pd.split(",", 1)[1]
+                    photo_bytes = base64.b64decode(b64.strip())
+                except Exception:
+                    photo_bytes = None
+            if photo_bytes:
+                try:
+                    img_buf = io.BytesIO(photo_bytes)
+                    img_reader = ImageReader(img_buf)
+                    pdf.drawImage(img_reader, 36, y - photo_size + 4, width=photo_size, height=photo_size, preserveAspectRatio=True, mask="auto")
+                except Exception:
+                    pass
+            x_text = 36 + photo_size + 6
+
+        text_y = y - (photo_size // 2 - 4 if include_photos else 0)
         full_name = f"{(row['last_name'] or '').strip()}, {(row['first_name'] or '').strip()}".strip(", ")
-        pdf.drawString(36, y, full_name[:32])
-        pdf.drawString(200, y, str(row["company_name"] or "-")[:24])
-        pdf.drawString(340, y, str(row["subcompany_name"] or "-")[:21])
-        pdf.drawString(470, y, str(row["status"] or "-")[:11])
-        y -= 13
+        pdf.drawString(x_text, text_y, full_name[:28])
+        pdf.drawString(x_text + 170, text_y, str(row["company_name"] or "-")[:22])
+        pdf.drawString(x_text + 310, text_y, str(row["subcompany_name"] or "-")[:18])
+        pdf.drawString(x_text + 430, text_y, str(row["status"] or "-")[:10])
+        y -= row_height
 
     if not rows:
         pdf.drawString(36, y, "Keine Mitarbeiter gefunden.")
@@ -5185,28 +5252,61 @@ def export_access_csv():
         params,
     ).fetchall()
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["id", "badge_id", "first_name", "last_name", "direction", "gate", "note", "timestamp_utc"])
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.pdfgen import canvas as rl_canvas
+    except Exception:
+        return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
 
+    buffer = io.BytesIO()
+    pw, ph = landscape(A4)
+    pdf = rl_canvas.Canvas(buffer, pagesize=landscape(A4))
+    period_label = f" | Zeitraum: {from_date or '...'} – {to_date or '...'}".rstrip(" | Zeitraum: ... – ...") if (from_date or to_date) else ""
+    col_x = [36, 180, 276, 342, 408, 532, 660]
+    al_headers = ["Name", "Badge-ID", "Richtung", "Tor", "Zeitstempel (UTC)", "Notiz", ""]
+
+    def draw_access_hdr(y):
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(36, y, f"BauPass - Zutrittsjournal{period_label}")
+        y -= 14
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')} | {len(rows)} Einträge")
+        y -= 16
+        pdf.setFont("Helvetica-Bold", 8)
+        for i, h in enumerate(al_headers):
+            pdf.drawString(col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 11
+        return y
+
+    y = ph - 36
+    y = draw_access_hdr(y)
+    pdf.setFont("Helvetica", 8)
     for row in rows:
-        writer.writerow(
-            [
-                row["id"],
-                row["badge_id"],
-                row["first_name"],
-                row["last_name"],
-                row["direction"],
-                row["gate"],
-                row["note"],
-                row["timestamp"],
-            ]
-        )
-
+        if y < 48:
+            pdf.showPage()
+            y = ph - 36
+            y = draw_access_hdr(y)
+            pdf.setFont("Helvetica", 8)
+        full_name = f"{(row['last_name'] or '').strip()}, {(row['first_name'] or '').strip()}".strip(", ")
+        pdf.drawString(col_x[0], y, full_name[:28])
+        pdf.drawString(col_x[1], y, str(row["badge_id"] or "")[:18])
+        dir_label = {"in": "Eintritt", "out": "Austritt"}.get(str(row["direction"] or ""), str(row["direction"] or "-"))
+        pdf.drawString(col_x[2], y, dir_label[:12])
+        pdf.drawString(col_x[3], y, str(row["gate"] or "-")[:16])
+        pdf.drawString(col_x[4], y, str(row["timestamp"] or "")[:22])
+        pdf.drawString(col_x[5], y, str(row["note"] or "")[:28])
+        y -= 12
+    if not rows:
+        pdf.drawString(36, y, "Keine Einträge gefunden.")
+    pdf.save()
+    buffer.seek(0)
+    filename = f"zutrittsjournal-{datetime.now().strftime('%Y-%m-%d')}.pdf"
     return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=zutrittsjournal.csv"},
+        buffer.getvalue(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -7067,43 +7167,59 @@ def export_invoice_retry_queue_csv():
         """
     ).fetchall()
 
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=";")
-    writer.writerow([
-        "invoice_id",
-        "invoice_number",
-        "company_id",
-        "company_name",
-        "recipient_email",
-        "total_amount",
-        "send_attempt_count",
-        "last_send_attempt_at",
-        "next_retry_at",
-        "last_error",
-        "created_at",
-    ])
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.pdfgen import canvas as rl_canvas
+    except Exception:
+        return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
 
+    buffer = io.BytesIO()
+    pw, ph = landscape(A4)
+    pdf = rl_canvas.Canvas(buffer, pagesize=landscape(A4))
+    rq_col_x = [36, 120, 236, 356, 426, 496, 566, 656]
+    rq_headers = ["Rechnungs-Nr.", "Firma", "Empfänger-Email", "Betrag", "Versuche", "Nächster Retry", "Erstellt", "Fehler"]
+
+    def draw_rq_hdr(y):
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(36, y, "BauPass - Rechnungs-Retry-Queue")
+        y -= 14
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')} | {len(rows)} Einträge")
+        y -= 16
+        pdf.setFont("Helvetica-Bold", 7)
+        for i, h in enumerate(rq_headers):
+            pdf.drawString(rq_col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 10
+        return y
+
+    y = ph - 36
+    y = draw_rq_hdr(y)
+    pdf.setFont("Helvetica", 7)
     for row in rows:
-        writer.writerow([
-            row["id"],
-            row["invoice_number"],
-            row["company_id"],
-            row["company_name"] or "",
-            row["recipient_email"] or "",
-            float(row["total_amount"] or 0),
-            int(row["send_attempt_count"] or 0),
-            row["last_send_attempt_at"] or "",
-            row["next_retry_at"] or "",
-            row["error_message"] or "",
-            row["created_at"] or "",
-        ])
-
-    csv_text = output.getvalue()
-    output.close()
-    filename = f"invoice-retry-queue-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
+        if y < 48:
+            pdf.showPage()
+            y = ph - 36
+            y = draw_rq_hdr(y)
+            pdf.setFont("Helvetica", 7)
+        pdf.drawString(rq_col_x[0], y, str(row["invoice_number"] or "")[:16])
+        pdf.drawString(rq_col_x[1], y, str(row["company_name"] or "")[:18])
+        pdf.drawString(rq_col_x[2], y, str(row["recipient_email"] or "")[:28])
+        pdf.drawString(rq_col_x[3], y, f"{float(row['total_amount'] or 0):.2f} €")
+        pdf.drawString(rq_col_x[4], y, str(int(row["send_attempt_count"] or 0)))
+        pdf.drawString(rq_col_x[5], y, str(row["next_retry_at"] or "")[:18])
+        pdf.drawString(rq_col_x[6], y, str(row["created_at"] or "")[:18])
+        pdf.drawString(rq_col_x[7], y, str(row["error_message"] or "")[:20])
+        y -= 11
+    if not rows:
+        pdf.drawString(36, y, "Keine offenen Retry-Einträge.")
+    pdf.save()
+    buffer.seek(0)
+    filename = f"invoice-retry-queue-{utc_now().strftime('%Y-%m-%d')}.pdf"
     return Response(
-        csv_text,
-        mimetype="text/csv; charset=utf-8",
+        buffer.getvalue(),
+        mimetype="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -7113,11 +7229,151 @@ def export_invoice_retry_queue_csv():
 @require_roles("superadmin")
 def export_invoice_incidents_csv():
     db = get_db()
-    csv_text = build_invoice_incident_export_csv(db)
-    filename = f"invoice-incidents-{utc_now().strftime('%Y%m%d-%H%M%S')}.csv"
+    retry_rows = db.execute(
+        """
+        SELECT invoices.*, companies.name AS company_name
+        FROM invoices
+        JOIN companies ON companies.id = invoices.company_id
+        WHERE invoices.status = 'send_failed' AND invoices.paid_at IS NULL
+        ORDER BY COALESCE(invoices.next_retry_at, invoices.created_at) ASC
+        """
+    ).fetchall()
+    dead_letter_rows = get_invoice_dead_letters(db)
+    alert_rows = db.execute(
+        "SELECT code, severity, message, created_at FROM system_alerts ORDER BY created_at DESC LIMIT 25"
+    ).fetchall()
+    metrics = get_invoice_ops_metrics(db)
+
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.pdfgen import canvas as rl_canvas
+    except Exception:
+        return jsonify({"error": "pdf_dependency_missing", "message": "Bitte reportlab installieren."}), 503
+
+    buffer = io.BytesIO()
+    pw, ph = landscape(A4)
+    pdf = rl_canvas.Canvas(buffer, pagesize=landscape(A4))
+
+    y = ph - 36
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(36, y, "BauPass - Rechnungs-Incident-Report")
+    y -= 16
+    pdf.setFont("Helvetica", 9)
+    pdf.drawString(36, y, f"Erstellt am: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    y -= 20
+
+    # Summary section
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(36, y, "Zusammenfassung")
+    y -= 12
+    pdf.setFont("Helvetica", 9)
+    summary_items = [
+        ("Kritische Fehlversände >24h", metrics.get("criticalOver24h", 0)),
+        ("Ø Minuten bis erster Erfolg", metrics.get("avgFirstSuccessMinutes", 0)),
+        ("Offene Retry-Fälle", len(retry_rows)),
+        ("Offene Dead-Letter-Fälle", len(dead_letter_rows)),
+        ("Offene System-Alerts", len(alert_rows)),
+    ]
+    for label, value in summary_items:
+        pdf.drawString(36, y, f"{label}: {value}")
+        y -= 12
+    y -= 8
+
+    # Retry queue section
+    if retry_rows:
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(36, y, f"Retry-Queue ({len(retry_rows)} Einträge)")
+        y -= 12
+        inc_col_x = [36, 120, 236, 356, 426, 496, 566]
+        inc_headers = ["Rechnungs-Nr.", "Firma", "Email", "Betrag", "Versuche", "Nächster Retry", "Fehler"]
+        pdf.setFont("Helvetica-Bold", 7)
+        for i, h in enumerate(inc_headers):
+            pdf.drawString(inc_col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 10
+        pdf.setFont("Helvetica", 7)
+        for row in retry_rows:
+            if y < 48:
+                pdf.showPage()
+                y = ph - 36
+            pdf.drawString(inc_col_x[0], y, str(row["invoice_number"] or "")[:16])
+            pdf.drawString(inc_col_x[1], y, str(row["company_name"] or "")[:18])
+            pdf.drawString(inc_col_x[2], y, str(row["recipient_email"] or "")[:28])
+            pdf.drawString(inc_col_x[3], y, f"{float(row['total_amount'] or 0):.2f} €")
+            pdf.drawString(inc_col_x[4], y, str(int(row["send_attempt_count"] or 0)))
+            pdf.drawString(inc_col_x[5], y, str(row["next_retry_at"] or "")[:18])
+            pdf.drawString(inc_col_x[6], y, str(row["error_message"] or "")[:22])
+            y -= 11
+        y -= 8
+
+    # Dead letters section
+    if dead_letter_rows:
+        if y < 80:
+            pdf.showPage()
+            y = ph - 36
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(36, y, f"Dead Letters ({len(dead_letter_rows)} Einträge)")
+        y -= 12
+        dl_col_x = [36, 120, 236, 356, 426, 566]
+        dl_headers = ["Rechnungs-Nr.", "Firma", "Email", "Betrag", "Grund", "Erstellt"]
+        pdf.setFont("Helvetica-Bold", 7)
+        for i, h in enumerate(dl_headers):
+            pdf.drawString(dl_col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 10
+        pdf.setFont("Helvetica", 7)
+        for row in dead_letter_rows:
+            if y < 48:
+                pdf.showPage()
+                y = ph - 36
+            pdf.drawString(dl_col_x[0], y, str(row.get("invoice_number", "") or "")[:16])
+            pdf.drawString(dl_col_x[1], y, str(row.get("company_name", "") or "")[:18])
+            pdf.drawString(dl_col_x[2], y, str(row.get("recipient_email", "") or "")[:28])
+            pdf.drawString(dl_col_x[3], y, f"{float(row.get('total_amount', 0) or 0):.2f} €")
+            pdf.drawString(dl_col_x[4], y, str(row.get("reason", "") or "")[:22])
+            pdf.drawString(dl_col_x[5], y, str(row.get("created_at", "") or "")[:18])
+            y -= 11
+        y -= 8
+
+    # System alerts section
+    if alert_rows:
+        if y < 80:
+            pdf.showPage()
+            y = ph - 36
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(36, y, f"System-Alerts ({len(alert_rows)} Einträge)")
+        y -= 12
+        sa_col_x = [36, 160, 230, 500]
+        sa_headers = ["Code", "Schweregrad", "Meldung", "Erstellt"]
+        pdf.setFont("Helvetica-Bold", 7)
+        for i, h in enumerate(sa_headers):
+            pdf.drawString(sa_col_x[i], y, h)
+        y -= 8
+        pdf.line(36, y, pw - 36, y)
+        y -= 10
+        pdf.setFont("Helvetica", 7)
+        for row in alert_rows:
+            if y < 48:
+                pdf.showPage()
+                y = ph - 36
+            pdf.drawString(sa_col_x[0], y, str(row["code"] or "")[:20])
+            pdf.drawString(sa_col_x[1], y, str(row["severity"] or "")[:12])
+            pdf.drawString(sa_col_x[2], y, str(row["message"] or "")[:52])
+            pdf.drawString(sa_col_x[3], y, str(row["created_at"] or "")[:18])
+            y -= 11
+
+    if not retry_rows and not dead_letter_rows and not alert_rows:
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(36, y, "Keine Vorfälle vorhanden.")
+
+    pdf.save()
+    buffer.seek(0)
+    filename = f"invoice-incidents-{utc_now().strftime('%Y-%m-%d')}.pdf"
     return Response(
-        csv_text,
-        mimetype="text/csv; charset=utf-8",
+        buffer.getvalue(),
+        mimetype="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

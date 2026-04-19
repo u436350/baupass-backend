@@ -7112,46 +7112,89 @@ async function exportAccessCsv() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `zutrittsjournal-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `zutrittsjournal-${new Date().toISOString().slice(0, 10)}.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   } catch (error) {
-    window.alert(`Zutritts-CSV Export fehlgeschlagen: ${error.message}`);
+    window.alert(`Zutrittsjournal-Export fehlgeschlagen: ${error.message}`);
   }
 }
 
-async function exportWorkersPdf() {
-  try {
-    const includeDeleted = window.confirm("Gelöschte Mitarbeiter ebenfalls exportieren?");
+function exportWorkersPdf() {
+  const today = new Date().toISOString().slice(0, 10);
+  const overlay = document.createElement("div");
+  overlay.className = "turnstile-secret-overlay";
+  overlay.innerHTML = `
+    <div class="turnstile-secret-card" style="max-width:420px">
+      <p class="eyebrow">Mitarbeiterliste</p>
+      <h3 style="margin:0 0 18px">PDF-Export Optionen</h3>
+      <div style="display:grid;gap:14px;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="wlIncludePhotos" style="width:18px;height:18px" />
+          <span>Mit Fotos (Passfoto je Mitarbeiter)</span>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-weight:600">Zeitraum</span>
+          <select id="wlPeriod" style="padding:8px 12px;border-radius:8px;border:1.5px solid #ddd;font-size:14px">
+            <option value="all">Alle aktiven Mitarbeiter</option>
+            <option value="today">Heute</option>
+            <option value="week">Diese Woche</option>
+            <option value="day">Bestimmter Tag</option>
+          </select>
+        </label>
+        <label id="wlCustomDateWrap" style="display:none;flex-direction:column;gap:6px">
+          <span style="font-weight:600">Datum</span>
+          <input type="date" id="wlCustomDate" value="${today}" style="padding:8px 12px;border-radius:8px;border:1.5px solid #ddd;font-size:14px" />
+        </label>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:flex-end">
+        <button type="button" class="ghost-button" id="wlCancelBtn">Abbrechen</button>
+        <button type="button" class="primary-button" id="wlDownloadBtn">PDF herunterladen</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const periodSel = overlay.querySelector("#wlPeriod");
+  const customWrap = overlay.querySelector("#wlCustomDateWrap");
+  periodSel.addEventListener("change", () => {
+    customWrap.style.display = periodSel.value === "day" ? "flex" : "none";
+  });
+  overlay.querySelector("#wlCancelBtn").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (ev) => { if (ev.target === overlay) overlay.remove(); });
+
+  overlay.querySelector("#wlDownloadBtn").addEventListener("click", async () => {
+    const includePhotos = overlay.querySelector("#wlIncludePhotos").checked;
+    const periodVal = periodSel.value;
+    const customDate = overlay.querySelector("#wlCustomDate").value || today;
+    overlay.remove();
+
     const query = new URLSearchParams();
-    if (includeDeleted) {
-      query.set("includeDeleted", "1");
-    }
+    if (includePhotos) query.set("includePhotos", "1");
+    if (periodVal === "today") { query.set("period", "day"); query.set("date", today); }
+    else if (periodVal === "week") { query.set("period", "week"); query.set("date", today); }
+    else if (periodVal === "day") { query.set("period", "day"); query.set("date", customDate); }
     const suffix = query.toString() ? `?${query.toString()}` : "";
 
-    const response = await fetch(`${API_BASE}/api/workers/export.pdf${suffix}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Fehler ${response.status}`);
+    try {
+      const response = await fetch(`${API_BASE}/api/workers/export.pdf${suffix}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error(`API Fehler ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mitarbeiterliste-${today}.pdf`;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(`Mitarbeiterlisten-Export fehlgeschlagen: ${error.message}`);
     }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `mitarbeiterliste-${new Date().toISOString().slice(0, 10)}.pdf`;
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    window.alert(`Mitarbeiterlisten-Export (PDF) fehlgeschlagen: ${error.message}`);
-  }
+  });
 }
 
 function printDailyReport() {
@@ -10803,7 +10846,7 @@ if (invoiceRetryExportBtn) {
     try {
       await downloadAuthorizedCsv(
         `${API_BASE}/api/invoices/retry-queue/export.csv`,
-        `invoice-retry-queue-${new Date().toISOString().slice(0, 10)}.csv`
+        `invoice-retry-queue-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     } catch (error) {
       window.alert(`CSV-Export fehlgeschlagen: ${error.message}`);
@@ -10821,7 +10864,7 @@ if (invoiceIncidentExportBtn) {
     try {
       await downloadAuthorizedCsv(
         `${API_BASE}/api/invoices/incidents/export.csv`,
-        `invoice-incidents-${new Date().toISOString().slice(0, 10)}.csv`
+        `invoice-incidents-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     } catch (error) {
       window.alert(`Incident-Export fehlgeschlagen: ${error.message}`);
@@ -10922,7 +10965,7 @@ if (exportCompanyDocEmailsBtn) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `company-document-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `company-document-emails-${new Date().toISOString().slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
