@@ -3484,3 +3484,36 @@ body.theme-black .sidebar {
     linear-gradient(178deg, rgba(0, 0, 0, 0.98), rgba(10, 10, 10, 0.95)),
     conic-gradient(from 150deg at 0% 0%, rgba(202, 90, 45, 0.18), rgba(42, 113, 119, 0.14), rgba(202, 90, 45, 0.18));
 }
+
+/* ── Window Controls Overlay: Titelleiste nahtlos in Sidebar einbauen ── */
+@media (display-mode: window-controls-overlay) {
+  .shell {
+    min-height: 100dvh;
+  }
+
+  /* Sidebar füllt die gesamte Fensterhöhe inkl. Titelleistenbereich */
+  .sidebar {
+    height: 100dvh !important;
+    padding-top: calc(32px + env(titlebar-area-height, 0px));
+  }
+
+  /* Unsichtbarer, ziehbarer Streifen oben links (Fenster verschieben) */
+  .sidebar::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: env(titlebar-area-height, 32px);
+    background: transparent;
+    -webkit-app-region: drag;
+    app-region: drag;
+    z-index: 9999;
+  }
+
+  /* Buttons/Links in der Sidebar sollen nicht ziehen */
+  .sidebar * {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}
