@@ -2,14 +2,17 @@
   "name": "baupass-control-e2e",
   "private": true,
   "version": "1.0.0",
-  "description": "Playwright E2E tests for BauPass Control",
+  "description": "BauPass Control test and desktop shell",
+  "main": "desktop/main.js",
   "scripts": {
+    "desktop": "electron desktop/main.js",
     "test:e2e": "playwright test",
     "test:e2e:preview": "playwright test tests/e2e/preview-session.spec.js",
     "test:e2e:ops": "playwright test tests/e2e/invoice-ops.spec.js",
     "test:e2e:all": "playwright test tests/e2e/preview-session.spec.js tests/e2e/invoice-ops.spec.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@playwright/test": "^1.52.0",
+    "electron": "^31.7.7"
   }
 }

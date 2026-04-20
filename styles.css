@@ -3536,3 +3536,74 @@ body::after {
     app-region: no-drag;
   }
 }
+
+/* ── Native Desktop Shell (Electron) ─────────────────────────────────────── */
+.desktop-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 0 14px;
+  background: linear-gradient(180deg, #111820 0%, #0d131a 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f3e9dd;
+  z-index: 12000;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.desktop-titlebar-brand {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.82;
+  font-weight: 600;
+}
+
+.desktop-titlebar-spacer {
+  flex: 1;
+}
+
+.desktop-titlebar-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.desktop-titlebar-btn {
+  width: 46px;
+  height: 40px;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: #f0e8dd;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.desktop-titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.desktop-titlebar-btn-close:hover {
+  background: #c53d2f;
+  color: white;
+}
+
+body.desktop-app {
+  padding-top: 40px;
+}
+
+body.desktop-app .shell {
+  min-height: calc(100vh - 40px);
+}
+
+body.desktop-app .auth-overlay {
+  min-height: calc(100vh - 40px);
+}

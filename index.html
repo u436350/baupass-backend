@@ -45,6 +45,16 @@
   <link rel="stylesheet" href="./styles.css?v=20260420b" />
 </head>
 <body class="auth-locked notranslate" translate="no">
+  <header id="desktopTitlebar" class="desktop-titlebar hidden" aria-hidden="true">
+    <div class="desktop-titlebar-brand">BauPass Control</div>
+    <div class="desktop-titlebar-spacer"></div>
+    <div class="desktop-titlebar-actions">
+      <button id="desktopMinimizeBtn" class="desktop-titlebar-btn" type="button" aria-label="Verkleinern" title="Verkleinern">-</button>
+      <button id="desktopMaximizeBtn" class="desktop-titlebar-btn" type="button" aria-label="Maximieren" title="Maximieren">□</button>
+      <button id="desktopCloseBtn" class="desktop-titlebar-btn desktop-titlebar-btn-close" type="button" aria-label="Schliessen" title="Schliessen">×</button>
+    </div>
+  </header>
+
   <div id="authOverlay" class="auth-overlay" style="display:grid;">
     <div class="auth-panel">
       <label class="auth-lang-field auth-lang-field-compact">
@@ -1295,5 +1305,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
   <script src="./app.js?v=20260418u"></script>
+  <script src="./desktop/renderer.js?v=20260420a"></script>
 </body>
 </html>
