@@ -6186,9 +6186,11 @@ function printWorkerAppQr(workerName, qrSrc) {
   const safeName = escapeHtml(workerName || "Mitarbeiter");
   w.document.write(`
     <!DOCTYPE html>
-    <html lang="de">
+    <html lang="de" translate="no">
     <head>
       <meta charset="UTF-8" />
+      <meta name="google" content="notranslate" />
+      <meta http-equiv="Content-Language" content="de" />
       <title>Mitarbeiter-App QR</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 24px; text-align: center; }
@@ -7491,9 +7493,11 @@ function printDailyReport() {
 
   const html = `
     <!DOCTYPE html>
-    <html lang="de">
+    <html lang="de" translate="no">
     <head>
       <meta charset="UTF-8" />
+      <meta name="google" content="notranslate" />
+      <meta http-equiv="Content-Language" content="de" />
       <title>Zutrittsreport</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 24px; color: #222; }
@@ -7571,7 +7575,7 @@ function printVisitorWeeklyReport() {
     return;
   }
   reportWindow.document.open();
-  reportWindow.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8" /><title>Besucher-Wochenliste</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f3f6f8}h1{margin:0 0 8px}.muted{color:#555}</style></head><body><h1>Besucher-Wochenliste</h1><p class="muted">Zeitraum: ${escapeHtml(toDateInputValue(start))} bis ${escapeHtml(toDateInputValue(end))}</p>${htmlRows ? `<table><thead><tr><th>Name</th><th>Firma</th><th>Zweck</th><th>Ansprechpartner</th><th>Baustelle</th><th>Letzte Aktivität</th></tr></thead><tbody>${htmlRows}</tbody></table>` : "<p>Keine Besucher in dieser Woche.</p>"}</body></html>`);
+  reportWindow.document.write(`<!DOCTYPE html><html lang="de" translate="no"><head><meta charset="UTF-8" /><meta name="google" content="notranslate" /><meta http-equiv="Content-Language" content="de" /><title>Besucher-Wochenliste</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px}th{background:#f3f6f8}h1{margin:0 0 8px}.muted{color:#555}</style></head><body><h1>Besucher-Wochenliste</h1><p class="muted">Zeitraum: ${escapeHtml(toDateInputValue(start))} bis ${escapeHtml(toDateInputValue(end))}</p>${htmlRows ? `<table><thead><tr><th>Name</th><th>Firma</th><th>Zweck</th><th>Ansprechpartner</th><th>Baustelle</th><th>Letzte Aktivität</th></tr></thead><tbody>${htmlRows}</tbody></table>` : "<p>Keine Besucher in dieser Woche.</p>"}</body></html>`);
   reportWindow.document.close();
   reportWindow.focus();
   reportWindow.print();
@@ -8013,9 +8017,11 @@ function extractAccessLineItems(companyId, invoicePeriod) {
 function renderInvoiceHtml(invoice) {
   return `
     <!DOCTYPE html>
-    <html lang="de">
+    <html lang="de" translate="no">
     <head>
       <meta charset="UTF-8" />
+      <meta name="google" content="notranslate" />
+      <meta http-equiv="Content-Language" content="de" />
       <title>Rechnung ${escapeHtml(invoice.invoiceNumber)}</title>
       <style>
         body { margin: 0; font-family: Arial, sans-serif; color: #1b1b1b; }

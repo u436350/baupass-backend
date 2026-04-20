@@ -881,10 +881,12 @@ def render_login_page():
 
     template = """
         <!DOCTYPE html>
-        <html lang="de">
+        <html lang="de" translate="no">
         <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <meta name="google" content="notranslate" />
+            <meta http-equiv="Content-Language" content="de" />
             <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
             <meta http-equiv="Pragma" content="no-cache" />
             <meta http-equiv="Expires" content="0" />
@@ -2908,10 +2910,12 @@ def phone_test_page():
         now_value = html.escape(now_iso())
         return f"""
 <!DOCTYPE html>
-<html lang=\"de\">
+<html lang=\"de\" translate=\"no\">
 <head>
     <meta charset=\"utf-8\" />
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+    <meta name=\"google\" content=\"notranslate\" />
+    <meta http-equiv=\"Content-Language\" content=\"de\" />
     <title>BauPass Telefon-Test</title>
     <style>
         body {{
