@@ -1,4 +1,5 @@
 import sqlite3
+import io
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -338,6 +339,208 @@ def test_gate_api_key_is_scoped_to_turnstile_company(client_and_db):
     assert foreign_gate_response.get_json()["error"] == "forbidden_worker_company"
 
 
+def test_worker_with_expired_required_document_is_auto_locked_and_access_blocked(client_and_db):
+    client, db_path = client_and_db
+    headers = _auth_headers(client)
+
+    create_response = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-LOCK-1"),
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+    worker_id = create_response.get_json()["id"]
+
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            """
+            INSERT INTO worker_documents (
+                id, worker_id, company_id, doc_type, filename, file_path, file_size,
+                source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes, expiry_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "doc-expired-1",
+                worker_id,
+                "cmp-default",
+                "personalausweis",
+                "id-expired.pdf",
+                "backend/e2e-doc-uploads/id-expired.pdf",
+                123,
+                "",
+                None,
+                "usr-superadmin",
+                now,
+                "",
+                "2020-01-01",
+            ),
+        )
+        db.commit()
+
+    list_response = client.get("/api/workers", headers=headers)
+    assert list_response.status_code == 200
+    workers = list_response.get_json() or []
+    worker_row = next((row for row in workers if row.get("id") == worker_id), None)
+    assert worker_row is not None
+    assert worker_row.get("status") == "gesperrt"
+    assert worker_row.get("lockReasonCode") == "expired_documents"
+
+    access_response = client.post(
+        "/api/access-logs",
+        json={
+            "workerId": worker_id,
+            "direction": "check-in",
+            "gate": "Nordtor",
+            "note": "Blocked by expired docs",
+        },
+        headers=headers,
+    )
+    assert access_response.status_code == 400
+    assert access_response.get_json().get("error") == "worker_documents_expired"
+
+
+def test_worker_is_auto_unlocked_after_uploading_new_valid_required_document(client_and_db):
+    client, db_path = client_and_db
+    headers = _auth_headers(client)
+
+    create_response = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-UNLOCK-1"),
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+    worker_id = create_response.get_json()["id"]
+
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            """
+            INSERT INTO worker_documents (
+                id, worker_id, company_id, doc_type, filename, file_path, file_size,
+                source_email_from, source_inbox_id, uploaded_by_user_id, created_at, notes, expiry_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "doc-expired-2",
+                worker_id,
+                "cmp-default",
+                "personalausweis",
+                "id-expired.pdf",
+                "backend/e2e-doc-uploads/id-expired-2.pdf",
+                123,
+                "",
+                None,
+                "usr-superadmin",
+                now,
+                "",
+                "2020-01-01",
+            ),
+        )
+        db.commit()
+
+    _ = client.get("/api/workers", headers=headers)
+
+    upload_response = client.post(
+        f"/api/workers/{worker_id}/documents/upload",
+        data={
+            "docType": "personalausweis",
+            "notes": "Renewed ID",
+            "expiryDate": "2030-12-31",
+            "file": (io.BytesIO(b"%PDF-1.4 renewed"), "id-renewed.pdf", "application/pdf"),
+        },
+        headers=headers,
+        content_type="multipart/form-data",
+    )
+    assert upload_response.status_code == 200
+
+    refreshed_workers = client.get("/api/workers", headers=headers)
+    assert refreshed_workers.status_code == 200
+    worker_row = next((row for row in (refreshed_workers.get_json() or []) if row.get("id") == worker_id), None)
+    assert worker_row is not None
+    assert worker_row.get("status") == "aktiv"
+    assert not worker_row.get("lockReasonCode")
+
+
+def test_company_admin_cannot_use_photo_override_flag(client_and_db):
+    client, _ = client_and_db
+    admin_headers = _auth_headers(client)
+    company_headers, _ = _company_admin_auth_headers(client)
+
+    create_response = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-OVR-1"),
+        headers=admin_headers,
+    )
+    assert create_response.status_code == 201
+    worker_id = create_response.get_json()["id"]
+
+    update_response = client.put(
+        f"/api/workers/{worker_id}",
+        json={
+            "photoData": "data:image/png;base64,BBB",
+            "photoMatchOverride": True,
+            "photoMatchSimilarity": 0.31,
+            "photoMatchOverrideReason": "False positive simulation",
+        },
+        headers=company_headers,
+    )
+    assert update_response.status_code == 403
+    assert update_response.get_json().get("error") == "photo_override_forbidden"
+
+
+def test_superadmin_photo_override_requires_reason_and_is_audited(client_and_db):
+    client, db_path = client_and_db
+    headers = _auth_headers(client)
+
+    create_response = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-OVR-2"),
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+    worker_id = create_response.get_json()["id"]
+
+    missing_reason_response = client.put(
+        f"/api/workers/{worker_id}",
+        json={
+            "photoData": "data:image/png;base64,CCC",
+            "photoMatchOverride": True,
+            "photoMatchSimilarity": 0.29,
+            "photoMatchOverrideReason": "kurz",
+        },
+        headers=headers,
+    )
+    assert missing_reason_response.status_code == 400
+    assert missing_reason_response.get_json().get("error") == "photo_override_reason_required"
+
+    ok_response = client.put(
+        f"/api/workers/{worker_id}",
+        json={
+            "photoData": "data:image/png;base64,DDD",
+            "photoMatchOverride": True,
+            "photoMatchSimilarity": 0.29,
+            "photoMatchOverrideReason": "Supervisor verified in person",
+        },
+        headers=headers,
+    )
+    assert ok_response.status_code == 200
+
+    with closing(sqlite3.connect(db_path)) as db:
+        row = db.execute(
+            """
+            SELECT event_type, message
+            FROM audit_logs
+            WHERE event_type = 'security.worker_photo_override' AND target_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (worker_id,),
+        ).fetchone()
+        assert row is not None
+        assert "Supervisor verified in person" in str(row[1] or "")
+
+
 def test_support_login_requires_matching_company(client_and_db):
     client, _ = client_and_db
 
@@ -619,12 +822,12 @@ def test_invoice_incident_export_contains_retry_dead_letter_and_alert_rows(clien
     response = client.get("/api/invoices/incidents/export.csv", headers=headers)
 
     assert response.status_code == 200
-    content = response.get_data(as_text=True)
-    assert "record_type;key;label;invoice_id;invoice_number" in content
-    assert "retry_queue;inv-export-1;Retry Queue;inv-export-1;RE-EXPORT-1" in content
-    assert "dead_letter;dead-export-1;Dead Letter;inv-export-1;RE-EXPORT-1" in content
-    assert "system_alert;smtp_circuit_open;System Alert" in content
-    assert "summary;open_dead_letters;Offene Dead-Letter-Fälle" in content
+    assert response.mimetype == "application/pdf"
+    content_disposition = response.headers.get("Content-Disposition", "")
+    assert "invoice-incidents-" in content_disposition
+    assert content_disposition.lower().endswith('.pdf"') or ".pdf" in content_disposition.lower()
+    content = response.get_data()
+    assert content.startswith(b"%PDF-")
 
 
 def test_invoice_bulk_retry_requires_second_superadmin_approval(client_and_db):

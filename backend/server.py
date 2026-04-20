@@ -252,16 +252,29 @@ def sanitize_photo_data(value, required=False):
     return raw.replace("\n", "").replace("\r", "")
 
 
-def worker_has_expired_required_documents(db, worker_id, today_value=None):
+def _required_worker_doc_types():
+    return ["mindestlohnnachweis", "personalausweis"]
+
+
+def get_worker_required_document_snapshot(db, worker_id, today_value=None):
     worker_id = clean_id_input(worker_id)
     if not worker_id:
-        return False, []
+        return {
+            "requiredTypes": _required_worker_doc_types(),
+            "missingTypes": [],
+            "expiredTypes": [],
+            "expiringSoonTypes": [],
+            "latestByType": {},
+        }
+
     today = str(today_value or now_iso()[:10])
-    required_doc_types = ["mindestlohnnachweis", "personalausweis"]
+    soon_date = (parse_iso_date(today) or utc_now().date()) + timedelta(days=30)
+    required_doc_types = _required_worker_doc_types()
     placeholders = ", ".join("?" for _ in required_doc_types)
+
     latest_rows = db.execute(
         f"""
-        SELECT wd.doc_type, wd.expiry_date
+        SELECT wd.doc_type, wd.expiry_date, wd.created_at
         FROM worker_documents wd
         JOIN (
             SELECT doc_type, MAX(created_at) AS latest_created_at
@@ -275,12 +288,110 @@ def worker_has_expired_required_documents(db, worker_id, today_value=None):
         (worker_id, *required_doc_types, worker_id),
     ).fetchall()
 
-    expired_types = []
+    latest_by_type = {}
     for row in latest_rows:
-        expiry = str(row["expiry_date"] or "").strip()
-        if expiry and expiry < today:
-            expired_types.append(str(row["doc_type"] or ""))
+        doc_type = str(row["doc_type"] or "").strip().lower()
+        if not doc_type:
+            continue
+        latest_by_type[doc_type] = {
+            "expiryDate": str(row["expiry_date"] or "").strip(),
+            "createdAt": str(row["created_at"] or "").strip(),
+        }
+
+    missing_types = []
+    expired_types = []
+    expiring_soon_types = []
+
+    for doc_type in required_doc_types:
+        entry = latest_by_type.get(doc_type)
+        if not entry:
+            missing_types.append(doc_type)
+            continue
+        expiry = entry.get("expiryDate") or ""
+        if expiry:
+            if expiry < today:
+                expired_types.append(doc_type)
+            else:
+                expiry_parsed = parse_iso_date(expiry)
+                if expiry_parsed and expiry_parsed <= soon_date:
+                    expiring_soon_types.append(doc_type)
+
+    return {
+        "requiredTypes": required_doc_types,
+        "missingTypes": missing_types,
+        "expiredTypes": expired_types,
+        "expiringSoonTypes": expiring_soon_types,
+        "latestByType": latest_by_type,
+    }
+
+
+def get_worker_lock_metadata(db, worker_row, today_value=None):
+    if not worker_row:
+        return {}
+    worker_type = str(worker_row["worker_type"] or "worker").strip().lower()
+    if worker_type != "worker":
+        return {}
+
+    snapshot = get_worker_required_document_snapshot(db, worker_row["id"], today_value=today_value)
+    expired_types = snapshot.get("expiredTypes") or []
+    if expired_types:
+        label_map = {
+            "personalausweis": "Personalausweis/Reisepass",
+            "mindestlohnnachweis": "Mindestlohnnachweis",
+        }
+        labels = [label_map.get(item, item) for item in expired_types]
+        return {
+            "lockReasonCode": "expired_documents",
+            "lockReason": f"Automatisch gesperrt wegen abgelaufener Pflichtdokumente: {', '.join(labels)}",
+            "expiredRequiredDocTypes": expired_types,
+        }
+    return {}
+
+
+def worker_has_expired_required_documents(db, worker_id, today_value=None):
+    snapshot = get_worker_required_document_snapshot(db, worker_id, today_value=today_value)
+    expired_types = list(snapshot.get("expiredTypes") or [])
     return len(expired_types) > 0, expired_types
+
+
+def unlock_worker_if_documents_valid(db, worker_row, today_value=None, actor=None):
+    if not worker_row:
+        return False
+    if str(worker_row["deleted_at"] or "").strip():
+        return False
+    if str(worker_row["worker_type"] or "worker").strip().lower() != "worker":
+        return False
+
+    worker_id = str(worker_row["id"] or "").strip()
+    if not worker_id:
+        return False
+
+    has_expired, _expired_types = worker_has_expired_required_documents(db, worker_id, today_value=today_value)
+    if has_expired:
+        return False
+    if str(worker_row["status"] or "").strip().lower() != "gesperrt":
+        return False
+
+    lock_code = f"worker_doc_expired_lock_{worker_id}"
+    unresolved_lock_alert = db.execute(
+        "SELECT id FROM system_alerts WHERE code = ? AND resolved_at IS NULL ORDER BY created_at DESC LIMIT 1",
+        (lock_code,),
+    ).fetchone()
+    if not unresolved_lock_alert:
+        return False
+
+    db.execute("UPDATE workers SET status = 'aktiv' WHERE id = ?", (worker_id,))
+    db.execute("UPDATE system_alerts SET resolved_at = ? WHERE code = ? AND resolved_at IS NULL", (now_iso(), lock_code))
+
+    log_audit(
+        "worker.auto_unlocked_documents",
+        f"Mitarbeiter {worker_id} wurde nach gueltigem Dokument-Update automatisch entsperrt",
+        target_type="worker",
+        target_id=worker_id,
+        company_id=worker_row["company_id"],
+        actor=actor,
+    )
+    return True
 
 
 def lock_worker_for_expired_documents(db, worker_row, today_value=None):
@@ -1497,6 +1608,10 @@ def init_db():
         cur.execute("ALTER TABLE email_inbox ADD COLUMN to_addr TEXT NOT NULL DEFAULT ''")
     if "matched_company_id" not in inbox_columns:
         cur.execute("ALTER TABLE email_inbox ADD COLUMN matched_company_id TEXT")
+
+    system_alert_columns = [row[1] for row in cur.execute("PRAGMA table_info(system_alerts)").fetchall()]
+    if "resolved_at" not in system_alert_columns:
+        cur.execute("ALTER TABLE system_alerts ADD COLUMN resolved_at TEXT")
 
     session_columns = [row[1] for row in cur.execute("PRAGMA table_info(sessions)").fetchall()]
     if "last_seen" not in session_columns:
@@ -3985,12 +4100,19 @@ def demo_seed():
 @app.get("/api/workers")
 @require_auth
 def list_workers():
+    db = get_db()
     include_deleted = request.args.get("includeDeleted", "0") == "1"
-    lock_workers_with_expired_documents(get_db())
+    lock_workers_with_expired_documents(db)
     clause, params = visible_worker_clause(g.current_user)
     where = clause if include_deleted else f"{clause}{' AND' if clause else ' WHERE'} deleted_at IS NULL"
-    rows = get_db().execute(f"SELECT * FROM workers{where} ORDER BY last_name, first_name", params).fetchall()
-    return jsonify([serialize_worker_record(row) for row in rows])
+    rows = db.execute(f"SELECT * FROM workers{where} ORDER BY last_name, first_name", params).fetchall()
+
+    serialized = []
+    for row in rows:
+        item = serialize_worker_record(row)
+        item.update(get_worker_lock_metadata(db, row))
+        serialized.append(item)
+    return jsonify(serialized)
 
 
 @app.get("/api/workers/export.csv")
@@ -4325,6 +4447,7 @@ def update_worker(worker_id):
 
     photo_override_requested = bool(payload.get("photoMatchOverride"))
     photo_similarity_raw = payload.get("photoMatchSimilarity")
+    photo_override_reason = clean_text_input(payload.get("photoMatchOverrideReason") or "", max_len=240)
     photo_similarity = None
     if photo_similarity_raw is not None and str(photo_similarity_raw).strip() != "":
         try:
@@ -4336,6 +4459,8 @@ def update_worker(worker_id):
 
     if photo_override_requested and g.current_user["role"] != "superadmin":
         return jsonify({"error": "photo_override_forbidden"}), 403
+    if photo_override_requested and len(photo_override_reason) < 8:
+        return jsonify({"error": "photo_override_reason_required"}), 400
 
     try:
         next_company_id = clean_id_input(payload.get("companyId", worker["company_id"]))
@@ -4435,7 +4560,7 @@ def update_worker(worker_id):
         similarity_label = f"{photo_similarity * 100:.1f}%" if isinstance(photo_similarity, float) else "n/a"
         log_audit(
             "security.worker_photo_override",
-            f"Foto-Override fuer Mitarbeiter {worker_id} bestaetigt (Aehnlichkeit: {similarity_label})",
+            f"Foto-Override fuer Mitarbeiter {worker_id} bestaetigt (Aehnlichkeit: {similarity_label}, Grund: {photo_override_reason})",
             target_type="worker",
             target_id=worker_id,
             company_id=worker["company_id"],
@@ -8721,6 +8846,8 @@ def assign_attachment_to_worker(inbox_id, attachment_id):
     if not unassigned:
         db.execute("UPDATE email_inbox SET processed = 1 WHERE id = ?", (inbox_id,))
 
+    unlock_worker_if_documents_valid(db, worker, actor=g.current_user)
+
     db.commit()
 
     log_audit(
@@ -8823,6 +8950,7 @@ def upload_worker_document(worker_id):
             g.current_user["id"], now_iso(), notes, expiry_date,
         ),
     )
+    unlock_worker_if_documents_valid(db, worker, actor=g.current_user)
     db.commit()
 
     log_audit(

@@ -3851,6 +3851,59 @@ async function computePhotoDHash(dataUrl, width = 9, height = 8) {
   return bits;
 }
 
+async function computePhotoAHash(dataUrl, size = 8) {
+  if (!dataUrl) {
+    return "";
+  }
+  const img = await loadImageFromDataUrl(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, size, size);
+  const pixels = ctx.getImageData(0, 0, size, size).data;
+
+  const lumaValues = [];
+  for (let i = 0; i < pixels.length; i += 4) {
+    const luma = (pixels[i] * 299 + pixels[i + 1] * 587 + pixels[i + 2] * 114) / 1000;
+    lumaValues.push(luma);
+  }
+  const avg = lumaValues.reduce((sum, val) => sum + val, 0) / Math.max(1, lumaValues.length);
+  return lumaValues.map((val) => (val >= avg ? "1" : "0")).join("");
+}
+
+async function computePhotoDHashCenterCrop(dataUrl, width = 9, height = 8) {
+  if (!dataUrl) {
+    return "";
+  }
+  const img = await loadImageFromDataUrl(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  const srcW = img.naturalWidth || img.width;
+  const srcH = img.naturalHeight || img.height;
+  const cropW = Math.max(1, Math.floor(srcW * 0.7));
+  const cropH = Math.max(1, Math.floor(srcH * 0.7));
+  const sx = Math.max(0, Math.floor((srcW - cropW) / 2));
+  const sy = Math.max(0, Math.floor((srcH - cropH) / 2));
+  ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, width, height);
+
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  let bits = "";
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < (width - 1); x += 1) {
+      const left = ((y * width) + x) * 4;
+      const right = ((y * width) + x + 1) * 4;
+      const leftLuma = (pixels[left] * 299 + pixels[left + 1] * 587 + pixels[left + 2] * 114) / 1000;
+      const rightLuma = (pixels[right] * 299 + pixels[right + 1] * 587 + pixels[right + 2] * 114) / 1000;
+      bits += leftLuma > rightLuma ? "1" : "0";
+    }
+  }
+  return bits;
+}
+
 function hammingDistanceBits(a, b) {
   const minLen = Math.min(a.length, b.length);
   let dist = 0;
@@ -3867,16 +3920,32 @@ async function compareWorkerPhotoSimilarity(referenceDataUrl, candidateDataUrl) 
     return { comparable: false, similarity: 0 };
   }
   try {
-    const [refHash, candHash] = await Promise.all([
+    const [refDHash, candDHash, refAHash, candAHash, refCenterHash, candCenterHash] = await Promise.all([
       computePhotoDHash(referenceDataUrl),
-      computePhotoDHash(candidateDataUrl)
+      computePhotoDHash(candidateDataUrl),
+      computePhotoAHash(referenceDataUrl),
+      computePhotoAHash(candidateDataUrl),
+      computePhotoDHashCenterCrop(referenceDataUrl),
+      computePhotoDHashCenterCrop(candidateDataUrl)
     ]);
-    if (!refHash || !candHash) {
+
+    if (!refDHash || !candDHash || !refAHash || !candAHash || !refCenterHash || !candCenterHash) {
       return { comparable: false, similarity: 0 };
     }
-    const distance = hammingDistanceBits(refHash, candHash);
-    const maxLen = Math.max(refHash.length, candHash.length) || 1;
-    const similarity = 1 - (distance / maxLen);
+
+    const dDistance = hammingDistanceBits(refDHash, candDHash);
+    const dMax = Math.max(refDHash.length, candDHash.length) || 1;
+    const dSimilarity = 1 - (dDistance / dMax);
+
+    const aDistance = hammingDistanceBits(refAHash, candAHash);
+    const aMax = Math.max(refAHash.length, candAHash.length) || 1;
+    const aSimilarity = 1 - (aDistance / aMax);
+
+    const cDistance = hammingDistanceBits(refCenterHash, candCenterHash);
+    const cMax = Math.max(refCenterHash.length, candCenterHash.length) || 1;
+    const cSimilarity = 1 - (cDistance / cMax);
+
+    const similarity = (dSimilarity * 0.45) + (aSimilarity * 0.2) + (cSimilarity * 0.35);
     return { comparable: true, similarity: Math.max(0, Math.min(1, similarity)) };
   } catch {
     return { comparable: false, similarity: 0 };
@@ -4926,6 +4995,7 @@ function renderWorkerList() {
       const deleted = Boolean(worker.deletedAt);
       const sub = getSubcompanyLabel(worker);
       const visitor = isVisitorWorker(worker);
+      const lockReason = String(worker.lockReason || "").trim();
       const visitorMeta = visitor
         ? `<p>${uiT("labelVisitorCompany")}: <strong>${escapeHtml(worker.visitorCompany || "-")}</strong> | ${uiT("labelVisitPurpose")}: <strong>${escapeHtml(worker.visitPurpose || "-")}</strong></p>
           <p>${uiT("labelHostName")}: <strong>${escapeHtml(worker.hostName || "-")}</strong> | ${uiT("labelVisitEndAt")}: <strong>${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</strong></p>`
@@ -4943,6 +5013,7 @@ function renderWorkerList() {
           <p>${escapeHtml(visitor ? uiT("optVisitor") : (worker.role || "-"))} | ${escapeHtml(worker.site || "-")}</p>
           <p>${uiT("appPinLabel")}: <strong>${visitor ? uiT("pinNotRequired") : (worker.badgePinConfigured ? uiT("pinSet") : uiT("pinMissing"))}</strong> | ${uiT("cardLabel")}: <strong>${escapeHtml(worker.physicalCardId || uiT("cardUnassigned"))}</strong></p>
           ${sub ? `<p>Subunternehmen: ${escapeHtml(sub)}</p>` : ""}
+          ${lockReason ? `<p class="helper-text helper-text-warning"><strong>Sperrgrund:</strong> ${escapeHtml(lockReason)}</p>` : ""}
           ${visitorMeta}
           <div class="button-row">
             <button type="button" class="ghost-button" data-worker-edit="${escapeHtml(worker.id)}" ${deleted ? "disabled" : ""}>${uiT("btnEdit")}</button>
@@ -6946,8 +7017,14 @@ async function handleWorkerSubmit(event) {
           if (!proceed) {
             return;
           }
+          const overrideReason = window.prompt("Bitte Grund für den Foto-Override eingeben (mindestens 8 Zeichen):", "") || "";
+          if (overrideReason.trim().length < 8) {
+            window.alert("Override-Grund zu kurz. Bitte mindestens 8 Zeichen eingeben.");
+            return;
+          }
           payload.photoMatchOverride = true;
           payload.photoMatchSimilarity = Number(compare.similarity.toFixed(4));
+          payload.photoMatchOverrideReason = overrideReason.trim();
         }
       }
     }
@@ -6977,6 +7054,14 @@ async function handleWorkerSubmit(event) {
     }
     if (error.message === "duplicate_physical_card_id") {
       window.alert("Diese physische Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet.");
+      return;
+    }
+    if (error.message === "photo_override_forbidden") {
+      window.alert("Foto-Override ist nur für Superadmin erlaubt.");
+      return;
+    }
+    if (error.message === "photo_override_reason_required") {
+      window.alert("Bitte einen ausreichenden Grund für den Foto-Override angeben.");
       return;
     }
     if (error.message === "visit_purpose_required") {
