@@ -6946,6 +6946,8 @@ async function handleWorkerSubmit(event) {
           if (!proceed) {
             return;
           }
+          payload.photoMatchOverride = true;
+          payload.photoMatchSimilarity = Number(compare.similarity.toFixed(4));
         }
       }
     }

@@ -4323,6 +4323,20 @@ def update_worker(worker_id):
     if worker["deleted_at"]:
         return jsonify({"error": "worker_deleted"}), 400
 
+    photo_override_requested = bool(payload.get("photoMatchOverride"))
+    photo_similarity_raw = payload.get("photoMatchSimilarity")
+    photo_similarity = None
+    if photo_similarity_raw is not None and str(photo_similarity_raw).strip() != "":
+        try:
+            photo_similarity = float(photo_similarity_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "invalid_photo_match_similarity"}), 400
+        if photo_similarity < 0 or photo_similarity > 1:
+            return jsonify({"error": "invalid_photo_match_similarity"}), 400
+
+    if photo_override_requested and g.current_user["role"] != "superadmin":
+        return jsonify({"error": "photo_override_forbidden"}), 403
+
     try:
         next_company_id = clean_id_input(payload.get("companyId", worker["company_id"]))
     except ValueError as error:
@@ -4416,6 +4430,18 @@ def update_worker(worker_id):
         ),
     )
     db.commit()
+
+    if photo_override_requested and updated_photo_data != (worker["photo_data"] or ""):
+        similarity_label = f"{photo_similarity * 100:.1f}%" if isinstance(photo_similarity, float) else "n/a"
+        log_audit(
+            "security.worker_photo_override",
+            f"Foto-Override fuer Mitarbeiter {worker_id} bestaetigt (Aehnlichkeit: {similarity_label})",
+            target_type="worker",
+            target_id=worker_id,
+            company_id=worker["company_id"],
+            actor=g.current_user,
+        )
+
     log_audit("worker.updated", f"Mitarbeiter {worker_id} aktualisiert", target_type="worker", target_id=worker_id, company_id=worker["company_id"], actor=g.current_user)
     return jsonify({"ok": True})
 
