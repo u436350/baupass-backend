@@ -6932,8 +6932,16 @@ async function handleWorkerSubmit(event) {
         const compare = await compareWorkerPhotoSimilarity(existingPhoto, newPhoto);
         if (compare.comparable && compare.similarity < 0.62) {
           const scorePct = Math.round(compare.similarity * 100);
+          const role = String(getCurrentUser()?.role || "").toLowerCase();
+          const canOverride = role === "superadmin";
+          if (!canOverride) {
+            window.alert(
+              `Fotovergleich fehlgeschlagen (${scorePct}%). Speichern ist gesperrt. Bitte erneut fotografieren oder Superadmin kontaktieren.`
+            );
+            return;
+          }
           const proceed = window.confirm(
-            `Fotovergleich niedrig (${scorePct}%). Das neue Kamera-Foto scheint nicht zum bisherigen Ausweisfoto zu passen. Trotzdem speichern?`
+            `Fotovergleich fehlgeschlagen (${scorePct}%). Nur Superadmin darf mit Risiko speichern. Trotzdem speichern?`
           );
           if (!proceed) {
             return;
