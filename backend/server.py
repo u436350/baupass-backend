@@ -783,6 +783,15 @@ def apply_security_headers(response):
     else:
         response.headers["Cache-Control"] = "no-cache"
         response.headers["Pragma"] = "no-cache"
+
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" in content_type:
+        response.headers["Content-Language"] = "de"
+        response.headers["X-Robots-Tag"] = "notranslate"
+        existing_cache_control = response.headers.get("Cache-Control") or ""
+        if "no-transform" not in existing_cache_control.lower():
+            response.headers["Cache-Control"] = (existing_cache_control + ", no-transform").strip(", ")
+
     return response
 
 
