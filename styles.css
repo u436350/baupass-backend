@@ -1085,6 +1085,67 @@ select {
   gap: 12px;
 }
 
+.auth-legal-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  font-size: 0.82rem;
+  color: var(--muted, #6b7280);
+}
+
+.auth-legal-footer .ghost-button.small-button {
+  font-size: 0.82rem;
+  padding: 2px 8px;
+}
+
+.legal-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legal-modal.hidden {
+  display: none;
+}
+
+.legal-modal-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  padding: 28px 32px 24px 32px;
+  max-width: 660px;
+  width: 95vw;
+  max-height: 82vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.legal-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.legal-modal-body {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin-top: 12px;
+  color: var(--text, #1f2937);
+}
+
 .install-box {
   display: grid;
   gap: 12px;

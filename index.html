@@ -136,6 +136,20 @@
           <button id="desktopInstallButton" type="button" class="ghost-button full-width" data-ui-i18n="desktopInstallButton" hidden>Auf diesem Computer installieren</button>
         </div>
       </div>
+      <div class="auth-legal-footer">
+        <button id="showImpressumBtn" type="button" class="ghost-button small-button">Impressum</button>
+        <span aria-hidden="true">·</span>
+        <button id="showDatenschutzBtn" type="button" class="ghost-button small-button">Datenschutz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legal-Text Modal -->
+  <div id="legalModal" class="legal-modal hidden" role="dialog" aria-modal="true">
+    <div class="legal-modal-card">
+      <button class="legal-modal-close" id="legalModalClose" title="Schließen">&times;</button>
+      <h2 id="legalModalTitle">Impressum</h2>
+      <div id="legalModalBody" class="legal-modal-body"></div>
     </div>
   </div>
 
@@ -999,6 +1013,24 @@
                 </select>
               </label>
               <p class="helper-text full-width" data-ui-i18n="adminWorkerAppPinLockHint">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
+
+              <!-- ── Rechtliches ── -->
+              <div class="form-section">
+                <div class="form-section-icon">⚖️</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">Rechtliches</p>
+                  <h4>Impressum &amp; Datenschutz</h4>
+                </div>
+              </div>
+              <label class="full-width">
+                <span>Impressum-Text</span>
+                <textarea id="impressumText" rows="8" placeholder="Angaben gemäß § 5 TMG&#10;&#10;Firmenname GmbH&#10;Musterstraße 1&#10;12345 Musterstadt&#10;&#10;Vertreten durch: Max Mustermann&#10;E-Mail: info@firma.de"></textarea>
+              </label>
+              <label class="full-width">
+                <span>Datenschutzerklärung</span>
+                <textarea id="datenschutzText" rows="12" placeholder="Datenschutzerklärung gemäß DSGVO&#10;&#10;Verantwortlicher: ...&#10;&#10;1. Allgemeines&#10;..."></textarea>
+              </label>
+              <p class="helper-text full-width">Diese Texte erscheinen auf der Anmeldeseite unter „Impressum" und „Datenschutz".</p>
 
               <button type="submit" class="primary-button full-width" data-ui-i18n="btnSaveAdmin">Admin-Einstellungen speichern</button>
             </form>

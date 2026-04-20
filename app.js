@@ -5929,6 +5929,10 @@ function renderAdminSettingsForm() {
   if (imapPassword) imapPassword.value = "";
   if (imapFolder) imapFolder.value = state.settings.imapFolder || "INBOX";
   if (imapUseSsl) imapUseSsl.value = state.settings.imapUseSsl === false ? "0" : "1";
+  const impressumText = document.querySelector("#impressumText");
+  const datenschutzText = document.querySelector("#datenschutzText");
+  if (impressumText) impressumText.value = state.settings.impressumText || "";
+  if (datenschutzText) datenschutzText.value = state.settings.datenschutzText || "";
 }
 
 function showWorkerDetailOverlay(worker) {
@@ -7604,6 +7608,8 @@ async function handleSettingsSubmit(event) {
       imapUsername: (document.querySelector("#imapUsername")?.value || "").trim(),
       imapFolder: (document.querySelector("#imapFolder")?.value || "INBOX").trim() || "INBOX",
       imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
+      impressumText: (document.querySelector("#impressumText")?.value || ""),
+      datenschutzText: (document.querySelector("#datenschutzText")?.value || ""),
     };
     const smtpPasswordValue = document.querySelector("#smtpPassword")?.value || "";
     if (smtpPasswordValue.trim()) {
@@ -12393,6 +12399,47 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
 
   if (elements.loginResetPasswordButton) {
     elements.loginResetPasswordButton.addEventListener("click", requestPasswordResetFromLogin);
+  }
+
+  // ── Impressum / Datenschutz Modal ─────────────────────────────────────────
+  const legalModal = document.getElementById("legalModal");
+  const legalModalTitle = document.getElementById("legalModalTitle");
+  const legalModalBody = document.getElementById("legalModalBody");
+  const legalModalClose = document.getElementById("legalModalClose");
+
+  function openLegalModal(title, text) {
+    if (!legalModal) return;
+    if (legalModalTitle) legalModalTitle.textContent = title;
+    if (legalModalBody) legalModalBody.textContent = text || "Kein Text hinterlegt.";
+    legalModal.classList.remove("hidden");
+    legalModal.focus?.();
+  }
+
+  if (legalModalClose) {
+    legalModalClose.addEventListener("click", () => legalModal?.classList.add("hidden"));
+  }
+  if (legalModal) {
+    legalModal.addEventListener("click", (event) => {
+      if (event.target === legalModal) legalModal.classList.add("hidden");
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !legalModal.classList.contains("hidden")) {
+        legalModal.classList.add("hidden");
+      }
+    });
+  }
+
+  const showImpressumBtn = document.getElementById("showImpressumBtn");
+  const showDatenschutzBtn = document.getElementById("showDatenschutzBtn");
+  if (showImpressumBtn) {
+    showImpressumBtn.addEventListener("click", () => {
+      openLegalModal("Impressum", state.settings?.impressumText || "");
+    });
+  }
+  if (showDatenschutzBtn) {
+    showDatenschutzBtn.addEventListener("click", () => {
+      openLegalModal("Datenschutzerklärung", state.settings?.datenschutzText || "");
+    });
   }
 
   maybeHandlePasswordResetToken();

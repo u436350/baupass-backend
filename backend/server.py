@@ -1602,6 +1602,10 @@ def init_db():
         cur.execute("ALTER TABLE settings ADD COLUMN imap_folder TEXT NOT NULL DEFAULT 'INBOX'")
     if "imap_use_ssl" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN imap_use_ssl INTEGER NOT NULL DEFAULT 1")
+    if "impressum_text" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN impressum_text TEXT NOT NULL DEFAULT ''")
+    if "datenschutz_text" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN datenschutz_text TEXT NOT NULL DEFAULT ''")
 
     inbox_columns = [row[1] for row in cur.execute("PRAGMA table_info(email_inbox)").fetchall()]
     if "to_addr" not in inbox_columns:
@@ -3517,6 +3521,8 @@ def get_settings():
             "imapPassword": row["imap_password"],
             "imapFolder": row["imap_folder"] or "INBOX",
             "imapUseSsl": int(row["imap_use_ssl"]) == 1,
+            "impressumText": row["impressum_text"] or "",
+            "datenschutzText": row["datenschutz_text"] or "",
         }
     )
 
@@ -3564,6 +3570,10 @@ def update_settings():
             1 if payload.get("workerAppEnabled", True) else 0,
         ),
     )
+    # Impressum / Datenschutz
+    impressum_text = str(payload.get("impressumText") or "")[:20000]
+    datenschutz_text = str(payload.get("datenschutzText") or "")[:20000]
+    db.execute("UPDATE settings SET impressum_text = ?, datenschutz_text = ? WHERE id = 1", (impressum_text, datenschutz_text))
     # IMAP-Felder separat aktualisieren (immer optional)
     payload_imap_password = str(payload.get("imapPassword") or "")
     imap_fields = {
@@ -5184,8 +5194,11 @@ def list_company_turnstiles(company_id):
 
 @app.post("/api/companies/<company_id>/turnstiles/<user_id>/reset-password")
 @require_auth
-@require_roles("superadmin")
+@require_roles("superadmin", "company-admin")
 def reset_turnstile_password(company_id, user_id):
+    # Company-Admins duerfen nur ihre eigene Firma verwalten
+    if g.current_user["role"] == "company-admin" and g.current_user.get("company_id") != company_id:
+        return jsonify({"error": "forbidden"}), 403
     payload = request.get_json(silent=True) or {}
     password = (payload.get("password") or "").strip()
     if len(password) < 4:
