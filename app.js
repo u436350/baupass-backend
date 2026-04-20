@@ -11498,7 +11498,7 @@ wireDesktopInstallPrompt();
   window.__baupassDocActionFallbackBound = true;
 
   document.addEventListener("click", (event) => {
-    const actionEl = event.target.closest("#docInboxRefreshBtn, #docInboxSyncBtn, .nav-link[data-view='documents']");;
+    const actionEl = event.target.closest("#docInboxRefreshBtn, #docInboxSyncBtn, .nav-link[data-view='documents']");
     if (!actionEl) {
       return;
     }
@@ -11509,38 +11509,6 @@ wireDesktopInstallPrompt();
         return false;
       }
       return true;
-    };
-
-    const openWebmailAndSync = () => {
-      const imapHostVal = (state.settings?.imapHost || "").toLowerCase();
-      let webmailUrl;
-      if (imapHostVal.includes("gmail") || imapHostVal.includes("google")) {
-        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
-      } else if (imapHostVal.includes("outlook") || imapHostVal.includes("hotmail") || imapHostVal.includes("live.com") || imapHostVal.includes("office365")) {
-        webmailUrl = "https://outlook.live.com/mail/0/inbox";
-      } else if (imapHostVal.includes("yahoo")) {
-        webmailUrl = "https://mail.yahoo.com/";
-      } else if (imapHostVal) {
-        const domain = imapHostVal.replace(/^imap\./, "");
-        webmailUrl = "https://mail." + domain;
-      } else {
-        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
-      }
-
-      const win = window.open(webmailUrl, "_blank");
-      if (!win) {
-        window.location.href = webmailUrl;
-        return;
-      }
-
-      window.setTimeout(async () => {
-        try {
-          await apiRequest(API_BASE + "/api/documents/imap/trigger", { method: "POST" });
-          await loadDocumentInbox();
-        } catch (e) {
-          window.alert(e.message);
-        }
-      }, 700);
     };
 
     if (actionEl.matches(".nav-link[data-view='documents']")) {

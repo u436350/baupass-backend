@@ -75,10 +75,18 @@ function startBackend() {
   }
 
   const pythonCmd = resolvePythonCommand();
+  // Derive the port from DESKTOP_URL so backend and frontend always match.
+  let desktopPort = "8080";
+  try {
+    desktopPort = String(new URL(DESKTOP_URL).port || "8080");
+  } catch {
+    // keep default
+  }
   backendProcess = spawn(pythonCmd, ["backend/run_prod.py"], {
     cwd: PROJECT_ROOT,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
+    env: { ...process.env, PORT: desktopPort, HOST: "127.0.0.1" },
   });
   backendStartedByDesktop = true;
 

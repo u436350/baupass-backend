@@ -1,6 +1,8 @@
 // @ts-check
 const { defineConfig } = require('@playwright/test');
 
+const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:8080';
+
 module.exports = defineConfig({
   testDir: './tests/e2e',
   timeout: 45_000,
@@ -10,7 +12,13 @@ module.exports = defineConfig({
   fullyParallel: false,
   retries: 0,
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://127.0.0.1:8080',
+    baseURL,
+  },
+  webServer: process.env.E2E_SKIP_SERVER ? undefined : {
+    command: `${process.env.PYTHON || '.venv/Scripts/python.exe'} backend/server.py`,
+    url: baseURL,
+    reuseExistingServer: true,
+    timeout: 15_000,
   },
   reporter: [['list']],
 });

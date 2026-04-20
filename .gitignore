@@ -14,3 +14,6 @@ backend/baupass.db
 # Generated local docs and temporary scripts
 backend/uploads/documents/
 task.ps1
+
+# Node dependencies
+node_modules/
