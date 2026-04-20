@@ -229,7 +229,6 @@ const UI_TRANSLATIONS = {
     btnDocInboxRefresh: "Aktualisieren",
     btnDocInboxSync: "System-Eingang abrufen",
     btnDocInboxPoll: "Postfach jetzt abrufen",
-    btnDocInboxOpenGmail: "Gmail oeffnen",
     docEmailInfoLabel: "Dokument-E-Mail (Mitarbeiter schicken Nachweise hierhin):",
     btnCopyEmail: "Kopieren",
     btnCopyEmailDone: "Kopiert!",
@@ -564,7 +563,6 @@ const UI_TRANSLATIONS = {
     btnDocInboxRefresh: "Refresh",
     btnDocInboxSync: "Sync system inbox",
     btnDocInboxPoll: "Fetch mailbox now",
-    btnDocInboxOpenGmail: "Open Gmail",
     docEmailInfoLabel: "Document email (workers send proofs here):",
     btnCopyEmail: "Copy",
     btnCopyEmailDone: "Copied!",
@@ -11494,7 +11492,7 @@ wireDesktopInstallPrompt();
   window.__baupassDocActionFallbackBound = true;
 
   document.addEventListener("click", (event) => {
-    const actionEl = event.target.closest("#docInboxRefreshBtn, #docInboxSyncBtn, #docInboxPollBtn, .nav-link[data-view='documents']");
+    const actionEl = event.target.closest("#docInboxRefreshBtn, #docInboxSyncBtn, .nav-link[data-view='documents']");;
     if (!actionEl) {
       return;
     }
@@ -11580,14 +11578,6 @@ wireDesktopInstallPrompt();
         }
       })();
       return;
-    }
-
-    if (actionEl.id === "docInboxPollBtn") {
-      event.preventDefault();
-      if (!ensureSession()) {
-        return;
-      }
-      openWebmailAndSync();
     }
   });
 })();
@@ -12308,44 +12298,6 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       } finally {
         rematchBtn.disabled = false;
       }
-    });
-  }
-
-  const pollBtn = document.querySelector("#docInboxPollBtn");
-  if (pollBtn) {
-    pollBtn.addEventListener("click", () => {
-      if (!token) {
-        handleExpiredControlSession();
-        return;
-      }
-      const imapHostVal = (state.settings?.imapHost || "").toLowerCase();
-      let webmailUrl;
-      if (imapHostVal.includes("gmail") || imapHostVal.includes("google")) {
-        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
-      } else if (imapHostVal.includes("outlook") || imapHostVal.includes("hotmail") || imapHostVal.includes("live.com") || imapHostVal.includes("office365")) {
-        webmailUrl = "https://outlook.live.com/mail/0/inbox";
-      } else if (imapHostVal.includes("yahoo")) {
-        webmailUrl = "https://mail.yahoo.com/";
-      } else if (imapHostVal) {
-        // Versuche Webmail aus dem Domain-Teil des IMAP-Hosts abzuleiten
-        const domain = imapHostVal.replace(/^imap\./, "");
-        webmailUrl = "https://mail." + domain;
-      } else {
-        webmailUrl = "https://mail.google.com/mail/u/0/#inbox";
-      }
-
-      // Öffne Webmail direkt (kein noopener, damit Browser es nicht blockiert)
-      const win = window.open(webmailUrl, "_blank");
-      if (!win) {
-        // Popup geblockt – als Fallback im aktuellen Tab öffnen
-        window.location.href = webmailUrl;
-        return;
-      }
-
-      // Nach dem Öffnen des Postfachs direkt den Import starten.
-      window.setTimeout(() => {
-        runDocumentInboxSync(syncBtn || undefined);
-      }, 700);
     });
   }
 
