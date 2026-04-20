@@ -6,13 +6,45 @@
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron desktop/main.js",
+    "desktop:local": "cross-env BAUPASS_DESKTOP_URL=http://127.0.0.1:8080 electron desktop/main.js",
+    "build": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
     "test:e2e": "playwright test",
     "test:e2e:preview": "playwright test tests/e2e/preview-session.spec.js",
     "test:e2e:ops": "playwright test tests/e2e/invoice-ops.spec.js",
     "test:e2e:all": "playwright test tests/e2e/preview-session.spec.js tests/e2e/invoice-ops.spec.js"
   },
+  "build": {
+    "appId": "com.baupass.control",
+    "productName": "BauPass Control",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**",
+      "index.html",
+      "app.js",
+      "styles.css",
+      "control-manifest.json",
+      "control-sw.js",
+      "worker-icon-192.png",
+      "worker-icon-512.png"
+    ],
+    "win": {
+      "target": [{"target": "portable"}],
+      "icon": "worker-icon-512.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
-    "electron": "^31.7.7"
+    "cross-env": "^7.0.3",
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8"
   }
 }

@@ -3607,3 +3607,12 @@ body.desktop-app .shell {
 body.desktop-app .auth-overlay {
   min-height: calc(100vh - 40px);
 }
+
+body.desktop-app .sidebar {
+  top: 40px !important;
+  height: calc(100vh - 40px) !important;
+}
+
+body.desktop-app .topbar {
+  top: 40px !important;
+}
