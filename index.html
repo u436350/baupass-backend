@@ -108,11 +108,11 @@
         <div id="loginSupportNotice" class="meta-box" style="display:none;"></div>
         <label>
           <span data-ui-i18n="loginUsernameLabel">Benutzername</span>
-          <input id="loginUsername" type="text" placeholder="Benutzername" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="username" />
+          <input id="loginUsername" type="text" placeholder="Benutzername" data-ui-i18n="loginUsernamePlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="off" />
         </label>
         <label>
           <span data-ui-i18n="loginPasswordLabel">Passwort</span>
-          <input id="loginPassword" type="password" placeholder="Passwort eingeben" data-ui-i18n="loginPasswordPlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="current-password" />
+          <input id="loginPassword" type="password" placeholder="Passwort eingeben" data-ui-i18n="loginPasswordPlaceholder" data-ui-i18n-attr="placeholder" required autocomplete="off" />
         </label>
         <label>
           <span data-ui-i18n="loginOtpLabel">OTP-Code (wenn 2FA aktiv)</span>
@@ -911,7 +911,7 @@
               </label>
               <label>
                 <span data-ui-i18n="labelSmtpPass">SMTP Passwort</span>
-                <input id="smtpPassword" type="password" placeholder="App-Passwort" />
+                <input id="smtpPassword" type="password" placeholder="App-Passwort" autocomplete="off" />
               </label>
               <label>
                 <span data-ui-i18n="labelSenderEmail">Absender E-Mail</span>
@@ -954,7 +954,7 @@
               </label>
               <label>
                 <span data-ui-i18n="labelImapPass">IMAP Passwort</span>
-                <input id="imapPassword" type="password" placeholder="App-Passwort" />
+                <input id="imapPassword" type="password" placeholder="App-Passwort" autocomplete="off" />
               </label>
               <label>
                 <span data-ui-i18n="labelImapFolder">IMAP Ordner</span>
@@ -1121,11 +1121,11 @@
             <form id="passwordForm" class="form-grid compact-grid">
               <label>
                 <span data-ui-i18n="labelCurrentPassword">Aktuelles Passwort</span>
-                <input id="currentPassword" type="password" required />
+                <input id="currentPassword" type="password" required autocomplete="off" />
               </label>
               <label>
                 <span data-ui-i18n="labelNewPassword">Neues Passwort</span>
-                <input id="newPassword" type="password" minlength="8" required />
+                <input id="newPassword" type="password" minlength="8" required autocomplete="off" />
               </label>
               <button type="submit" class="ghost-button full-width" data-ui-i18n="btnChangePassword">Passwort ändern</button>
             </form>
