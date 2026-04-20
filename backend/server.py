@@ -4462,6 +4462,11 @@ def update_worker(worker_id):
     if photo_override_requested and len(photo_override_reason) < 8:
         return jsonify({"error": "photo_override_reason_required"}), 400
 
+    # 4-Augen: photo override requires second superadmin – validate everything first,
+    # then store in operation_approvals and return 202 instead of saving immediately.
+    # The actual DB write happens in execute_approved_operation after approval.
+    _photo_override_needs_approval = photo_override_requested
+
     try:
         next_company_id = clean_id_input(payload.get("companyId", worker["company_id"]))
     except ValueError as error:
@@ -4526,6 +4531,47 @@ def update_worker(worker_id):
     next_site = clean_text_input(payload.get("site", worker["site"]), max_len=120)
     next_valid_until = clean_text_input(payload.get("validUntil", worker["valid_until"]), max_len=32)
     next_status = clean_text_input(payload.get("status", worker["status"]), max_len=32) or worker["status"]
+
+    # --- 4-Augen: if photo changed under an override, store a pending approval
+    #     and return 202. The second superadmin executes the actual write.
+    if _photo_override_needs_approval and updated_photo_data != (worker["photo_data"] or ""):
+        approval_payload = {
+            "workerId": worker_id,
+            "companyId": next_company_id,
+            "subcompanyId": subcompany_id,
+            "firstName": next_first_name,
+            "lastName": next_last_name,
+            "insuranceNumber": next_insurance_number if worker_type != "visitor" else "",
+            "workerType": worker_type,
+            "role": next_role if worker_type != "visitor" else (next_role or visitor_company or "Besucher"),
+            "site": next_site,
+            "validUntil": next_valid_until,
+            "visitorCompany": visitor_company,
+            "visitPurpose": visit_purpose,
+            "hostName": host_name,
+            "visitEndAt": visit_end_at,
+            "status": next_status,
+            "photoData": updated_photo_data,
+            "badgePinHash": next_badge_pin_hash if worker_type != "visitor" else "",
+            "physicalCardId": next_physical_card_id,
+            "photoMatchOverrideReason": photo_override_reason,
+            "photoMatchSimilarity": photo_similarity,
+        }
+        approval_id = create_operation_approval(
+            db,
+            action_type="worker.photo_override",
+            payload=approval_payload,
+            actor=g.current_user,
+            target_type="worker",
+            target_id=worker_id,
+            company_id=next_company_id,
+        )
+        return jsonify({
+            "ok": True,
+            "approvalRequested": True,
+            "approvalId": approval_id,
+            "message": "Foto-Override erfordert eine zweite Superadmin-Freigabe.",
+        }), 202
 
     db.execute(
         """
@@ -6444,6 +6490,66 @@ def execute_approved_operation(db, approval_row, actor):
             raise ValueError(error_code)
         return {"action": action_type, "invoiceId": invoice_id, "resolved": True}
 
+    if action_type == "worker.photo_override":
+        worker_id = clean_id_input((payload or {}).get("workerId"))
+        if not worker_id:
+            raise ValueError("missing_worker_id")
+        worker = db.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+        if not worker:
+            raise ValueError("worker_not_found")
+        if worker["deleted_at"]:
+            raise ValueError("worker_deleted")
+        photo_data = payload.get("photoData") or worker["photo_data"]
+        photo_similarity = payload.get("photoMatchSimilarity")
+        photo_override_reason = str(payload.get("photoMatchOverrideReason") or "")
+        db.execute(
+            """
+            UPDATE workers
+            SET company_id = ?, subcompany_id = ?, first_name = ?, last_name = ?, insurance_number = ?,
+                worker_type = ?, role = ?, site = ?, valid_until = ?, visitor_company = ?, visit_purpose = ?,
+                host_name = ?, visit_end_at = ?, status = ?, photo_data = ?, badge_pin_hash = ?, physical_card_id = ?
+            WHERE id = ?
+            """,
+            (
+                payload.get("companyId") or worker["company_id"],
+                payload.get("subcompanyId") if payload.get("subcompanyId") is not None else worker["subcompany_id"],
+                payload.get("firstName") or worker["first_name"],
+                payload.get("lastName") or worker["last_name"],
+                payload.get("insuranceNumber") if payload.get("insuranceNumber") is not None else worker["insurance_number"],
+                payload.get("workerType") or worker["worker_type"],
+                payload.get("role") if payload.get("role") is not None else worker["role"],
+                payload.get("site") if payload.get("site") is not None else worker["site"],
+                payload.get("validUntil") if payload.get("validUntil") is not None else worker["valid_until"],
+                payload.get("visitorCompany") if payload.get("visitorCompany") is not None else worker["visitor_company"],
+                payload.get("visitPurpose") if payload.get("visitPurpose") is not None else worker["visit_purpose"],
+                payload.get("hostName") if payload.get("hostName") is not None else worker["host_name"],
+                payload.get("visitEndAt") if payload.get("visitEndAt") is not None else worker["visit_end_at"],
+                payload.get("status") or worker["status"],
+                photo_data,
+                payload.get("badgePinHash") if payload.get("badgePinHash") is not None else worker["badge_pin_hash"],
+                payload.get("physicalCardId") if payload.get("physicalCardId") is not None else worker["physical_card_id"],
+                worker_id,
+            ),
+        )
+        similarity_label = f"{photo_similarity * 100:.1f}%" if isinstance(photo_similarity, float) else "n/a"
+        log_audit(
+            "security.worker_photo_override",
+            f"Foto-Override fuer Mitarbeiter {worker_id} durch 4-Augen-Freigabe bestaetigt (Aehnlichkeit: {similarity_label}, Grund: {photo_override_reason})",
+            target_type="worker",
+            target_id=worker_id,
+            company_id=payload.get("companyId") or worker["company_id"],
+            actor=actor,
+        )
+        log_audit(
+            "worker.updated",
+            f"Mitarbeiter {worker_id} aktualisiert (Foto-Override 4-Augen)",
+            target_type="worker",
+            target_id=worker_id,
+            company_id=payload.get("companyId") or worker["company_id"],
+            actor=actor,
+        )
+        return {"action": action_type, "workerId": worker_id}
+
     raise ValueError("unsupported_approval_action")
 
 
@@ -7404,6 +7510,125 @@ def decide_invoice_approval(approval_id):
     log_audit(
         "approval.approved",
         f"Freigabe {approval_id} wurde bestätigt und ausgeführt",
+        target_type="approval",
+        target_id=approval_id,
+        actor=g.current_user,
+    )
+    return jsonify({"ok": True, "approvalId": approval_id, "status": "approved", "execution": execution_result})
+
+
+# ── 4-Augen: Foto-Override-Freigaben ─────────────────────────────────────────
+
+@app.get("/api/workers/photo-override-approvals/pending")
+@require_auth
+@require_roles("superadmin")
+def list_pending_photo_override_approvals():
+    db = get_db()
+    mark_expired_operation_approvals(db)
+    db.commit()
+    rows = db.execute(
+        """
+        SELECT * FROM operation_approvals
+        WHERE action_type = 'worker.photo_override' AND status = 'pending'
+        ORDER BY requested_at DESC
+        LIMIT 50
+        """,
+    ).fetchall()
+    result = []
+    for row in rows:
+        try:
+            payload = json.loads(row["payload_json"] or "{}")
+        except Exception:
+            payload = {}
+        similarity = payload.get("photoMatchSimilarity")
+        result.append({
+            "approvalId": row["id"],
+            "workerId": payload.get("workerId"),
+            "workerName": f"{payload.get('firstName', '')} {payload.get('lastName', '')}".strip(),
+            "overrideReason": payload.get("photoMatchOverrideReason"),
+            "similarity": round(similarity * 100, 1) if isinstance(similarity, (int, float)) else None,
+            "requestedByUserId": row["requested_by_user_id"],
+            "requestedAt": row["requested_at"],
+            "expiresAt": row["expires_at"],
+            "photoData": payload.get("photoData"),
+        })
+    return jsonify(result)
+
+
+@app.post("/api/workers/photo-override-approvals/<approval_id>/decision")
+@require_auth
+@require_roles("superadmin")
+def decide_photo_override_approval(approval_id):
+    decision_payload = request.get_json(silent=True) or {}
+    decision = str(decision_payload.get("decision") or "").strip().lower()
+    if decision not in {"approve", "reject"}:
+        return jsonify({"error": "invalid_decision"}), 400
+
+    db = get_db()
+    mark_expired_operation_approvals(db)
+    db.commit()
+    approval = db.execute(
+        "SELECT * FROM operation_approvals WHERE id = ? AND action_type = 'worker.photo_override'",
+        (approval_id,),
+    ).fetchone()
+    if not approval:
+        return jsonify({"error": "approval_not_found"}), 404
+
+    status_value = str(approval["status"] or "").strip().lower()
+    if status_value == "expired":
+        return jsonify({"error": "approval_expired"}), 410
+    if status_value != "pending":
+        return jsonify({"error": "approval_not_pending"}), 409
+
+    expires_at = parse_iso_datetime_utc(approval["expires_at"])
+    if expires_at and expires_at <= utc_now():
+        db.execute(
+            "UPDATE operation_approvals SET status = 'expired', decided_at = ?, decision_note = 'expired_by_timeout' WHERE id = ?",
+            (now_iso(), approval_id),
+        )
+        db.commit()
+        return jsonify({"error": "approval_expired"}), 410
+
+    if approval["requested_by_user_id"] == g.current_user["id"]:
+        return jsonify({"error": "approver_must_be_different_user"}), 403
+
+    note = str(decision_payload.get("note") or "").strip()[:400]
+    if decision == "reject":
+        if not note:
+            return jsonify({"error": "decision_note_required"}), 400
+        db.execute(
+            "UPDATE operation_approvals SET status = 'rejected', decided_by_user_id = ?, decided_at = ?, decision_note = ? WHERE id = ?",
+            (g.current_user["id"], now_iso(), note, approval_id),
+        )
+        db.commit()
+        log_audit(
+            "approval.rejected",
+            f"Foto-Override-Freigabe {approval_id} abgelehnt",
+            target_type="approval",
+            target_id=approval_id,
+            actor=g.current_user,
+        )
+        return jsonify({"ok": True, "approvalId": approval_id, "status": "rejected"})
+
+    try:
+        execution_result = execute_approved_operation(db, approval, actor=g.current_user)
+    except ValueError as exc:
+        error_text = str(exc)
+        db.execute(
+            "UPDATE operation_approvals SET status = 'rejected', decided_by_user_id = ?, decided_at = ?, decision_note = ? WHERE id = ?",
+            (g.current_user["id"], now_iso(), f"execution_failed:{error_text}", approval_id),
+        )
+        db.commit()
+        return jsonify({"error": "approval_execution_failed", "details": error_text}), 400
+
+    db.execute(
+        "UPDATE operation_approvals SET status = 'approved', decided_by_user_id = ?, decided_at = ?, decision_note = ?, execution_result_json = ? WHERE id = ?",
+        (g.current_user["id"], now_iso(), note, json.dumps(execution_result or {}, ensure_ascii=True), approval_id),
+    )
+    db.commit()
+    log_audit(
+        "approval.approved",
+        f"Foto-Override-Freigabe {approval_id} bestaetigt und ausgefuehrt",
         target_type="approval",
         target_id=approval_id,
         actor=g.current_user,

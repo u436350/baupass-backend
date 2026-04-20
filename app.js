@@ -4482,6 +4482,7 @@ function refreshAll() {
   renderStats();
   renderReportingPanels();
   renderWorkerList();
+  renderPhotoOverrideApprovalPanel();
   renderCompanyList();
   renderCompliancePanel();
   renderAuditLogPanel();
@@ -5128,6 +5129,92 @@ function bindWorkerRowActions() {
         window.alert(uiT("alertPinResetSuccessFor").replace("{name}", name));
       } catch (error) {
         window.alert(uiT("alertPinResetFailed").replace("{error}", error.message));
+      }
+    };
+  });
+}
+
+async function renderPhotoOverrideApprovalPanel() {
+  const panel = document.getElementById("photoOverrideApprovalPanel");
+  const list = document.getElementById("photoOverrideApprovalList");
+  if (!panel || !list) return;
+
+  const role = String(getCurrentUser()?.role || "").toLowerCase();
+  if (role !== "superadmin") {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  let approvals = [];
+  try {
+    approvals = await apiRequest(API_BASE + "/api/workers/photo-override-approvals/pending");
+  } catch {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  if (!Array.isArray(approvals) || approvals.length === 0) {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  const currentUserId = getCurrentUser()?.id || "";
+  list.innerHTML = approvals.map((a) => {
+    const canDecide = a.requestedByUserId !== currentUserId;
+    const photoHtml = a.photoData
+      ? `<img src="${escapeHtml(a.photoData)}" alt="Neues Foto" style="max-width:80px;max-height:100px;border-radius:8px;border:1px solid #ccc;margin-bottom:8px;" />`
+      : "";
+    const similarityText = a.similarity != null ? `${a.similarity}%` : "k.A.";
+    const notSelfHint = canDecide ? "" : `<p class="helper-text helper-text-warning">Du bist der Antragsteller – ein anderer Superadmin muss freigeben.</p>`;
+    return `
+      <div class="card" data-approval-id="${escapeHtml(a.approvalId)}">
+        ${photoHtml}
+        <p><strong>${escapeHtml(a.workerName || a.workerId || "?")}</strong></p>
+        <p class="helper-text">Fotovergleich: ${escapeHtml(similarityText)} | Grund: ${escapeHtml(a.overrideReason || "–")}</p>
+        <p class="helper-text">Beantragt: ${escapeHtml(a.requestedAt || "")} | Gültig bis: ${escapeHtml(a.expiresAt || "")}</p>
+        ${notSelfHint}
+        ${canDecide ? `
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="primary-button approval-approve-btn" data-approval-id="${escapeHtml(a.approvalId)}">Freigeben</button>
+          <button class="danger-button approval-reject-btn" data-approval-id="${escapeHtml(a.approvalId)}">Ablehnen</button>
+        </div>` : ""}
+      </div>`;
+  }).join("");
+
+  list.querySelectorAll(".approval-approve-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await apiRequest(API_BASE + `/api/workers/photo-override-approvals/${btn.dataset.approvalId}/decision`, {
+          method: "POST",
+          body: { decision: "approve", note: "" },
+        });
+        await loadAllData();
+        await renderPhotoOverrideApprovalPanel();
+        refreshAll();
+        window.alert("Foto-Override freigegeben. Mitarbeiterdaten wurden gespeichert.");
+      } catch (error) {
+        window.alert("Freigabe fehlgeschlagen: " + error.message);
+      }
+    };
+  });
+
+  list.querySelectorAll(".approval-reject-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      const reason = window.prompt("Bitte Ablehnungsgrund eingeben:") || "";
+      if (!reason.trim()) {
+        window.alert("Ablehnungsgrund ist erforderlich.");
+        return;
+      }
+      try {
+        await apiRequest(API_BASE + `/api/workers/photo-override-approvals/${btn.dataset.approvalId}/decision`, {
+          method: "POST",
+          body: { decision: "reject", note: reason.trim() },
+        });
+        await renderPhotoOverrideApprovalPanel();
+        window.alert("Foto-Override abgelehnt.");
+      } catch (error) {
+        window.alert("Ablehnung fehlgeschlagen: " + error.message);
       }
     };
   });
@@ -7030,7 +7117,19 @@ async function handleWorkerSubmit(event) {
     }
 
     if (state.editingWorkerId) {
-      await apiRequest(API_BASE + `/api/workers/${state.editingWorkerId}`, { method: "PUT", body: payload });
+      const result = await apiRequest(API_BASE + `/api/workers/${state.editingWorkerId}`, { method: "PUT", body: payload });
+      if (result?.approvalRequested) {
+        window.alert(
+          "Foto-Override beantragt (Freigabe-ID: " + (result.approvalId || "?") + ").\n" +
+          "Ein zweiter Superadmin muss die Änderung freigeben, bevor sie gespeichert wird."
+        );
+        clearWorkerEditor();
+        stopCamera();
+        await loadAllData();
+        refreshAll();
+        setView("workers");
+        return;
+      }
     } else {
       const createdWorker = await apiRequest(API_BASE + "/api/workers", { method: "POST", body: payload });
       targetWorkerId = createdWorker?.id || null;

@@ -514,6 +514,7 @@ def test_superadmin_photo_override_requires_reason_and_is_audited(client_and_db)
     assert missing_reason_response.status_code == 400
     assert missing_reason_response.get_json().get("error") == "photo_override_reason_required"
 
+    # Valid override now returns 202 (approval required – 4-Augen-Prinzip)
     ok_response = client.put(
         f"/api/workers/{worker_id}",
         json={
@@ -524,21 +525,147 @@ def test_superadmin_photo_override_requires_reason_and_is_audited(client_and_db)
         },
         headers=headers,
     )
-    assert ok_response.status_code == 200
+    assert ok_response.status_code == 202
+    ok_body = ok_response.get_json()
+    assert ok_body.get("approvalRequested") is True
+    assert ok_body.get("approvalId") is not None
 
+
+def test_photo_override_4_eyes_requires_different_superadmin_and_executes_on_approve(client_and_db):
+    """Full 4-Augen flow: request by SA1, self-approve blocked, approved by SA2 executes write + audit."""
+    client, db_path = client_and_db
+    headers_sa1 = _auth_headers(client)
+
+    # Create worker
+    create_resp = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-4EYES-1"),
+        headers=headers_sa1,
+    )
+    assert create_resp.status_code == 201
+    worker_id = create_resp.get_json()["id"]
+
+    # SA1 requests a photo override
+    override_resp = client.put(
+        f"/api/workers/{worker_id}",
+        json={
+            "photoData": "data:image/png;base64,NEWPHOTO",
+            "photoMatchOverride": True,
+            "photoMatchSimilarity": 0.31,
+            "photoMatchOverrideReason": "Identity confirmed on site by supervisor",
+        },
+        headers=headers_sa1,
+    )
+    assert override_resp.status_code == 202
+    approval_id = override_resp.get_json()["approvalId"]
+
+    # SA1 cannot approve their own request
+    self_approve_resp = client.post(
+        f"/api/workers/photo-override-approvals/{approval_id}/decision",
+        json={"decision": "approve"},
+        headers=headers_sa1,
+    )
+    assert self_approve_resp.status_code == 403
+    assert self_approve_resp.get_json().get("error") == "approver_must_be_different_user"
+
+    # Insert a second superadmin directly in the DB
+    from werkzeug.security import generate_password_hash as _hash
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+            ("usr-sa2", "superadmin2", _hash("5678"), "SA2", "superadmin", None),
+        )
+        db.commit()
+
+    login_sa2 = client.post(
+        "/api/login",
+        json={"username": "superadmin2", "password": "5678", "loginScope": "server-admin"},
+    )
+    assert login_sa2.status_code == 200
+    headers_sa2 = {"Authorization": f"Bearer {login_sa2.get_json()['token']}"}
+
+    # SA2 approves
+    approve_resp = client.post(
+        f"/api/workers/photo-override-approvals/{approval_id}/decision",
+        json={"decision": "approve", "note": ""},
+        headers=headers_sa2,
+    )
+    assert approve_resp.status_code == 200
+    approve_body = approve_resp.get_json()
+    assert approve_body.get("status") == "approved"
+
+    # Worker photo should now be updated
+    workers_resp = client.get("/api/workers", headers=headers_sa2)
+    assert workers_resp.status_code == 200
+    worker_data = next((w for w in workers_resp.get_json() if w["id"] == worker_id), None)
+    assert worker_data is not None
+    assert worker_data["photoData"] == "data:image/png;base64,NEWPHOTO"
+
+    # Audit log entry should exist for security.worker_photo_override
     with closing(sqlite3.connect(db_path)) as db:
         row = db.execute(
-            """
-            SELECT event_type, message
-            FROM audit_logs
-            WHERE event_type = 'security.worker_photo_override' AND target_id = ?
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
+            "SELECT message FROM audit_logs WHERE event_type = 'security.worker_photo_override' AND target_id = ? ORDER BY created_at DESC LIMIT 1",
             (worker_id,),
         ).fetchone()
         assert row is not None
-        assert "Supervisor verified in person" in str(row[1] or "")
+        assert "Identity confirmed on site by supervisor" in str(row[0] or "")
+
+
+def test_photo_override_4_eyes_reject_cancels_write(client_and_db):
+    """Rejecting a photo override approval prevents the photo from being written."""
+    client, db_path = client_and_db
+    headers_sa1 = _auth_headers(client)
+
+    create_resp = client.post(
+        "/api/workers",
+        json=_worker_payload("cmp-default", "CARD-4EYES-2"),
+        headers=headers_sa1,
+    )
+    assert create_resp.status_code == 201
+    worker_id = create_resp.get_json()["id"]
+
+    override_resp = client.put(
+        f"/api/workers/{worker_id}",
+        json={
+            "photoData": "data:image/png;base64,REJECTEDPHOTO",
+            "photoMatchOverride": True,
+            "photoMatchSimilarity": 0.28,
+            "photoMatchOverrideReason": "Override that will be rejected",
+        },
+        headers=headers_sa1,
+    )
+    assert override_resp.status_code == 202, override_resp.get_json()
+    approval_id = override_resp.get_json()["approvalId"]
+
+    # Insert SA2
+    from werkzeug.security import generate_password_hash as _hash
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            "INSERT INTO users (id, username, password_hash, name, role, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+            ("usr-sa2-rej", "superadmin2rej", _hash("5678"), "SA2", "superadmin", None),
+        )
+        db.commit()
+
+    login_sa2 = client.post(
+        "/api/login",
+        json={"username": "superadmin2rej", "password": "5678", "loginScope": "server-admin"},
+    )
+    assert login_sa2.status_code == 200
+    headers_sa2 = {"Authorization": f"Bearer {login_sa2.get_json()['token']}"}
+
+    # SA2 rejects
+    reject_resp = client.post(
+        f"/api/workers/photo-override-approvals/{approval_id}/decision",
+        json={"decision": "reject", "note": "Photo does not look like the worker"},
+        headers=headers_sa2,
+    )
+    assert reject_resp.status_code == 200
+    assert reject_resp.get_json().get("status") == "rejected"
+
+    # Worker photo should still be the original
+    workers_resp = client.get("/api/workers", headers=headers_sa2)
+    worker_data = next((w for w in workers_resp.get_json() if w["id"] == worker_id), None)
+    assert worker_data["photoData"] == "data:image/png;base64,AAA"
 
 
 def test_support_login_requires_matching_company(client_and_db):
@@ -1145,3 +1272,6 @@ def test_gate_tap_auto_toggles_direction_when_not_provided(client_and_db):
     second_payload = second_tap.get_json()
     assert second_payload.get("direction") == "check-out"
     assert second_payload.get("feedbackMessage") == "Du bist jetzt abgemeldet."
+
+
+
