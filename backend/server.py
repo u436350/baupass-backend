@@ -252,6 +252,95 @@ def sanitize_photo_data(value, required=False):
     return raw.replace("\n", "").replace("\r", "")
 
 
+def worker_has_expired_required_documents(db, worker_id, today_value=None):
+    worker_id = clean_id_input(worker_id)
+    if not worker_id:
+        return False, []
+    today = str(today_value or now_iso()[:10])
+    required_doc_types = ["mindestlohnnachweis", "personalausweis"]
+    placeholders = ", ".join("?" for _ in required_doc_types)
+    latest_rows = db.execute(
+        f"""
+        SELECT wd.doc_type, wd.expiry_date
+        FROM worker_documents wd
+        JOIN (
+            SELECT doc_type, MAX(created_at) AS latest_created_at
+            FROM worker_documents
+            WHERE worker_id = ?
+              AND doc_type IN ({placeholders})
+            GROUP BY doc_type
+        ) latest ON latest.doc_type = wd.doc_type AND latest.latest_created_at = wd.created_at
+        WHERE wd.worker_id = ?
+        """,
+        (worker_id, *required_doc_types, worker_id),
+    ).fetchall()
+
+    expired_types = []
+    for row in latest_rows:
+        expiry = str(row["expiry_date"] or "").strip()
+        if expiry and expiry < today:
+            expired_types.append(str(row["doc_type"] or ""))
+    return len(expired_types) > 0, expired_types
+
+
+def lock_worker_for_expired_documents(db, worker_row, today_value=None):
+    if not worker_row:
+        return False
+    if str(worker_row["deleted_at"] or "").strip():
+        return False
+    if str(worker_row["worker_type"] or "worker").strip().lower() != "worker":
+        return False
+
+    worker_id = str(worker_row["id"] or "").strip()
+    if not worker_id:
+        return False
+
+    has_expired, expired_types = worker_has_expired_required_documents(db, worker_id, today_value=today_value)
+    if not has_expired:
+        return False
+
+    if str(worker_row["status"] or "").strip().lower() != "gesperrt":
+        db.execute("UPDATE workers SET status = 'gesperrt' WHERE id = ?", (worker_id,))
+
+    badge = str(worker_row["badge_id"] or "-")
+    full_name = f"{str(worker_row['first_name'] or '').strip()} {str(worker_row['last_name'] or '').strip()}".strip() or "Mitarbeiter"
+    create_system_alert(
+        db,
+        code=f"worker_doc_expired_lock_{worker_id}",
+        severity="warning",
+        message=f"Mitarbeiter {full_name} ({badge}) wurde wegen abgelaufener Dokumente automatisch gesperrt.",
+        details={
+            "workerId": worker_id,
+            "companyId": worker_row["company_id"],
+            "expiredDocTypes": expired_types,
+        },
+        dedup_minutes=240,
+    )
+    return True
+
+
+def lock_workers_with_expired_documents(db, today_value=None):
+    today = str(today_value or now_iso()[:10])
+    rows = db.execute(
+        """
+        SELECT id, company_id, first_name, last_name, badge_id, worker_type, status, deleted_at
+        FROM workers
+        WHERE deleted_at IS NULL
+          AND worker_type = 'worker'
+          AND status != 'gesperrt'
+        """
+    ).fetchall()
+
+    changed = 0
+    for row in rows:
+        if lock_worker_for_expired_documents(db, row, today_value=today):
+            changed += 1
+
+    if changed > 0:
+        db.commit()
+    return changed
+
+
 def get_rate_limit_key(scope):
     return f"{scope}|{get_client_ip()}"
 
@@ -2293,12 +2382,16 @@ def start_background_jobs():
 
     # Expiry-Check beim Start einmal ausführen, danach täglich
     check_doc_expiry_warnings()
+    with app.app_context():
+        lock_workers_with_expired_documents(get_db())
 
     def daily_job_loop():
         """Läuft einmal täglich: Dokument-Ablauf-Prüfung + Zusammenfassungs-E-Mail."""
         while True:
             time.sleep(86400)  # 24 Stunden warten
             check_doc_expiry_warnings()
+            with app.app_context():
+                lock_workers_with_expired_documents(get_db())
             send_daily_summary_email()
 
     threading.Thread(target=daily_job_loop, name="baupass-daily-jobs", daemon=True).start()
@@ -3893,6 +3986,7 @@ def demo_seed():
 @require_auth
 def list_workers():
     include_deleted = request.args.get("includeDeleted", "0") == "1"
+    lock_workers_with_expired_documents(get_db())
     clause, params = visible_worker_clause(g.current_user)
     where = clause if include_deleted else f"{clause}{' AND' if clause else ' WHERE'} deleted_at IS NULL"
     rows = get_db().execute(f"SELECT * FROM workers{where} ORDER BY last_name, first_name", params).fetchall()
@@ -5668,6 +5762,13 @@ def create_access_log():
     if user["role"] != "superadmin" and worker["company_id"] != user.get("company_id"):
         return jsonify({"error": "forbidden_worker"}), 403
 
+    if lock_worker_for_expired_documents(db, worker):
+        db.commit()
+        return jsonify({
+            "error": "worker_documents_expired",
+            "message": "Mitarbeiter wurde wegen abgelaufener Pflichtdokumente automatisch gesperrt.",
+        }), 400
+
     company_error = get_company_access_error(db, worker["company_id"])
     if company_error:
         return jsonify(company_error), 403
@@ -5738,6 +5839,13 @@ def gate_tap():
 
     if turnstile_user["company_id"] != worker["company_id"]:
         return jsonify({"error": "forbidden_worker_company"}), 403
+
+    if lock_worker_for_expired_documents(db, worker):
+        db.commit()
+        return jsonify({
+            "error": "worker_documents_expired",
+            "message": "Mitarbeiter wurde wegen abgelaufener Pflichtdokumente automatisch gesperrt.",
+        }), 403
 
     if requested_direction in {"", "auto", "toggle"}:
         latest_log = db.execute(

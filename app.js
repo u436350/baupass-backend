@@ -3817,6 +3817,72 @@ function setPhotoEditorSource(source, { resetOffset = false } = {}) {
   }
 }
 
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("image_load_failed"));
+    img.src = dataUrl;
+  });
+}
+
+async function computePhotoDHash(dataUrl, width = 9, height = 8) {
+  if (!dataUrl) {
+    return "";
+  }
+  const img = await loadImageFromDataUrl(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, width, height);
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+
+  let bits = "";
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < (width - 1); x += 1) {
+      const left = ((y * width) + x) * 4;
+      const right = ((y * width) + x + 1) * 4;
+      const leftLuma = (pixels[left] * 299 + pixels[left + 1] * 587 + pixels[left + 2] * 114) / 1000;
+      const rightLuma = (pixels[right] * 299 + pixels[right + 1] * 587 + pixels[right + 2] * 114) / 1000;
+      bits += leftLuma > rightLuma ? "1" : "0";
+    }
+  }
+  return bits;
+}
+
+function hammingDistanceBits(a, b) {
+  const minLen = Math.min(a.length, b.length);
+  let dist = 0;
+  for (let i = 0; i < minLen; i += 1) {
+    if (a[i] !== b[i]) {
+      dist += 1;
+    }
+  }
+  return dist + Math.abs(a.length - b.length);
+}
+
+async function compareWorkerPhotoSimilarity(referenceDataUrl, candidateDataUrl) {
+  if (!referenceDataUrl || !candidateDataUrl) {
+    return { comparable: false, similarity: 0 };
+  }
+  try {
+    const [refHash, candHash] = await Promise.all([
+      computePhotoDHash(referenceDataUrl),
+      computePhotoDHash(candidateDataUrl)
+    ]);
+    if (!refHash || !candHash) {
+      return { comparable: false, similarity: 0 };
+    }
+    const distance = hammingDistanceBits(refHash, candHash);
+    const maxLen = Math.max(refHash.length, candHash.length) || 1;
+    const similarity = 1 - (distance / maxLen);
+    return { comparable: true, similarity: Math.max(0, Math.min(1, similarity)) };
+  } catch {
+    return { comparable: false, similarity: 0 };
+  }
+}
+
 function syncWorkerEditorUi() {
   const submitButton = document.querySelector("#workerSubmitButton");
   const cancelButton = document.querySelector("#workerCancelEditButton");
@@ -6857,6 +6923,25 @@ async function handleWorkerSubmit(event) {
 
   try {
     let targetWorkerId = state.editingWorkerId || null;
+
+    if (state.editingWorkerId) {
+      const existingWorker = state.workers.find((entry) => entry.id === state.editingWorkerId) || null;
+      const existingPhoto = existingWorker?.photoData || "";
+      const newPhoto = payload.photoData || "";
+      if (existingPhoto && newPhoto && existingPhoto !== newPhoto) {
+        const compare = await compareWorkerPhotoSimilarity(existingPhoto, newPhoto);
+        if (compare.comparable && compare.similarity < 0.62) {
+          const scorePct = Math.round(compare.similarity * 100);
+          const proceed = window.confirm(
+            `Fotovergleich niedrig (${scorePct}%). Das neue Kamera-Foto scheint nicht zum bisherigen Ausweisfoto zu passen. Trotzdem speichern?`
+          );
+          if (!proceed) {
+            return;
+          }
+        }
+      }
+    }
+
     if (state.editingWorkerId) {
       await apiRequest(API_BASE + `/api/workers/${state.editingWorkerId}`, { method: "PUT", body: payload });
     } else {
