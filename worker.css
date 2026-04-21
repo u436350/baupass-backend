@@ -489,6 +489,20 @@ button:hover,
   font-size: .95rem;
 }
 
+.geolocation-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+  font-size: .8rem;
+  color: #6b7280;
+  opacity: .85;
+}
+
+.geolocation-hint.hidden {
+  display: none;
+}
+
 .login-tips {
   display: flex;
   flex-wrap: wrap;

@@ -12,6 +12,7 @@ import socket
 import re
 import threading
 import time
+import math
 from contextlib import closing
 from functools import wraps
 from datetime import datetime, timedelta, timezone
@@ -20,6 +21,8 @@ from pathlib import Path
 from email.message import EmailMessage
 from email.utils import getaddresses
 from urllib.parse import quote, urlsplit, urlunsplit, unquote_to_bytes
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 from flask import Flask, jsonify, request, send_from_directory, g, Response, redirect, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -27,6 +30,8 @@ import pyotp
 import qrcode
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+WORKER_LOGIN_MAX_DISTANCE_METERS = 100
+_site_geocode_cache: dict[str, tuple[float, float] | None] = {}
 
 # ──────────────────────────────────────────────
 # PWA-Icon-Generierung (PNG, einmalig gecacht)
@@ -746,7 +751,7 @@ def apply_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
-    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(self)"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
@@ -1596,6 +1601,10 @@ def init_db():
         cur.execute("ALTER TABLE workers ADD COLUMN badge_pin_hash TEXT NOT NULL DEFAULT ''")
     if "physical_card_id" not in worker_columns:
         cur.execute("ALTER TABLE workers ADD COLUMN physical_card_id TEXT")
+    if "site_latitude" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN site_latitude REAL")
+    if "site_longitude" not in worker_columns:
+        cur.execute("ALTER TABLE workers ADD COLUMN site_longitude REAL")
 
     if "worker_app_enabled" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN worker_app_enabled INTEGER NOT NULL DEFAULT 1")
@@ -4751,6 +4760,15 @@ def build_worker_app_access_payload(db, worker_id, actor_user):
 
 
 def serialize_worker_for_app(worker):
+    site_location = None
+    latitude = worker["site_latitude"] if hasattr(worker, "keys") and "site_latitude" in worker.keys() else None
+    longitude = worker["site_longitude"] if hasattr(worker, "keys") and "site_longitude" in worker.keys() else None
+    if latitude is not None and longitude is not None:
+        site_location = {
+            "latitude": float(latitude),
+            "longitude": float(longitude),
+            "radiusMeters": WORKER_LOGIN_MAX_DISTANCE_METERS,
+        }
     return {
         "id": worker["id"],
         "subcompanyId": worker["subcompany_id"],
@@ -4767,6 +4785,114 @@ def serialize_worker_for_app(worker):
         "status": worker["status"],
         "photoData": worker["photo_data"],
         "badgeId": worker["badge_id"],
+        "siteLocation": site_location,
+    }
+
+
+def _normalize_float(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _haversine_meters(latitude_a, longitude_a, latitude_b, longitude_b):
+    earth_radius_m = 6371000.0
+    lat1 = math.radians(float(latitude_a))
+    lon1 = math.radians(float(longitude_a))
+    lat2 = math.radians(float(latitude_b))
+    lon2 = math.radians(float(longitude_b))
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    haversine = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 2 * earth_radius_m * math.asin(math.sqrt(haversine))
+
+
+def _geocode_site_address(site_label):
+    normalized = str(site_label or "").strip()
+    if not normalized:
+        return None
+    cache_key = normalized.lower()
+    if cache_key in _site_geocode_cache:
+        return _site_geocode_cache[cache_key]
+
+    encoded_query = quote(normalized)
+    geocode_url = f"https://nominatim.openstreetmap.org/search?q={encoded_query}&format=jsonv2&limit=1"
+    request_obj = Request(
+        geocode_url,
+        headers={
+            "User-Agent": "BauPass Control/1.0 (worker geofence)",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urlopen(request_obj, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (URLError, HTTPError, TimeoutError, json.JSONDecodeError, OSError):
+        _site_geocode_cache[cache_key] = None
+        return None
+
+    if not payload:
+        _site_geocode_cache[cache_key] = None
+        return None
+
+    first_hit = payload[0]
+    latitude = _normalize_float(first_hit.get("lat"))
+    longitude = _normalize_float(first_hit.get("lon"))
+    if latitude is None or longitude is None:
+        _site_geocode_cache[cache_key] = None
+        return None
+
+    _site_geocode_cache[cache_key] = (latitude, longitude)
+    return _site_geocode_cache[cache_key]
+
+
+def ensure_worker_site_coordinates(db, worker):
+    latitude = worker["site_latitude"] if hasattr(worker, "keys") and "site_latitude" in worker.keys() else None
+    longitude = worker["site_longitude"] if hasattr(worker, "keys") and "site_longitude" in worker.keys() else None
+    if latitude is not None and longitude is not None:
+        return float(latitude), float(longitude)
+
+    geocoded = _geocode_site_address(worker["site"])
+    if not geocoded:
+        return None
+
+    latitude, longitude = geocoded
+    db.execute(
+        "UPDATE workers SET site_latitude = ?, site_longitude = ? WHERE id = ?",
+        (latitude, longitude, worker["id"]),
+    )
+    db.commit()
+    return latitude, longitude
+
+
+def validate_worker_login_distance_or_raise(db, worker, payload):
+    if normalize_worker_type(worker["worker_type"]) != "worker":
+        return None
+
+    location = payload.get("location") if isinstance(payload, dict) else None
+    if not isinstance(location, dict):
+        raise ValueError("worker_geolocation_required")
+
+    device_latitude = _normalize_float(location.get("latitude"))
+    device_longitude = _normalize_float(location.get("longitude"))
+    if device_latitude is None or device_longitude is None:
+        raise ValueError("worker_geolocation_required")
+
+    site_coordinates = ensure_worker_site_coordinates(db, worker)
+    if not site_coordinates:
+        raise ValueError("site_location_unavailable")
+
+    distance_meters = _haversine_meters(site_coordinates[0], site_coordinates[1], device_latitude, device_longitude)
+    if distance_meters > WORKER_LOGIN_MAX_DISTANCE_METERS:
+        raise PermissionError(f"outside_site_radius:{int(round(distance_meters))}")
+
+    return {
+        "distanceMeters": int(round(distance_meters)),
+        "siteLatitude": float(site_coordinates[0]),
+        "siteLongitude": float(site_coordinates[1]),
     }
 
 
@@ -4832,14 +4958,19 @@ def create_access_log_entry(db, worker_id, direction, gate, note, timestamp_valu
 def create_worker_app_session(db, worker):
     session_token = secrets.token_urlsafe(28)
     expires_at = resolve_worker_session_expiry_iso(worker)
+    site_coordinates = ensure_worker_site_coordinates(db, worker)
     db.execute(
         "INSERT INTO worker_app_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)",
         (session_token, worker["id"], expires_at),
     )
     db.commit()
+    worker_payload = dict(worker)
+    if site_coordinates:
+        worker_payload["site_latitude"] = float(site_coordinates[0])
+        worker_payload["site_longitude"] = float(site_coordinates[1])
     return {
         "token": session_token,
-        "worker": serialize_worker_for_app(worker),
+        "worker": serialize_worker_for_app(worker_payload),
         "sessionExpiresAt": expires_at,
         "cardType": normalize_worker_type(worker["worker_type"]),
     }
@@ -4908,6 +5039,19 @@ def worker_app_login():
         if company_error:
             return jsonify(company_error), 403
 
+        try:
+            validate_worker_login_distance_or_raise(db, worker, payload)
+        except ValueError as exc:
+            error_code = str(exc)
+            if error_code == "worker_geolocation_required":
+                return jsonify({"error": error_code, "message": "Bitte Standortfreigabe aktivieren und direkt auf der Baustelle anmelden."}), 400
+            if error_code == "site_location_unavailable":
+                return jsonify({"error": error_code, "message": "Fuer diese Baustelle konnten noch keine Koordinaten ermittelt werden. Bitte Admin informieren."}), 403
+            raise
+        except PermissionError as exc:
+            distance_text = str(exc).split(":", 1)[1] if ":" in str(exc) else ""
+            return jsonify({"error": "outside_site_radius", "message": f"Login nur auf der Baustelle moeglich (max. {WORKER_LOGIN_MAX_DISTANCE_METERS} m). Aktuell ca. {distance_text} m entfernt."}), 403
+
         consumed_at = now_iso()
         consumed = db.execute(
             "UPDATE worker_app_tokens SET revoked_at = ? WHERE token = ? AND revoked_at IS NULL",
@@ -4957,6 +5101,19 @@ def worker_app_login():
     if company_error:
         return jsonify(company_error), 403
 
+    try:
+        validate_worker_login_distance_or_raise(db, worker, payload)
+    except ValueError as exc:
+        error_code = str(exc)
+        if error_code == "worker_geolocation_required":
+            return jsonify({"error": error_code, "message": "Bitte Standortfreigabe aktivieren und direkt auf der Baustelle anmelden."}), 400
+        if error_code == "site_location_unavailable":
+            return jsonify({"error": error_code, "message": "Fuer diese Baustelle konnten noch keine Koordinaten ermittelt werden. Bitte Admin informieren."}), 403
+        raise
+    except PermissionError as exc:
+        distance_text = str(exc).split(":", 1)[1] if ":" in str(exc) else ""
+        return jsonify({"error": "outside_site_radius", "message": f"Login nur auf der Baustelle moeglich (max. {WORKER_LOGIN_MAX_DISTANCE_METERS} m). Aktuell ca. {distance_text} m entfernt."}), 403
+
     session_data = create_worker_app_session(db, worker)
     login_type = "Besucher" if is_visitor else "Mitarbeiter"
     log_audit(
@@ -4995,6 +5152,37 @@ def worker_app_me():
             "cardType": normalize_worker_type(worker["worker_type"]),
         }
     )
+
+
+@app.post("/api/worker-app/offline-events")
+@require_worker_session
+def worker_app_sync_offline_events():
+    payload = request.get_json(silent=True) or {}
+    events = payload.get("events") if isinstance(payload, dict) else None
+    if not isinstance(events, list):
+        return jsonify({"error": "invalid_offline_events"}), 400
+
+    worker = g.worker
+    stored_count = 0
+    for event in events[:50]:
+        if not isinstance(event, dict):
+            continue
+        event_type = str(event.get("type") or "offline_login").strip() or "offline_login"
+        occurred_at = str(event.get("occurredAt") or now_iso()).strip() or now_iso()
+        distance_meters = _normalize_float(event.get("distanceMeters"))
+        message = f"Offline-Ereignis nachsynchronisiert: {event_type} | Zeitpunkt {occurred_at}"
+        if distance_meters is not None:
+            message += f" | Distanz {int(round(distance_meters))} m"
+        log_audit(
+            f"worker_app.{event_type}",
+            message,
+            target_type="worker",
+            target_id=worker["id"],
+            company_id=worker["company_id"],
+        )
+        stored_count += 1
+
+    return jsonify({"ok": True, "stored": stored_count})
 
 
 @app.post("/api/worker-app/logout")

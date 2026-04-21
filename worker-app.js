@@ -58,6 +58,8 @@ const WORKER_ACCESS_TOKEN_KEY = "baupass-worker-access-token";
 const WORKER_BADGE_LOGIN_KEY = "baupass-worker-badge-login";
 const LOCAL_LAST_PHOTO_KEY = "baupass-last-local-photo";
 const OFFLINE_PHOTO_QUEUE_KEY = "baupass-offline-photo-queue";
+const OFFLINE_EVENT_QUEUE_KEY = "baupass-offline-event-queue";
+const WORKER_OFFLINE_LOGIN_PROFILE_KEY = "baupass-worker-offline-login-profile";
 const QR_CACHE_PREFIX = "baupass-worker-qr-cache";
 const QR_HIGH_CONTRAST_KEY = "baupass-qr-high-contrast";
 const AUTO_OPEN_SCANNER_KEY = "baupass-auto-open-scanner";
@@ -90,6 +92,7 @@ const TRANSLATIONS = {
     tipBadge: "Badge-ID plus PIN statt QR",
     tipHome: "Funktioniert als Homescreen-App",
     tipRoute: "Direkter Weg zur Baustelle",
+    geolocationHint: "Standort wird für Badge-Login benötigt",
     logoutBtn: "Abmelden",
     refreshBtn: "Aktualisieren",
     fieldBadgeId: "Badge-ID",
@@ -192,6 +195,7 @@ const TRANSLATIONS = {
     tipBadge: "Badge ID + PIN instead of QR",
     tipHome: "Works as a home screen app",
     tipRoute: "Direct route to the site",
+    geolocationHint: "Location required for badge login",
     logoutBtn: "Logout",
     refreshBtn: "Refresh",
     fieldBadgeId: "Badge ID",
@@ -294,6 +298,7 @@ const TRANSLATIONS = {
     tipBadge: "Rozet ID + PIN QR yerine",
     tipHome: "Ana ekran uygulaması olarak çalışır",
     tipRoute: "Şantiyeye doğrudan yol",
+    geolocationHint: "Rozet girişi için konum gereklidir",
     logoutBtn: "Çıkış Yap",
     refreshBtn: "Yenile",
     fieldBadgeId: "Rozet ID",
@@ -396,6 +401,7 @@ const TRANSLATIONS = {
     tipBadge: "رقم البطاقة + PIN بدلاً من QR",
     tipHome: "يعمل كتطبيق على الشاشة الرئيسية",
     tipRoute: "طريق مباشر إلى الموقع",
+    geolocationHint: "الموقع مطلوب لتسجيل الدخول بالبطاقة",
     logoutBtn: "تسجيل الخروج",
     refreshBtn: "تحديث",
     fieldBadgeId: "رقم البطاقة",
@@ -597,6 +603,7 @@ let ambientLowLightRecommended = false;
 let gateAutoOpenTriggered = false;
 let lastUserInteractionAt = Date.now();
 let autoOpenScannerEnabled = localStorage.getItem(AUTO_OPEN_SCANNER_KEY) !== "0";
+let offlineWorkerSessionActive = false;
 let pinLockEnabled = false; // Wird vom Backend gesetzt
 let isPassLocked = false; // Aktueller Status
 let lastPassInteractionAt = Date.now();
@@ -668,7 +675,8 @@ const elements = {
   pinLockForm: document.querySelector("#pinLockForm"),
   pinLockInput: document.querySelector("#pinLockInput"),
   pinLockError: document.querySelector("#pinLockError"),
-  pinLockLogoutButton: document.querySelector("#pinLockLogoutButton")
+  pinLockLogoutButton: document.querySelector("#pinLockLogoutButton"),
+  geolocationHint: document.querySelector("#geolocationHint")
 };
 
 const splashStartedAt = performance.now();
@@ -792,7 +800,13 @@ function bindEvents() {
     langSelect.addEventListener("change", () => setLang(langSelect.value));
   }
 
-  window.addEventListener("online", updateConnectionState);
+  window.addEventListener("online", () => {
+    updateConnectionState();
+    if (workerToken) {
+      void syncOfflinePhotoQueue();
+      void syncOfflineEventQueue();
+    }
+  });
   window.addEventListener("offline", updateConnectionState);
   window.addEventListener("pointerdown", markUserInteraction, { passive: true });
   window.addEventListener("touchstart", markUserInteraction, { passive: true });
@@ -809,11 +823,15 @@ function bindEvents() {
     elements.workerAccessToken.addEventListener("input", () => {
       const val = (elements.workerAccessToken.value || "").trim();
       const needsPin = looksLikeBadgeId(val) && !isVisitorBadgeId(val);
+      const isBadge = looksLikeBadgeId(val) && !isVisitorBadgeId(val);
       if (pinWrapper) {
         pinWrapper.classList.toggle("hidden", !needsPin);
         if (!needsPin && elements.workerBadgePin) {
           elements.workerBadgePin.value = "";
         }
+      }
+      if (elements.geolocationHint) {
+        elements.geolocationHint.classList.toggle("hidden", !isBadge);
       }
     });
   }
@@ -822,12 +840,13 @@ function bindEvents() {
     elements.workerLoginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const credential = (elements.workerAccessToken?.value || "").trim();
+      const locationPayload = await resolveLoginLocation();
       if (looksLikeBadgeId(credential)) {
         const badgePin = isVisitorBadgeId(credential) ? "" : (elements.workerBadgePin?.value || "").trim();
-        await loginWithBadgeId(credential, badgePin);
+        await loginWithBadgeId(credential, badgePin, { locationPayload });
         return;
       }
-      await loginWithAccessToken(credential);
+      await loginWithAccessToken(credential, { locationPayload });
     });
   }
 
@@ -932,6 +951,152 @@ function savePhotoToOfflineQueue(dataUrl) {
   localStorage.setItem(OFFLINE_PHOTO_QUEUE_KEY, JSON.stringify(queue));
 }
 
+function readStoredJson(key, fallbackValue) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return fallbackValue;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+}
+
+function writeStoredJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function resolveExpiryTimestamp(value) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? `${value}T23:59:59` : value;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime();
+}
+
+function isCachedWorkerPayloadUsable(payload) {
+  const worker = payload?.worker;
+  if (!worker || !worker.badgeId) {
+    return false;
+  }
+  if (resolveExpiryTimestamp(worker.validUntil) < Date.now()) {
+    return false;
+  }
+  if (worker.visitEndAt && resolveExpiryTimestamp(worker.visitEndAt) < Date.now()) {
+    return false;
+  }
+  return true;
+}
+
+async function hashSensitiveValue(value) {
+  const encoded = new TextEncoder().encode(String(value || ""));
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(digest)).map((item) => item.toString(16).padStart(2, "0")).join("");
+}
+
+function calculateDistanceMeters(latitudeA, longitudeA, latitudeB, longitudeB) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value) => value * (Math.PI / 180);
+  const lat1 = toRadians(Number(latitudeA));
+  const lon1 = toRadians(Number(longitudeA));
+  const lat2 = toRadians(Number(latitudeB));
+  const lon2 = toRadians(Number(longitudeB));
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+  const haversine = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(haversine));
+}
+
+async function resolveLoginLocation() {
+  if (!navigator.geolocation) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+      },
+      () => {
+        // Permission denied or unavailable – let the server decide if geolocation is required
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
+
+async function persistOfflineBadgeProfile(badgeId, badgePin, payload) {
+  if (!badgeId || !badgePin || !payload?.worker) {
+    return;
+  }
+  const pinHash = await hashSensitiveValue(`${normalizeBadgeIdInput(badgeId)}:${normalizeBadgePinInput(badgePin)}`);
+  writeStoredJson(WORKER_OFFLINE_LOGIN_PROFILE_KEY, {
+    badgeId: normalizeBadgeIdInput(badgeId),
+    pinHash,
+    workerId: payload.worker.id,
+    payload,
+    savedAt: new Date().toISOString(),
+  });
+}
+
+function queueOfflineEvent(eventPayload) {
+  const queue = readStoredJson(OFFLINE_EVENT_QUEUE_KEY, []);
+  queue.push(eventPayload);
+  writeStoredJson(OFFLINE_EVENT_QUEUE_KEY, queue.slice(-50));
+}
+
+async function tryOfflineBadgeLogin(badgeId, badgePin, locationPayload) {
+  const offlineProfile = readStoredJson(WORKER_OFFLINE_LOGIN_PROFILE_KEY, null);
+  const cachedPayload = readStoredJson(WORKER_CACHED_PAYLOAD_KEY, null);
+  const normalizedBadgeId = normalizeBadgeIdInput(badgeId);
+  if (!offlineProfile || !cachedPayload || !isCachedWorkerPayloadUsable(cachedPayload)) {
+    return false;
+  }
+  if (normalizeBadgeIdInput(offlineProfile.badgeId) !== normalizedBadgeId) {
+    return false;
+  }
+
+  const expectedPinHash = await hashSensitiveValue(`${normalizedBadgeId}:${normalizeBadgePinInput(badgePin)}`);
+  if (offlineProfile.pinHash !== expectedPinHash) {
+    return false;
+  }
+
+  const siteLocation = cachedPayload?.worker?.siteLocation;
+  if (!siteLocation || typeof siteLocation.latitude !== "number" || typeof siteLocation.longitude !== "number") {
+    showWorkerNotice("Offline-Login nicht moeglich: Baustellen-Standort wurde noch nie synchronisiert.");
+    return true;
+  }
+
+  const distanceMeters = Math.round(calculateDistanceMeters(siteLocation.latitude, siteLocation.longitude, locationPayload.latitude, locationPayload.longitude));
+  if (distanceMeters > Number(siteLocation.radiusMeters || 100)) {
+    showWorkerNotice(`Offline-Login nur auf der Baustelle moeglich. Aktuell ca. ${distanceMeters} m entfernt.`);
+    return true;
+  }
+
+  offlineWorkerSessionActive = true;
+  workerToken = localStorage.getItem(WORKER_TOKEN_KEY) || "";
+  localStorage.setItem(WORKER_BADGE_LOGIN_KEY, normalizedBadgeId);
+  renderWorker(cachedPayload);
+  updateConnectionState();
+  if (elements.lastSyncInfo) {
+    elements.lastSyncInfo.textContent = `Offline-Login aktiv. Wartet auf spaetere Synchronisierung.`;
+  }
+  queueOfflineEvent({
+    type: "offline_login",
+    occurredAt: new Date().toISOString(),
+    distanceMeters,
+  });
+  initializeSessionInactivityProtection();
+  return true;
+}
+
 async function syncOfflinePhotoQueue() {
   let queue = [];
   try {
@@ -961,6 +1126,27 @@ async function syncOfflinePhotoQueue() {
   }
 
   localStorage.setItem(OFFLINE_PHOTO_QUEUE_KEY, JSON.stringify(pending));
+}
+
+async function syncOfflineEventQueue() {
+  const queue = readStoredJson(OFFLINE_EVENT_QUEUE_KEY, []);
+  if (!queue.length || !workerToken) {
+    return;
+  }
+
+  try {
+    await fetchJson(`${API_BASE}/offline-events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${workerToken}`
+      },
+      body: JSON.stringify({ events: queue })
+    });
+    writeStoredJson(OFFLINE_EVENT_QUEUE_KEY, []);
+  } catch {
+    // keep queue for next sync attempt
+  }
 }
 
 function registerWorkerSw() {
@@ -1023,7 +1209,7 @@ async function triggerInstall() {
   showWorkerNotice(t("installManual"));
 }
 
-async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent = false } = {}) {
+async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent = false, locationPayload = null } = {}) {
   if (!accessToken) {
     if (!silent) {
       showWorkerNotice(t("enterAccessCode"));
@@ -1039,9 +1225,10 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     const payload = await fetchJson(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accessToken })
+      body: JSON.stringify({ accessToken, location: locationPayload })
     });
 
+    offlineWorkerSessionActive = false;
     workerToken = payload.token;
     localStorage.setItem(WORKER_TOKEN_KEY, workerToken);
     localStorage.setItem(WORKER_ACCESS_TOKEN_KEY, accessToken);
@@ -1082,7 +1269,7 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
   }
 }
 
-async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
+async function loginWithBadgeId(badgeId, badgePin, { silent = false, locationPayload = null } = {}) {
   const normalizedBadgeId = normalizeBadgeIdInput(badgeId);
   const normalizedBadgePin = normalizeBadgePinInput(badgePin);
   if (!normalizedBadgeId) {
@@ -1107,9 +1294,10 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
     const payload = await fetchJson(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ badgeId: normalizedBadgeId, badgePin: normalizedBadgePin })
+      body: JSON.stringify({ badgeId: normalizedBadgeId, badgePin: normalizedBadgePin, location: locationPayload })
     });
 
+    offlineWorkerSessionActive = false;
     workerToken = payload.token;
     localStorage.setItem(WORKER_TOKEN_KEY, workerToken);
     localStorage.setItem(WORKER_BADGE_LOGIN_KEY, normalizedBadgeId);
@@ -1121,6 +1309,7 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
       elements.workerBadgePin.value = normalizedBadgePin;
     }
     await loadWorkerData();
+    await persistOfflineBadgeProfile(normalizedBadgeId, normalizedBadgePin, payload);
 
     if (!isStandaloneMode() && elements.installButton) {
       elements.installButton.hidden = false;
@@ -1132,6 +1321,12 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false } = {}) {
     // ── Schutzlogik: Session-Inaktivitäts-Monitor starten ──
     initializeSessionInactivityProtection();
   } catch (error) {
+    if ((!navigator.onLine || !error.code) && locationPayload) {
+      const restored = await tryOfflineBadgeLogin(normalizedBadgeId, normalizedBadgePin, locationPayload);
+      if (restored) {
+        return;
+      }
+    }
     if (silent) {
       showLogin();
       return;
@@ -1155,12 +1350,14 @@ async function loadWorkerData() {
       headers: { Authorization: `Bearer ${workerToken}` }
     });
     localStorage.setItem(WORKER_CACHED_PAYLOAD_KEY, JSON.stringify(payload));
+    offlineWorkerSessionActive = false;
     renderWorker(payload);
     if (elements.lastSyncInfo) {
       elements.lastSyncInfo.textContent = `${t("lastSync")}: ${new Intl.DateTimeFormat(getCurrentLocale(), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date())}`;
     }
     updateConnectionState();
     await syncOfflinePhotoQueue();
+    await syncOfflineEventQueue();
     return true;
   } catch (error) {
     // Session expired or revoked — must re-login
@@ -1178,6 +1375,7 @@ async function loadWorkerData() {
     if (cachedRaw) {
       try {
         const cachedPayload = JSON.parse(cachedRaw);
+        offlineWorkerSessionActive = true;
         renderWorker(cachedPayload);
         if (elements.lastSyncInfo) {
           elements.lastSyncInfo.textContent = t("offlineBanner");
@@ -1540,6 +1738,9 @@ async function workerLogout() {
   localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
   localStorage.removeItem(WORKER_BADGE_LOGIN_KEY);
   localStorage.removeItem(WORKER_CACHED_PAYLOAD_KEY);
+  localStorage.removeItem(WORKER_OFFLINE_LOGIN_PROFILE_KEY);
+  localStorage.removeItem(OFFLINE_EVENT_QUEUE_KEY);
+  offlineWorkerSessionActive = false;
   workerToken = "";
   clearWorkerSessionExpiryTimer();
   if (inactivityCheckInterval) {

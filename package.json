@@ -27,11 +27,12 @@
       "control-manifest.json",
       "control-sw.js",
       "worker-icon-192.png",
-      "worker-icon-512.png"
+      "worker-icon-512.png",
+      "worker-icon-512.ico"
     ],
     "win": {
       "target": [{"target": "portable"}],
-      "icon": "worker-icon-512.png",
+      "icon": "worker-icon-512.ico",
       "signAndEditExecutable": false
     },
     "nsis": {

@@ -6,8 +6,10 @@ const { spawn } = require("child_process");
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
-const DESKTOP_URL = (process.env.BAUPASS_DESKTOP_URL || "http://127.0.0.1:8080").trim();
-const AUTOSTART_BACKEND = String(process.env.BAUPASS_DESKTOP_AUTOSTART_BACKEND || "1").trim() !== "0";
+const DESKTOP_URL = (process.env.BAUPASS_DESKTOP_URL || "https://web-production-c21ed.up.railway.app").trim();
+// Backend auto-start only makes sense when pointing at localhost.
+const IS_LOCAL = DESKTOP_URL.includes("127.0.0.1") || DESKTOP_URL.includes("localhost");
+const AUTOSTART_BACKEND = IS_LOCAL && String(process.env.BAUPASS_DESKTOP_AUTOSTART_BACKEND || "1").trim() !== "0";
 
 let mainWindow = null;
 let backendProcess = null;
@@ -151,7 +153,7 @@ function createWindow() {
     frame: false,
     backgroundColor: "#0d131a",
     autoHideMenuBar: true,
-    icon: path.join(PROJECT_ROOT, "worker-icon-512.png"),
+    icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
