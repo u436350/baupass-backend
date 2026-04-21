@@ -3,7 +3,7 @@ const fs = require("fs");
 const http = require("http");
 const https = require("https");
 const { spawn } = require("child_process");
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, screen } = require("electron");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DESKTOP_URL = (process.env.BAUPASS_DESKTOP_URL || "https://web-production-c21ed.up.railway.app").trim();
@@ -318,7 +318,14 @@ ipcMain.handle("desktop:toggle-maximize", () => {
   if (mainWindow.isMaximized()) {
     mainWindow.unmaximize();
   } else {
-    mainWindow.maximize();
+    // Use explicit work-area bounds for reliable frameless maximize on Windows.
+    try {
+      const display = screen.getDisplayNearestPoint(mainWindow.getBounds());
+      mainWindow.setFullScreen(false);
+      mainWindow.setBounds(display.workArea, false);
+    } catch {
+      mainWindow.maximize();
+    }
   }
   sendWindowState();
 });

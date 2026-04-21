@@ -4607,6 +4607,7 @@ function refreshAll() {
   renderAccessWarnings();
   renderDayCloseBanner();
   renderTurnstileQuickPanel();
+  renderPorterLivePanel();
   renderBadge();
   loadDevices();
   showLoginGreeting();
@@ -6837,6 +6838,35 @@ function renderDashboardPorterLivePanel() {
     </div>
     <div class="${eventClass}">${escapeHtml(directionLabel)}${latest.note ? ` | ${escapeHtml(latest.note)}` : ""}</div>
     ${companySummaryHtml}
+  `;
+}
+
+// Pförtner-View (Zutritts-Ansicht): Firmenzählung aktuell auf der Baustelle
+function renderPorterLivePanel() {
+  const panel = elements.porterLivePanel;
+  if (!panel) {
+    return;
+  }
+
+  const onSiteByCompany = getPorterOnSiteByCompany();
+  if (!onSiteByCompany.length) {
+    panel.className = "porter-live-card empty-state";
+    panel.innerHTML = `<strong>Aktuell auf der Baustelle je Firma</strong><p class="helper-text">Noch keine aktiven Anmeldungen vorhanden.</p>`;
+    return;
+  }
+
+  panel.className = "porter-live-card";
+  panel.innerHTML = `
+    <div class="porter-company-summary">
+      <strong>Aktuell auf der Baustelle je Firma</strong>
+      <div class="porter-company-list">
+        ${onSiteByCompany.map((entry) => `
+          <div class="porter-company-item">
+            <span>${escapeHtml(entry.companyName)}</span>
+            <span class="porter-company-count">${entry.count} ${entry.count === 1 ? "Person" : "Personen"}</span>
+          </div>`).join("")}
+      </div>
+    </div>
   `;
 }
 
