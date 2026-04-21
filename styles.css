@@ -4077,7 +4077,8 @@ body.desktop-app .shell {
 }
 
 body.desktop-app .auth-overlay {
-  min-height: calc(100vh - 40px);
+  top: 40px;
+  height: calc(100vh - 40px);
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }

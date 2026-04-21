@@ -6164,8 +6164,11 @@ function bindCompanyRowActions() {
     await handleLogout({ preserveSupportContext: true });
     syncSupportLoginUi();
     window.scrollTo({ top: 0, behavior: "smooth" });
-    elements.loginUsername?.focus();
-    window.alert(`${uiT("supportCompanyLoginOpenedPrefix")} ${companyName} ${uiT("supportCompanyLoginOpenedSuffix")}`);
+    // Use a short delay instead of window.alert() to avoid Electron losing
+    // keyboard focus after a native dialog dismissal.
+    window.setTimeout(() => {
+      focusLoginInput({ force: true });
+    }, 80);
   });
 }
 
