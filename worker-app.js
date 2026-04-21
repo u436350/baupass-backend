@@ -1279,6 +1279,8 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
   } catch (error) {
     if (["invalid_access_token", "access_token_revoked", "access_token_expired", "access_token_already_used"].includes(error.code)) {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+      showWorkerNotice("QR-Link ungueltig oder bereits verbraucht. Bitte QR-Code neu scannen.");
+      return;
     }
     if (error.code === "visitor_visit_expired") {
       localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);

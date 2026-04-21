@@ -5078,18 +5078,8 @@ def worker_app_login():
         if company_error:
             return jsonify(company_error), 403
 
-        try:
-            validate_worker_login_distance_or_raise(db, worker, payload)
-        except ValueError as exc:
-            error_code = str(exc)
-            if error_code == "worker_geolocation_required":
-                return jsonify({"error": error_code, "message": "Bitte Standortfreigabe aktivieren und direkt auf der Baustelle anmelden."}), 400
-            if error_code == "site_location_unavailable":
-                return jsonify({"error": error_code, "message": "Fuer diese Baustelle konnten noch keine Koordinaten ermittelt werden. Bitte Admin informieren."}), 403
-            raise
-        except PermissionError as exc:
-            distance_text = str(exc).split(":", 1)[1] if ":" in str(exc) else ""
-            return jsonify({"error": "outside_site_radius", "message": f"Login nur auf der Baustelle moeglich (max. {WORKER_LOGIN_MAX_DISTANCE_METERS} m). Aktuell ca. {distance_text} m entfernt."}), 403
+        # Einmal-Link (QR) soll unmittelbar funktionieren. Standortpruefung bleibt
+        # weiterhin fuer Badge-ID/PIN-Login aktiv (siehe unten im badge_id-Branch).
 
         consumed_at = now_iso()
         consumed = db.execute(
