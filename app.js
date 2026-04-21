@@ -11459,7 +11459,7 @@ if (elements.loginForm) {
 
 if (elements.authOverlay) {
   elements.authOverlay.addEventListener("click", (event) => {
-    const interactive = event.target.closest("input,select,textarea,button,a,label");
+    const interactive = event.target.closest(".auth-panel,input,select,textarea,button,a,label");
     if (interactive) {
       return;
     }

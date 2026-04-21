@@ -1130,6 +1130,22 @@ select {
   border-color: rgba(20, 27, 34, 0.14);
 }
 
+.auth-form #loginSupportNotice {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(255, 247, 237, 0.98), rgba(255, 241, 228, 0.94));
+  border: 1px solid rgba(217, 93, 57, 0.24);
+  color: #1f2937;
+}
+
+.auth-form #loginSupportNotice,
+.auth-form #loginSupportNotice p,
+.auth-form #loginSupportNotice span,
+.auth-form #loginSupportNotice strong {
+  color: #1f2937;
+}
+
 .auth-form .primary-button {
   margin-top: 8px;
   margin-bottom: 4px;
@@ -4062,6 +4078,22 @@ body.desktop-app .shell {
 
 body.desktop-app .auth-overlay {
   min-height: calc(100vh - 40px);
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+body.desktop-app .auth-panel,
+body.desktop-app .auth-form,
+body.desktop-app .auth-form label,
+body.desktop-app .auth-form input,
+body.desktop-app .auth-form select,
+body.desktop-app .auth-form textarea,
+body.desktop-app .auth-form button,
+body.desktop-app .auth-lang-select-shell,
+body.desktop-app .auth-hints,
+body.desktop-app .auth-legal-footer {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 body.desktop-app .sidebar {
