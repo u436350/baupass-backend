@@ -2940,6 +2940,10 @@ function initSystemThemeControl() {
 let deferredDesktopInstallPrompt = null;
 const elements = {
   body: document.body,
+  desktopTitlebar: document.querySelector("#desktopTitlebar"),
+  desktopMinimizeBtn: document.querySelector("#desktopMinimizeBtn"),
+  desktopMaximizeBtn: document.querySelector("#desktopMaximizeBtn"),
+  desktopCloseBtn: document.querySelector("#desktopCloseBtn"),
   authOverlay: document.querySelector("#authOverlay"),
   mainShell: document.querySelector("#mainShell"),
   loginForm: document.querySelector("#loginForm"),
@@ -3748,6 +3752,55 @@ async function triggerDesktopInstall() {
     elements.desktopInstallButton.hidden = true;
   }
   updateDesktopInstallHint();
+}
+
+function initNativeDesktopShell() {
+  const desktopApi = window.baupassDesktop;
+  const isDesktop = Boolean(desktopApi && desktopApi.isDesktop);
+  if (!isDesktop) {
+    return;
+  }
+
+  if (elements.body) {
+    elements.body.classList.add("desktop-app");
+  }
+  if (elements.desktopTitlebar) {
+    elements.desktopTitlebar.classList.remove("hidden");
+    elements.desktopTitlebar.setAttribute("aria-hidden", "false");
+  }
+
+  if (elements.desktopInstallButton) {
+    elements.desktopInstallButton.hidden = true;
+  }
+  if (elements.desktopInstallHint) {
+    elements.desktopInstallHint.textContent = "Desktop-Modus aktiv - ohne Browser-Titelleiste.";
+  }
+
+  if (elements.desktopMinimizeBtn) {
+    elements.desktopMinimizeBtn.addEventListener("click", () => {
+      desktopApi.minimize();
+    });
+  }
+  if (elements.desktopMaximizeBtn) {
+    const updateMaximizeState = (state) => {
+      const isMaximized = Boolean(state?.isMaximized);
+      elements.desktopMaximizeBtn.title = isMaximized ? "Wiederherstellen" : "Maximieren";
+      elements.desktopMaximizeBtn.setAttribute("aria-label", isMaximized ? "Wiederherstellen" : "Maximieren");
+      elements.desktopMaximizeBtn.classList.toggle("is-maximized", isMaximized);
+    };
+    elements.desktopMaximizeBtn.addEventListener("click", () => {
+      desktopApi.toggleMaximize();
+    });
+    desktopApi.getWindowState().then(updateMaximizeState).catch(() => {});
+    if (typeof desktopApi.onWindowState === "function") {
+      desktopApi.onWindowState(updateMaximizeState);
+    }
+  }
+  if (elements.desktopCloseBtn) {
+    elements.desktopCloseBtn.addEventListener("click", () => {
+      desktopApi.close();
+    });
+  }
 }
 
 function getSubcompanyLabel(worker) {
@@ -11648,6 +11701,7 @@ if (addSubcompanyButton) {
 
 registerControlServiceWorker();
 initUiLanguageControl();
+initNativeDesktopShell();
 wireDesktopInstallPrompt();
 
 (function initWorkerListControls() {
