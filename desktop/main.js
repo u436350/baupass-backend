@@ -157,7 +157,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     frame: false,
-    show: false,
+    show: true,
     backgroundColor: "#0d131a",
     autoHideMenuBar: true,
     icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
@@ -168,10 +168,6 @@ function createWindow() {
       sandbox: false,
       spellcheck: false,
     },
-  });
-
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
   });
 
   mainWindow.loadURL(DESKTOP_URL);
