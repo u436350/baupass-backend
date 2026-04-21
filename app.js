@@ -3574,8 +3574,15 @@ function focusLoginInput({ force = false } = {}) {
   window.requestAnimationFrame(() => {
     const hasUsername = Boolean(String(elements.loginUsername.value || "").trim());
     const target = hasUsername ? elements.loginPassword : elements.loginUsername;
+    target.classList.remove("login-focus-pulse");
+    // Reflow ensures the pulse animation can restart on repeated focus actions.
+    void target.offsetWidth;
+    target.classList.add("login-focus-pulse");
     target.focus({ preventScroll: true });
     target.select?.();
+    window.setTimeout(() => {
+      target.classList.remove("login-focus-pulse");
+    }, 850);
   });
 }
 
