@@ -2945,6 +2945,7 @@ const elements = {
   desktopMaximizeBtn: document.querySelector("#desktopMaximizeBtn"),
   desktopCloseBtn: document.querySelector("#desktopCloseBtn"),
   authOverlay: document.querySelector("#authOverlay"),
+  authPanel: document.querySelector("#authOverlay .auth-panel"),
   mainShell: document.querySelector("#mainShell"),
   loginForm: document.querySelector("#loginForm"),
   loginUsername: document.querySelector("#loginUsername"),
@@ -3058,6 +3059,7 @@ let invoiceAutoRefreshTimer = null;
 let invoiceApprovalRefreshTimer = null;
 let turnstileTapInFlight = false;
 let turnstileTapLiveResetTimer = null;
+let lastLoginFocusAt = 0;
 let companyBrandingPreviewOverride = "";
 let superadminUiPreviewCompanyId = "";
 
@@ -3553,6 +3555,28 @@ function syncSupportLoginUi() {
   if (!token && context?.companyId && elements.loginScope) {
     elements.loginScope.value = "company-admin";
   }
+}
+
+function focusLoginInput({ force = false } = {}) {
+  if (!elements.authOverlay || !elements.loginUsername || !elements.loginPassword) {
+    return;
+  }
+  if (elements.authOverlay.getAttribute("aria-hidden") === "true") {
+    return;
+  }
+
+  const now = Date.now();
+  if (!force && now - lastLoginFocusAt < 350) {
+    return;
+  }
+  lastLoginFocusAt = now;
+
+  window.requestAnimationFrame(() => {
+    const hasUsername = Boolean(String(elements.loginUsername.value || "").trim());
+    const target = hasUsername ? elements.loginPassword : elements.loginUsername;
+    target.focus({ preventScroll: true });
+    target.select?.();
+  });
 }
 
 function applySupportReadOnlyUiState() {
@@ -4558,6 +4582,10 @@ function refreshAll() {
       superadminUiPreviewCompanyId = "";
       elements.body.setAttribute("data-branding-preset", "construction");
     }
+  }
+
+  if (!loggedIn) {
+    focusLoginInput();
   }
 
   updateTopbarActionsState(loggedIn);
@@ -11361,6 +11389,24 @@ if (elements.navLinks.length) {
 
 if (elements.loginForm) {
   elements.loginForm.addEventListener("submit", handleLoginSubmit);
+}
+
+if (elements.authOverlay) {
+  elements.authOverlay.addEventListener("click", (event) => {
+    const interactive = event.target.closest("input,select,textarea,button,a,label");
+    if (interactive) {
+      return;
+    }
+    focusLoginInput({ force: true });
+  });
+}
+
+if (elements.loginScope) {
+  elements.loginScope.addEventListener("change", () => {
+    if (!token) {
+      focusLoginInput({ force: true });
+    }
+  });
 }
 
 if (elements.logoutButton) {

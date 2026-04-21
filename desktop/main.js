@@ -233,6 +233,18 @@ function createSplashWindow() {
 
 function createWindow() {
   updateSplashProgress(16, "Fenster wird vorbereitet", "Sichere Umgebung wird geladen");
+  let mainWindowShown = false;
+
+  const revealMainWindow = (closeDelayMs = 160) => {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindowShown) {
+      return;
+    }
+    mainWindowShown = true;
+    mainWindow.show();
+    mainWindow.focus();
+    setTimeout(closeSplashWindow, closeDelayMs);
+    sendWindowState();
+  };
 
   mainWindow = new BrowserWindow({
     width: 1480,
@@ -261,6 +273,12 @@ function createWindow() {
     updateSplashProgress(78, "Fast fertig", "Benutzeroberfläche wird gerendert");
   });
 
+  // Show as soon as first paint is ready to reduce perceived startup delay.
+  mainWindow.once("ready-to-show", () => {
+    updateSplashProgress(90, "Anwendung bereit", "Oberfläche wird angezeigt");
+    revealMainWindow(140);
+  });
+
   mainWindow.loadURL(DESKTOP_URL);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -270,29 +288,18 @@ function createWindow() {
 
   mainWindow.webContents.on("did-finish-load", () => {
     updateSplashProgress(100, "Bereit", "Willkommen in BauPass Control");
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    setTimeout(closeSplashWindow, 160);
-    sendWindowState();
+    revealMainWindow(120);
   });
 
   mainWindow.webContents.on("did-fail-load", () => {
     updateSplashProgress(100, "Verbindung fehlgeschlagen", "Die Oberfläche wird trotzdem geöffnet");
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    setTimeout(closeSplashWindow, 300);
+    revealMainWindow(300);
   });
 
   setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindowShown) {
       updateSplashProgress(96, "Start dauert länger", "Anwendung wird jetzt angezeigt");
-      mainWindow.show();
-      mainWindow.focus();
-      closeSplashWindow();
+      revealMainWindow(0);
     }
   }, SPLASH_MAX_VISIBLE_MS);
 
