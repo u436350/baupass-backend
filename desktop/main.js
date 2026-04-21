@@ -113,6 +113,12 @@ function startBackend() {
 }
 
 async function ensureBackend() {
+  // For hosted deployments, avoid blocking startup with a remote health probe.
+  // The app should open immediately and let the web app handle its own loading state.
+  if (!IS_LOCAL) {
+    return;
+  }
+
   const available = await probeBackend(DESKTOP_URL);
   if (available) {
     return;
