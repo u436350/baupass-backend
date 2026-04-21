@@ -7,7 +7,7 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#f6f1e8",
-  "theme_color": "#1c2128",
+  "theme_color": "#d4b597",
   "scope": "/",
   "orientation": "portrait",
   "categories": ["business", "productivity", "utilities"],

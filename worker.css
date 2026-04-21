@@ -1440,3 +1440,42 @@ body.splash-released .login-card {
   display: none;
 }
 
+/* Enforced light coffee theme to match Control-App interior */
+:root {
+  --bg: #f6efe2;
+  --card: rgba(255, 252, 247, 0.86);
+  --card-strong: rgba(255, 251, 246, 0.94);
+  --text: #1f1b16;
+  --muted: #6f645a;
+  --accent: #c78652;
+  --accent-dark: #a66a3d;
+  --accent-soft: #f0c39b;
+  --blue: #0f4c5c;
+  --shadow: 0 20px 52px rgba(88, 60, 36, 0.14);
+}
+
+body {
+  background: linear-gradient(145deg, #fbf6ef 0%, #f4eadc 50%, #eadcc8 100%);
+}
+
+.top-panel {
+  background: linear-gradient(135deg, #ecd9c4 0%, #d8b999 100%);
+  color: #2f241c;
+  border: 1px solid rgba(116, 80, 52, 0.18);
+}
+
+.top-panel .eyebrow,
+.top-lead,
+.platform-hint {
+  color: #4b3a2d;
+}
+
+.lang-option-block {
+  border: 1px solid rgba(120, 84, 56, 0.22);
+  background: rgba(248, 237, 225, 0.92);
+}
+
+.orb-two {
+  background: radial-gradient(circle, rgba(199, 134, 82, 0.2) 0%, rgba(199, 134, 82, 0) 72%);
+}
+
