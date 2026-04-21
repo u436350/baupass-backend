@@ -157,6 +157,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     frame: false,
+    show: false,
     backgroundColor: "#0d131a",
     autoHideMenuBar: true,
     icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
@@ -167,6 +168,10 @@ function createWindow() {
       sandbox: false,
       spellcheck: false,
     },
+  });
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   mainWindow.loadURL(DESKTOP_URL);
@@ -214,8 +219,12 @@ ipcMain.handle("desktop:get-window-state", () => ({
 }));
 
 async function bootstrap() {
-  await ensureBackend();
+  // Always create the window immediately so the app appears in <1s.
+  // For local backends, probe / start in background after window is shown.
   createWindow();
+  if (IS_LOCAL) {
+    ensureBackend();
+  }
 }
 
 app.whenReady().then(bootstrap);
