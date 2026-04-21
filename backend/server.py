@@ -38,6 +38,10 @@ _site_geocode_cache: dict[str, tuple[float, float] | None] = {}
 # ──────────────────────────────────────────────
 _icon_png_cache: dict[int, bytes] = {}
 
+WORKER_ICON_PRIMARY_RGB = (199, 134, 82)   # #c78652
+WORKER_ICON_SECONDARY_RGB = (138, 82, 48)  # #8a5230
+WORKER_ICON_TEXT_RGBA = (246, 239, 226, 255)  # #f6efe2
+
 
 def _generate_icon_png(size: int) -> bytes:
     """Erzeugt ein PNG-Icon (size×size) mit Baupass-Branding."""
@@ -47,8 +51,8 @@ def _generate_icon_png(size: int) -> bytes:
     from PIL import Image, ImageDraw, ImageFont
     import io as _io
 
-    r1, g1, b1 = 217, 93, 57    # #d95d39 (orange)
-    r2, g2, b2 = 18, 20, 23     # #121417 (dunkel)
+    r1, g1, b1 = WORKER_ICON_PRIMARY_RGB
+    r2, g2, b2 = WORKER_ICON_SECONDARY_RGB
     radius = max(4, size // 6)
     denom = max(1, 2 * (size - 1))
 
@@ -82,9 +86,9 @@ def _generate_icon_png(size: int) -> bytes:
 
     draw = ImageDraw.Draw(result)
     text = "BP"
-    font_size = size // 3
+    font_size = max(48, int(size * 0.375))
     font = None
-    for fp in ["arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf",
+    for fp in ["segoeuib.ttf", "arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf",
                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]:
         try:
@@ -97,8 +101,9 @@ def _generate_icon_png(size: int) -> bytes:
 
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text(((size - tw) // 2 - bbox[0], (size - th) // 2 - bbox[1]),
-              text, fill=(255, 247, 239, 255), font=font)
+    text_x = (size - tw) / 2 - bbox[0]
+    text_y = size * (330 / 512) - th / 2 - bbox[1]
+    draw.text((text_x, text_y), text, fill=WORKER_ICON_TEXT_RGBA, font=font)
 
     buf = _io.BytesIO()
     result.save(buf, "PNG")
@@ -9545,13 +9550,8 @@ def _load_invoice_logo_data_url():
 
 
 def _build_worker_icon_svg(icon_size: int) -> str:
-    logo_data_url = _load_invoice_logo_data_url()
-    if logo_data_url.startswith("data:image/"):
-        logo_href = html.escape(logo_data_url, quote=True)
-        return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{icon_size}\" height=\"{icon_size}\" viewBox=\"0 0 {icon_size} {icon_size}\">\n  <defs>\n    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d95d39\" />\n      <stop offset=\"100%\" stop-color=\"#121417\" />\n    </linearGradient>\n    <clipPath id=\"clip\">\n      <rect x=\"0\" y=\"0\" width=\"{icon_size}\" height=\"{icon_size}\" rx=\"{max(14, icon_size // 6)}\" ry=\"{max(14, icon_size // 6)}\" />\n    </clipPath>\n  </defs>\n  <rect width=\"{icon_size}\" height=\"{icon_size}\" fill=\"url(#bg)\" />\n  <g clip-path=\"url(#clip)\">\n    <image href=\"{logo_href}\" x=\"{int(icon_size * 0.09)}\" y=\"{int(icon_size * 0.09)}\" width=\"{int(icon_size * 0.82)}\" height=\"{int(icon_size * 0.82)}\" preserveAspectRatio=\"xMidYMid meet\" />\n  </g>\n</svg>"""
-
-    font_size = max(56, icon_size // 2)
-    return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{icon_size}\" height=\"{icon_size}\" viewBox=\"0 0 {icon_size} {icon_size}\">\n  <defs>\n    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d95d39\" />\n      <stop offset=\"100%\" stop-color=\"#121417\" />\n    </linearGradient>\n  </defs>\n  <rect width=\"{icon_size}\" height=\"{icon_size}\" rx=\"{max(14, icon_size // 6)}\" ry=\"{max(14, icon_size // 6)}\" fill=\"url(#bg)\" />\n  <text x=\"50%\" y=\"53%\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Barlow, Arial, sans-serif\" font-size=\"{font_size}\" font-weight=\"700\" fill=\"#fff7ef\">BP</text>\n</svg>"""
+    _ = html  # keep import used in this module without removing broader helpers.
+    return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{icon_size}\" height=\"{icon_size}\" viewBox=\"0 0 512 512\">\n  <defs>\n    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c78652\" />\n      <stop offset=\"100%\" stop-color=\"#8a5230\" />\n    </linearGradient>\n  </defs>\n  <rect width=\"512\" height=\"512\" rx=\"118\" fill=\"url(#bg)\" />\n  <text x=\"256\" y=\"330\" text-anchor=\"middle\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"192\" font-weight=\"800\" letter-spacing=\"4\" fill=\"#f6efe2\">BP</text>\n</svg>"""
 
 
 @app.get("/worker-icon-<int:icon_size>.svg")
@@ -9568,27 +9568,6 @@ def worker_icon_svg(icon_size: int):
 def worker_icon_png(icon_size: int):
     if icon_size not in (192, 512):
         return jsonify({"error": "not_found"}), 404
-
-    logo_data_url = _load_invoice_logo_data_url()
-    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+)(;base64)?,(.*)$", logo_data_url, re.DOTALL)
-    if match:
-        mime_type = match.group(1).lower()
-        is_base64 = bool(match.group(2))
-        raw_payload = match.group(3)
-        if mime_type in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
-            try:
-                binary = base64.b64decode(raw_payload) if is_base64 else unquote_to_bytes(raw_payload)
-                from PIL import Image
-
-                with Image.open(io.BytesIO(binary)) as img:
-                    rendered = img.convert("RGBA").resize((icon_size, icon_size))
-                    out = io.BytesIO()
-                    rendered.save(out, format="PNG")
-                    response = Response(out.getvalue(), mimetype="image/png")
-                    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-                    return response
-            except Exception:
-                pass
 
     data = _generate_icon_png(icon_size)
     if not data:
