@@ -644,6 +644,43 @@ select {
   animation: auth-enter 420ms ease;
 }
 
+.auth-panel h2,
+.auth-panel h3,
+.auth-panel strong,
+.auth-panel label,
+.auth-panel p,
+.auth-panel span,
+.auth-panel .eyebrow {
+  color: #111827;
+}
+
+.auth-panel .auth-copy,
+.auth-panel .helper-text,
+.auth-panel .auth-system-card span {
+  color: #1f2937;
+}
+
+.auth-panel input,
+.auth-panel select,
+.auth-panel textarea {
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+}
+
+.auth-panel input::placeholder,
+.auth-panel textarea::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+
+.auth-panel input:focus,
+.auth-panel select:focus,
+.auth-panel textarea:focus {
+  outline: 2px solid rgba(15, 76, 92, 0.32);
+  outline-offset: 1px;
+}
+
 .auth-lang-field {
   display: grid;
   gap: 6px;
@@ -2120,6 +2157,51 @@ body[data-branding-preset="premium"] {
   border-radius: 12px;
   background: rgba(23, 23, 23, 0.06);
   color: var(--muted);
+}
+
+.porter-company-summary {
+  margin-top: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.porter-company-summary > strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.porter-company-list {
+  display: grid;
+  gap: 6px;
+}
+
+.porter-company-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(15, 76, 92, 0.08);
+  color: #0b2430;
+  font-size: 0.9rem;
+}
+
+.porter-company-count {
+  min-width: 26px;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 76, 92, 0.14);
+  font-weight: 700;
+}
+
+.porter-company-summary.empty {
+  background: rgba(23, 23, 23, 0.05);
 }
 
 .access-entry-layout {

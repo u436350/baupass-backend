@@ -6746,16 +6746,65 @@ function renderRecentAccess() {
   });
 }
 
+function getPorterOnSiteByCompany() {
+  const visibleLogs = [...getUiVisibleAccessLogs()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  const workerById = new Map(getUiVisibleWorkers().map((worker) => [worker.id, worker]));
+  const lastDirectionByWorker = new Map();
+
+  for (const entry of visibleLogs) {
+    if (!entry?.workerId) {
+      continue;
+    }
+    lastDirectionByWorker.set(entry.workerId, entry.direction);
+  }
+
+  const companyCounts = new Map();
+  for (const [workerId, direction] of lastDirectionByWorker.entries()) {
+    if (direction !== "check-in") {
+      continue;
+    }
+    const worker = workerById.get(workerId);
+    if (!worker) {
+      continue;
+    }
+    const companyId = worker.companyId || worker.company_id || "";
+    const companyName = state.companies.find((entry) => entry.id === companyId)?.name || runtimeText("unknownCompany");
+    const currentCount = Number(companyCounts.get(companyName) || 0);
+    companyCounts.set(companyName, currentCount + 1);
+  }
+
+  return [...companyCounts.entries()]
+    .map(([companyName, count]) => ({ companyName, count }))
+    .sort((left, right) => right.count - left.count || left.companyName.localeCompare(right.companyName, "de"));
+}
+
 function renderDashboardPorterLivePanel() {
   const panel = elements.dashboardPorterLivePanel;
   if (!panel) {
     return;
   }
 
+  const onSiteByCompany = getPorterOnSiteByCompany();
+  const companySummaryHtml = onSiteByCompany.length
+    ? `
+      <div class="porter-company-summary">
+        <strong>Aktuell auf der Baustelle je Firma</strong>
+        <div class="porter-company-list">
+          ${onSiteByCompany.map((entry) => `<div class="porter-company-item"><span>${escapeHtml(entry.companyName)}</span><span class="porter-company-count">${entry.count}</span></div>`).join("")}
+        </div>
+      </div>
+    `
+    : `
+      <div class="porter-company-summary empty">
+        <strong>Aktuell auf der Baustelle je Firma</strong>
+        <div class="helper-text">Noch keine aktiven Anmeldungen vorhanden.</div>
+      </div>
+    `;
+
   const latest = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp))[0] || null;
   if (!latest) {
     panel.className = "porter-live-card empty-state";
-    panel.innerHTML = runtimeText("dashboardLastAccessPlaceholder");
+    panel.innerHTML = `${runtimeText("dashboardLastAccessPlaceholder")}${companySummaryHtml}`;
     return;
   }
 
@@ -6787,6 +6836,7 @@ function renderDashboardPorterLivePanel() {
       </div>
     </div>
     <div class="${eventClass}">${escapeHtml(directionLabel)}${latest.note ? ` | ${escapeHtml(latest.note)}` : ""}</div>
+    ${companySummaryHtml}
   `;
 }
 
