@@ -3767,6 +3767,11 @@ function initNativeDesktopShell() {
   if (elements.desktopTitlebar) {
     elements.desktopTitlebar.classList.remove("hidden");
     elements.desktopTitlebar.setAttribute("aria-hidden", "false");
+    // Doppelklick auf die Titelleiste → Maximieren/Wiederherstellen
+    elements.desktopTitlebar.addEventListener("dblclick", (ev) => {
+      if (ev.target.closest(".desktop-titlebar-actions")) return; // Buttons ausschließen
+      desktopApi.toggleMaximize();
+    });
   }
 
   if (elements.desktopInstallButton) {
@@ -4727,37 +4732,24 @@ setInterval(() => {
 
 // ── Print Badge ──────────────────────────────────────────────────────────────
 function printBadge(worker, company) {
-  const badgeHtml = document.getElementById("badgePreview")?.innerHTML;
-  if (!badgeHtml) return;
-  const companyName = escapeHtml(company?.name || "");
-  const workerName = escapeHtml((worker?.firstName || "") + " " + (worker?.lastName || "")).trim();
-  const win = window.open("", "_blank", "width=460,height=660");
-  if (!win) { alert("Popup-Fenster wurde blockiert. Bitte erlauben Sie Popups für diese Seite."); return; }
-  win.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
-<title>${workerName} – Ausweis</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#111}
-  .badge-card{border-radius:16px;overflow:hidden;border:2px solid #1a3a4a;max-width:340px;margin:0 auto}
-  .badge-top{background:#1a3a4a;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:flex-start}
-  .badge-top h3{font-size:1.1rem;margin-top:4px}
-  .badge-top p{font-size:.78rem;opacity:.8;margin-top:2px}
-  .badge-chip{background:#fff3;color:#fff;border-radius:6px;padding:3px 8px;font-size:.72rem;white-space:nowrap}
-  .badge-body{padding:16px;display:flex;gap:16px;align-items:flex-start;background:#f8f9fa}
-  .badge-photo{width:80px;height:80px;border-radius:10px;object-fit:cover;border:2px solid #d1d5db}
-  .badge-copy p{font-size:.82rem;color:#374151;margin-top:4px}
-  .badge-copy strong{font-size:1rem}
-  .badge-qr{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px}
-  .badge-qr img{width:90px;height:90px}
-  .eyebrow{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7}
-  @media print{body{padding:0}button{display:none}}
-</style></head><body>
-${badgeHtml}
-<br><br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;font-size:.9rem;cursor:pointer;border:1px solid #ccc;border-radius:6px;background:#f0f0f0">Drucken</button></div>
-</body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 600);
+  // Vorherige Druck-Container entfernen
+  document.querySelectorAll(".print-badge-root").forEach((el) => el.remove());
+
+  const preview = document.getElementById("badgePreview");
+  if (!preview) return;
+
+  // Badge-Inhalt in Druck-Overlay klonen (nutzt dieselben Styles wie die App)
+  const root = document.createElement("div");
+  root.className = "print-badge-root";
+  root.innerHTML = preview.innerHTML;
+  document.body.appendChild(root);
+
+  // Kurz warten damit der Browser rendert, dann drucken
+  requestAnimationFrame(() => {
+    window.print();
+    // Nach dem Drucken (oder Abbrechen) aufräumen
+    setTimeout(() => root.remove(), 2000);
+  });
 }
 
 function renderSystemAlertBanner(loggedIn) {

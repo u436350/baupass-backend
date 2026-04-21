@@ -3733,12 +3733,31 @@ body.desktop-app .topbar {
 
 /* ── Ausweis drucken ──────────────────────────────────────────── */
 @media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   body > *:not(.print-badge-root) { display: none !important; }
   .print-badge-root {
-    display: block !important;
+    display: flex !important;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20mm;
     position: fixed;
     inset: 0;
     background: #fff;
     z-index: 99999;
   }
+  .print-badge-root .badge-shell {
+    box-shadow: none !important;
+    width: 90mm;
+  }
+  .print-badge-root .badge-card {
+    width: 90mm;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #1a3a4a;
+  }
+  .print-badge-root button,
+  .print-badge-root .print-badge-root-hide { display: none !important; }
+  .print-badge-root .helper-text { font-size: 7pt; }
+  .print-badge-root .qr-block img { width: 28mm !important; height: 28mm !important; }
+  .print-badge-root .badge-photo { width: 22mm !important; height: 22mm !important; }
 }

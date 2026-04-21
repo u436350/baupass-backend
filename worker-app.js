@@ -732,7 +732,9 @@ async function init() {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = urlToken;
     }
-    await loginWithAccessToken(urlToken, { keepUrlToken: true, silent: false });
+    // keepUrlToken: false → URL wird sofort bereinigt, damit ein Seitenrefresh
+    // nicht denselben (bereits verbrauchten) Einmalcode nochmals sendet.
+    await loginWithAccessToken(urlToken, { keepUrlToken: false, silent: false });
     return;
   }
 
@@ -1238,6 +1240,19 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
       window.history.replaceState({}, document.title, "./worker.html");
     }
     await loadWorkerData();
+
+    // Einmaltoken ist jetzt verbraucht – aus Storage löschen, damit beim nächsten
+    // App-Start kein Fehler „Anmeldung fehlgeschlagen" wegen ungültigem Token entsteht.
+    localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
+    // Badge-ID für nächste Session vormerken, damit das Feld vorausgefüllt ist.
+    try {
+      const cached = JSON.parse(localStorage.getItem(WORKER_CACHED_PAYLOAD_KEY) || "{}");
+      if (cached.badgeId) {
+        localStorage.setItem(WORKER_BADGE_LOGIN_KEY, cached.badgeId);
+      }
+    } catch {
+      // Ignore – not critical
+    }
 
     if (!isStandaloneMode() && elements.installButton) {
       elements.installButton.hidden = false;
