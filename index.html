@@ -213,8 +213,13 @@
         <button id="systemAlertActionBtn" type="button" class="ghost-button">Zu Rechnungen</button>
       </div>
 
-      <!-- Begrüssungs-Toast -->
-      <div id="loginGreetingToast" class="login-greeting-toast hidden" role="status" aria-live="polite"></div>
+      <!-- Begrüssungs-Overlay -->
+      <div id="loginGreetingToast" class="login-greeting-toast hidden" role="status" aria-live="polite" aria-atomic="true">
+        <div class="greet-icon" id="greetIcon"></div>
+        <p class="greet-salutation" id="greetSalutation"></p>
+        <p class="greet-sub" id="greetSub"></p>
+        <div class="greet-bar"><div class="greet-bar-fill" id="greetBarFill"></div></div>
+      </div>
 
       <section class="view active" data-view="dashboard">
         <div id="sessionCard" class="session-card" style="margin-bottom:24px;"></div>

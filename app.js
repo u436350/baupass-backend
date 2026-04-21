@@ -4621,26 +4621,67 @@ function refreshAll() {
 }
 
 // ── Login Greeting ──────────────────────────────────────────────────────────
+const GREETING_SHOWN_KEY = "baupass-greeting-date";
+const GREET_DISPLAY_MS = 4200;
+
 function showLoginGreeting() {
   const user = state.currentUser;
   const el = document.getElementById("loginGreetingToast");
   if (!el || !user) return;
+
+  // Nur einmal pro Tag anzeigen
+  const today = new Date().toISOString().slice(0, 10); // "2026-04-21"
+  const lastShown = localStorage.getItem(GREETING_SHOWN_KEY);
+  if (lastShown === today) return;
+  localStorage.setItem(GREETING_SHOWN_KEY, today);
+
   const h = new Date().getHours();
-  let salutation;
-  let icon;
-  if (h >= 5 && h < 12) { salutation = uiT("greetingMorning") || "Guten Morgen"; icon = "☀️"; }
-  else if (h < 18)       { salutation = uiT("greetingDay")    || "Guten Tag";     icon = "🌤️"; }
-  else if (h < 22)       { salutation = uiT("greetingEvening")|| "Guten Abend";   icon = "🌆"; }
-  else                   { salutation = uiT("greetingNight")  || "Gute Nacht";    icon = "🌙"; }
-  const name = (user.name || user.username || "").split(" ")[0];
-  const isStaff = ["turnstile", "company-admin", "superadmin"].includes(user.role);
-  const suffix = isStaff ? ` – ${uiT("greetingSuffix") || "Schönen Dienst!"} 👷` : "!";
-  el.innerHTML = `<span style="font-size:1.4em;margin-right:8px">${icon}</span>${escapeHtml(salutation)}${name ? ", " + escapeHtml(name) : ""}${suffix}`;
+  let salutation, icon, sub;
+  if      (h >= 5  && h < 12) { salutation = "Guten Morgen";   icon = "☀️";  sub = "Ein produktiver Tag liegt vor Ihnen."; }
+  else if (h >= 12 && h < 14) { salutation = "Guten Mittag";   icon = "🌤️"; sub = "Zeit für eine kurze Pause!"; }
+  else if (h >= 14 && h < 18) { salutation = "Guten Tag";      icon = "🌤️"; sub = "Schön, dass Sie da sind."; }
+  else if (h >= 18 && h < 22) { salutation = "Guten Abend";    icon = "🌆";  sub = "Danke für Ihren Einsatz heute."; }
+  else                         { salutation = "Gute Nacht";     icon = "🌙";  sub = "Bitte denken Sie an die Übergabe."; }
+
+  const firstName = (user.name || user.username || "").split(" ")[0];
+  const fullSalutation = firstName ? `${salutation}, ${firstName}!` : `${salutation}!`;
+
+  // Laufleiste Dauer setzen
+  el.style.setProperty("--greet-duration", `${GREET_DISPLAY_MS / 1000}s`);
+
+  const iconEl = document.getElementById("greetIcon");
+  const salEl  = document.getElementById("greetSalutation");
+  const subEl  = document.getElementById("greetSub");
+  if (iconEl)  iconEl.textContent  = icon;
+  if (salEl)   salEl.textContent   = fullSalutation;
+  if (subEl)   subEl.textContent   = sub;
+
   el.classList.remove("hidden", "fade-out");
+
+  // Text-to-Speech (Web Speech API, mittlere Lautstärke)
+  try {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(`${salutation}${firstName ? ", " + firstName : ""}!`);
+      utter.lang    = "de-DE";
+      utter.volume  = 0.6;   // 60 % – weder zu laut noch zu leise
+      utter.rate    = 0.95;
+      utter.pitch   = 1.05;
+      // Deutsche Stimme bevorzugen wenn verfügbar
+      const voices = window.speechSynthesis.getVoices();
+      const deVoice = voices.find((v) => v.lang.startsWith("de") && v.localService);
+      if (deVoice) utter.voice = deVoice;
+      window.speechSynthesis.speak(utter);
+    }
+  } catch {
+    // Kein TTS verfügbar – still ignorieren
+  }
+
+  // Nach GREET_DISPLAY_MS ausblenden
   setTimeout(() => {
     el.classList.add("fade-out");
     setTimeout(() => el.classList.add("hidden"), 600);
-  }, 4500);
+  }, GREET_DISPLAY_MS);
 }
 
 // ── Device Management ────────────────────────────────────────────────────────

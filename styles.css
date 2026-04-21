@@ -3616,37 +3616,74 @@ body.desktop-app .sidebar {
 body.desktop-app .topbar {
   top: 40px !important;
 }
-/* ── Begr\u00FCssungs-Toast ─────────────────────────────────────────── */
+/* ── Begrüssungs-Overlay (Vollbild) ─────────────────────────── */
 .login-greeting-toast {
   position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  background: linear-gradient(135deg, #0f4c5c 0%, #1a6b7a 100%);
-  color: #fff;
-  padding: 14px 28px 14px 20px;
-  border-radius: 16px;
-  box-shadow: 0 6px 32px rgba(0, 0, 0, 0.22);
-  font-size: 1.05rem;
-  font-weight: 600;
+  inset: 0;
+  z-index: 99998;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-  animation: greetSlideIn 0.35s ease;
+  gap: 24px;
+  background: rgba(10, 28, 36, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  text-align: center;
+  padding: 40px;
+  animation: greetFadeIn 0.4s ease;
   pointer-events: none;
 }
 .login-greeting-toast.hidden { display: none; }
-.login-greeting-toast.fade-out { animation: greetFadeOut 0.5s ease forwards; }
-.login-greeting-toast .greeting-icon { font-size: 1.5rem; }
-@keyframes greetSlideIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-14px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+.login-greeting-toast.fade-out { animation: greetFadeOut 0.55s ease forwards; }
+.login-greeting-toast .greet-icon {
+  font-size: 4rem;
+  line-height: 1;
+  animation: greetIconPop 0.5s cubic-bezier(.22,1.2,.55,1) both;
+}
+.login-greeting-toast .greet-salutation {
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.login-greeting-toast .greet-sub {
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  opacity: 0.82;
+  font-weight: 400;
+  margin: 0;
+}
+.login-greeting-toast .greet-bar {
+  width: 180px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.2);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.login-greeting-toast .greet-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #4ecdc4;
+  animation: greetBarDrain var(--greet-duration, 4s) linear forwards;
+  transform-origin: left;
+}
+@keyframes greetFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes greetFadeOut {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.04); }
+}
+@keyframes greetIconPop {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+@keyframes greetBarDrain {
+  from { width: 100%; }
+  to   { width: 0%; }
 }
 
 /* ── Ger\u00E4te-Status (Hardware Watchdog) ──────────────────────────── */
