@@ -472,6 +472,26 @@ const UI_TRANSLATIONS = {
     labelAuditEvent: "Event-Typ",
     labelAuditRole: "Rolle",
     btnAuditCsv: "Audit-CSV exportieren",
+    navDevices: "Geräte",
+    devicesEyebrow: "Hardware",
+    devicesH3: "Smart-Boxen und OSDP-Geräte",
+    devicesHint: "Jede Smart-Box sendet alle 30–60 s einen Heartbeat. Kein Signal >90 s = offline.",
+    btnAddDevice: "Gerät hinzufügen",
+    addDeviceEyebrow: "Neues Gerät",
+    addDeviceH3: "Gerät registrieren",
+    labelDeviceName: "Name",
+    labelDeviceLocation: "Standort",
+    labelDeviceType: "Typ / Protokoll",
+    btnDeviceRegister: "Gerät registrieren und API-Schlüssel erzeugen",
+    deviceOnline: "Online",
+    deviceOffline: "Offline",
+    deviceNeverSeen: "Noch kein Heartbeat",
+    btnPrintBadge: "Ausweis drucken",
+    greetingMorning: "Guten Morgen",
+    greetingDay: "Guten Tag",
+    greetingEvening: "Guten Abend",
+    greetingNight: "Gute Nacht",
+    greetingSuffix: "Angenehmen Dienst!",
   },
   en: {
     authEyebrow: "Login Page",
@@ -678,6 +698,26 @@ const UI_TRANSLATIONS = {
     pinSet: "set",
     pinMissing: "missing",
     cardLabel: "Card",
+    navDevices: "Devices",
+    devicesEyebrow: "Hardware",
+    devicesH3: "Smart Boxes & OSDP Devices",
+    devicesHint: "Each smart box sends a heartbeat every 30–60 s. No signal >90 s = offline.",
+    btnAddDevice: "Add Device",
+    addDeviceEyebrow: "New Device",
+    addDeviceH3: "Register Device",
+    labelDeviceName: "Name",
+    labelDeviceLocation: "Location",
+    labelDeviceType: "Type / Protocol",
+    btnDeviceRegister: "Register device and generate API key",
+    deviceOnline: "Online",
+    deviceOffline: "Offline",
+    deviceNeverSeen: "No heartbeat yet",
+    btnPrintBadge: "Print Badge",
+    greetingMorning: "Good morning",
+    greetingDay: "Good day",
+    greetingEvening: "Good evening",
+    greetingNight: "Good night",
+    greetingSuffix: "Have a great shift!",
     cardUnassigned: "not assigned",
     btnEdit: "Edit",
     btnDelete: "Delete",
@@ -2939,6 +2979,14 @@ const elements = {
   bulkCancelButton: document.querySelector("#bulkCancelButton"),
   badgePreview: document.querySelector("#badgePreview"),
   badgeMeta: document.querySelector("#badgeMeta"),
+  printBadgeButton: document.querySelector("#printBadgeButton"),
+  loginGreetingToast: document.querySelector("#loginGreetingToast"),
+  deviceStatusList: document.querySelector("#deviceStatusList"),
+  deviceApiKeyResult: document.querySelector("#deviceApiKeyResult"),
+  deviceForm: document.querySelector("#deviceForm"),
+  deviceName: document.querySelector("#deviceName"),
+  deviceLocation: document.querySelector("#deviceLocation"),
+  deviceType: document.querySelector("#deviceType"),
   accessLogList: document.querySelector("#accessLogList"),
   accessSummaryGrid: document.querySelector("#accessSummaryGrid"),
   accessHourlyGrid: document.querySelector("#accessHourlyGrid"),
@@ -3037,6 +3085,7 @@ const state = {
   accessInsights: { hourly: [], openEntries: [] },
   reporting: { kpis: {}, accessDaily: [], topOverdueCompanies: [] },
   invoices: [],
+  devices: [],
   invoiceOpsMetrics: {
     avgFirstSuccessMinutes: 0,
     criticalOver24h: 0,
@@ -4046,10 +4095,10 @@ function getDefaultViewForRole(role) {
 function getAllowedViewsForRole(role) {
   const normalized = String(role || "").toLowerCase();
   if (normalized === "superadmin") {
-    return ["dashboard", "workers", "badge", "access", "documents", "invoices", "admin"];
+    return ["dashboard", "workers", "badge", "access", "documents", "invoices", "admin", "devices"];
   }
   if (normalized === "company-admin") {
-    return ["dashboard", "workers", "badge", "access", "documents"];
+    return ["dashboard", "workers", "badge", "access", "documents", "devices"];
   }
   if (normalized === "turnstile") {
     return ["access", "documents", "dashboard"];
@@ -4097,6 +4146,10 @@ function setView(viewName) {
   } else {
     stopInvoiceAutoRefresh();
     stopInvoiceApprovalAutoRefresh();
+  }
+
+  if (targetView === "devices") {
+    loadDevices();
   }
 }
 
@@ -4497,6 +4550,8 @@ function refreshAll() {
   renderDayCloseBanner();
   renderTurnstileQuickPanel();
   renderBadge();
+  loadDevices();
+  showLoginGreeting();
   renderInvoiceHistory();
   renderInvoiceManagementList();
   if (getCurrentViewName() === "invoices") {
@@ -4505,6 +4560,151 @@ function refreshAll() {
   ensureInvoiceDefaults();
   refreshInvoicePreview({ silent: true });
   applySupportReadOnlyUiState();
+}
+
+// ── Login Greeting ──────────────────────────────────────────────────────────
+function showLoginGreeting() {
+  const user = state.currentUser;
+  const el = document.getElementById("loginGreetingToast");
+  if (!el || !user) return;
+  const h = new Date().getHours();
+  let salutation;
+  let icon;
+  if (h >= 5 && h < 12) { salutation = uiT("greetingMorning") || "Guten Morgen"; icon = "☀️"; }
+  else if (h < 18)       { salutation = uiT("greetingDay")    || "Guten Tag";     icon = "🌤️"; }
+  else if (h < 22)       { salutation = uiT("greetingEvening")|| "Guten Abend";   icon = "🌆"; }
+  else                   { salutation = uiT("greetingNight")  || "Gute Nacht";    icon = "🌙"; }
+  const name = (user.name || user.username || "").split(" ")[0];
+  const isStaff = ["turnstile", "company-admin", "superadmin"].includes(user.role);
+  const suffix = isStaff ? ` – ${uiT("greetingSuffix") || "Schönen Dienst!"} 👷` : "!";
+  el.innerHTML = `<span style="font-size:1.4em;margin-right:8px">${icon}</span>${escapeHtml(salutation)}${name ? ", " + escapeHtml(name) : ""}${suffix}`;
+  el.classList.remove("hidden", "fade-out");
+  setTimeout(() => {
+    el.classList.add("fade-out");
+    setTimeout(() => el.classList.add("hidden"), 600);
+  }, 4500);
+}
+
+// ── Device Management ────────────────────────────────────────────────────────
+const _deviceRefreshTimers = {};
+
+async function loadDevices() {
+  const user = state.currentUser;
+  if (!user || !["superadmin", "company-admin"].includes(user.role)) return;
+  try {
+    const data = await apiRequest(`${API_BASE}/api/admin/devices`);
+    state.devices = data.devices || [];
+    renderDevices();
+  } catch (e) {
+    console.warn("loadDevices failed", e);
+  }
+}
+
+function renderDevices() {
+  const list = elements.deviceStatusList;
+  if (!list) return;
+  const devices = state.devices || [];
+  if (!devices.length) {
+    list.innerHTML = `<p class="empty-state" style="padding:1rem;">${escapeHtml("Noch keine Geräte registriert.")}</p>`;
+    return;
+  }
+  list.innerHTML = devices.map(d => {
+    const ago = d.lastSeenAt ? Math.round((Date.now() - new Date(d.lastSeenAt).getTime()) / 1000) : null;
+    const statusLabel = d.online
+      ? (uiT("deviceOnline") || "Online")
+      : ago === null ? (uiT("deviceNeverSeen") || "Noch kein Heartbeat") : (uiT("deviceOffline") || "Offline");
+    const dotClass = d.online ? "device-dot online" : "device-dot offline";
+    const agoText = ago !== null ? ` · ${ago < 60 ? ago + "s" : Math.round(ago/60) + "min"} ago` : "";
+    return `<div class="device-status-item" data-device-id="${escapeHtml(d.id)}">
+      <span class="${dotClass}"></span>
+      <span class="device-name">${escapeHtml(d.name)}</span>
+      <span class="device-meta">${escapeHtml(d.location)}${agoText}</span>
+      <span class="device-badge">${escapeHtml(statusLabel)}</span>
+      <button class="ghost-button" style="margin-left:auto;color:#dc2626;font-size:.8rem;" onclick="deleteDevice('${escapeHtml(d.id)}')">✕</button>
+    </div>`;
+  }).join("");
+}
+
+async function deleteDevice(id) {
+  if (!confirm("Gerät wirklich löschen?")) return;
+  try {
+    await apiRequest(`${API_BASE}/api/admin/devices/${encodeURIComponent(id)}`, { method: "DELETE" });
+    state.devices = (state.devices || []).filter(d => d.id !== id);
+    renderDevices();
+  } catch (e) {
+    alert("Fehler beim Löschen: " + (e.message || e));
+  }
+}
+
+// Wire device form (delegated, called once on page load)
+(function wireDeviceForm() {
+  const form = document.getElementById("deviceForm");
+  const keyResult = document.getElementById("deviceApiKeyResult");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById("deviceName")?.value || "").trim();
+    const location = (document.getElementById("deviceLocation")?.value || "").trim();
+    const deviceType = document.getElementById("deviceType")?.value || "osdp";
+    if (!name) return;
+    try {
+      const res = await apiRequest(`${API_BASE}/api/admin/devices`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, location, deviceType }),
+      });
+      if (keyResult) {
+        keyResult.classList.remove("hidden");
+        keyResult.innerHTML = `<strong>API-Schlüssel (nur einmal sichtbar):</strong><br><code style="word-break:break-all;">${escapeHtml(res.apiKey)}</code>`;
+      }
+      form.reset();
+      await loadDevices();
+    } catch (err) {
+      alert("Fehler: " + (err.message || err));
+    }
+  });
+})();
+
+// Auto-refresh devices every 30s when devices view is active
+setInterval(() => {
+  if (getCurrentViewName && getCurrentViewName() === "devices") {
+    loadDevices();
+  }
+}, 30000);
+
+// ── Print Badge ──────────────────────────────────────────────────────────────
+function printBadge(worker, company) {
+  const badgeHtml = document.getElementById("badgePreview")?.innerHTML;
+  if (!badgeHtml) return;
+  const companyName = escapeHtml(company?.name || "");
+  const workerName = escapeHtml((worker?.firstName || "") + " " + (worker?.lastName || "")).trim();
+  const win = window.open("", "_blank", "width=460,height=660");
+  if (!win) { alert("Popup-Fenster wurde blockiert. Bitte erlauben Sie Popups für diese Seite."); return; }
+  win.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+<title>${workerName} – Ausweis</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;padding:20px;background:#fff;color:#111}
+  .badge-card{border-radius:16px;overflow:hidden;border:2px solid #1a3a4a;max-width:340px;margin:0 auto}
+  .badge-top{background:#1a3a4a;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:flex-start}
+  .badge-top h3{font-size:1.1rem;margin-top:4px}
+  .badge-top p{font-size:.78rem;opacity:.8;margin-top:2px}
+  .badge-chip{background:#fff3;color:#fff;border-radius:6px;padding:3px 8px;font-size:.72rem;white-space:nowrap}
+  .badge-body{padding:16px;display:flex;gap:16px;align-items:flex-start;background:#f8f9fa}
+  .badge-photo{width:80px;height:80px;border-radius:10px;object-fit:cover;border:2px solid #d1d5db}
+  .badge-copy p{font-size:.82rem;color:#374151;margin-top:4px}
+  .badge-copy strong{font-size:1rem}
+  .badge-qr{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:8px}
+  .badge-qr img{width:90px;height:90px}
+  .eyebrow{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7}
+  @media print{body{padding:0}button{display:none}}
+</style></head><body>
+${badgeHtml}
+<br><br><div style="text-align:center"><button onclick="window.print()" style="padding:8px 20px;font-size:.9rem;cursor:pointer;border:1px solid #ccc;border-radius:6px;background:#f0f0f0">Drucken</button></div>
+</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 600);
 }
 
 function renderSystemAlertBanner(loggedIn) {
@@ -6285,6 +6485,7 @@ function renderBadge() {
     elements.badgePreview.className = "badge-shell empty-state";
     elements.badgeMeta.innerHTML = runtimeText("badgeNoneSelected");
     elements.badgeMeta.className = "badge-meta empty-state";
+    if (elements.printBadgeButton) elements.printBadgeButton.style.display = "none";
     return;
   }
 
@@ -6387,6 +6588,14 @@ function renderBadge() {
       <p>${escapeHtml(getRoleLabel(getCurrentUser()?.role || "unbekannt"))}</p>
     </div>
   `;
+
+  if (elements.printBadgeButton) {
+    elements.printBadgeButton.style.display = "";
+    elements.printBadgeButton.onclick = () => printBadge(worker, state.companies.find(c => c.id === worker.companyId));
+  }
+
+  if (elements.printBadgeButton) elements.printBadgeButton.style.display = "";
+  elements.printBadgeButton.onclick = () => printBadge(worker, state.companies.find(c => c.id === worker.companyId));
 
   renderWorkerBadgeAppQr(worker.id, qrId, worker.badgeId);
 }

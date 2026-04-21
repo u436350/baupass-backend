@@ -17,3 +17,8 @@ task.ps1
 
 # Node dependencies
 node_modules/
+
+# Electron build output
+dist/
+*.exe
+*.ico

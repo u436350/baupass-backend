@@ -1741,6 +1741,23 @@ def init_db():
         """
     )
 
+    # ── Neu: Hardware-Geraete (Smart-Boxes / OSDP-Controller) ──
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS devices (
+            id TEXT PRIMARY KEY,
+            company_id TEXT,
+            name TEXT NOT NULL,
+            location TEXT NOT NULL DEFAULT '',
+            device_type TEXT NOT NULL DEFAULT 'osdp',
+            api_key_hash TEXT NOT NULL DEFAULT '',
+            last_seen_at TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )
+        """
+    )
+
     db.commit()
     db.close()
 
@@ -9578,6 +9595,106 @@ def static_proxy(path):
 
 start_background_jobs()
 _start_imap_thread()
+
+
+# ── Hardware-Geraete (Watchdog / OSDP Smart-Box) ─────────────────────────────
+
+DEVICE_ONLINE_THRESHOLD_SECONDS = 90  # Geraet gilt als offline wenn > 90s kein Heartbeat
+
+
+def _serialize_device(row, now_value=None):
+    last_seen = str(row["last_seen_at"] or "")
+    online = False
+    if last_seen:
+        try:
+            last_ts = (parse_iso_utc(last_seen) or datetime.now(timezone.utc)).replace(tzinfo=timezone.utc)
+            delta = (datetime.now(timezone.utc) - last_ts).total_seconds()
+            online = delta <= DEVICE_ONLINE_THRESHOLD_SECONDS
+        except Exception:
+            pass
+    return {
+        "id": row["id"],
+        "companyId": row["company_id"],
+        "name": row["name"],
+        "location": row["location"],
+        "deviceType": row["device_type"],
+        "lastSeenAt": last_seen,
+        "online": online,
+        "createdAt": row["created_at"],
+    }
+
+
+@app.get("/api/admin/devices")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def list_devices():
+    db = get_db()
+    company_id = g.current_user.get("company_id") if g.current_user.get("role") != "superadmin" else None
+    if company_id:
+        rows = db.execute("SELECT * FROM devices WHERE company_id = ? ORDER BY name", (company_id,)).fetchall()
+    else:
+        rows = db.execute("SELECT * FROM devices ORDER BY company_id, name").fetchall()
+    return jsonify([_serialize_device(r) for r in rows])
+
+
+@app.post("/api/admin/devices")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def create_device():
+    payload = request.get_json(silent=True) or {}
+    db = get_db()
+    name = clean_text_input(payload.get("name", ""), max_len=80)
+    if not name:
+        return jsonify({"error": "name_required"}), 400
+    location = clean_text_input(payload.get("location", ""), max_len=120)
+    device_type = clean_text_input(payload.get("deviceType", "osdp"), max_len=32) or "osdp"
+    company_id = g.current_user.get("company_id") or clean_text_input(payload.get("companyId", ""), max_len=64) or None
+    raw_key = secrets.token_urlsafe(32)
+    key_hash = generate_password_hash(raw_key)
+    device_id = f"dev-{secrets.token_hex(6)}"
+    db.execute(
+        "INSERT INTO devices (id, company_id, name, location, device_type, api_key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (device_id, company_id, name, location, device_type, key_hash, now_iso()),
+    )
+    db.commit()
+    log_audit("device.created", f"Geraet '{name}' ({device_type}) angelegt", target_type="device", target_id=device_id, company_id=company_id, actor=g.current_user)
+    return jsonify({"ok": True, "device": {"id": device_id, "name": name, "location": location, "deviceType": device_type, "apiKey": raw_key, "online": False}})
+
+
+@app.delete("/api/admin/devices/<device_id>")
+@require_auth
+@require_roles("superadmin", "company-admin")
+def delete_device(device_id):
+    db = get_db()
+    device = db.execute("SELECT * FROM devices WHERE id = ?", (device_id,)).fetchone()
+    if not device:
+        return jsonify({"error": "device_not_found"}), 404
+    if g.current_user.get("role") != "superadmin" and device["company_id"] != g.current_user.get("company_id"):
+        return jsonify({"error": "forbidden"}), 403
+    db.execute("DELETE FROM devices WHERE id = ?", (device_id,))
+    db.commit()
+    log_audit("device.deleted", f"Geraet '{device['name']}' geloescht", target_type="device", target_id=device_id, company_id=device["company_id"], actor=g.current_user)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/device/heartbeat")
+def device_heartbeat():
+    """OSDP Smart-Box ruft diesen Endpoint regelmaessig auf um Online-Status zu signalisieren."""
+    raw_key = (request.headers.get("X-Device-API-Key") or "").strip()
+    if not raw_key:
+        return jsonify({"error": "api_key_required"}), 401
+    db = get_db()
+    devices = db.execute("SELECT * FROM devices").fetchall()
+    matched = None
+    for dev in devices:
+        if dev["api_key_hash"] and check_password_hash(dev["api_key_hash"], raw_key):
+            matched = dev
+            break
+    if not matched:
+        return jsonify({"error": "invalid_api_key"}), 401
+    db.execute("UPDATE devices SET last_seen_at = ? WHERE id = ?", (now_iso(), matched["id"]))
+    db.commit()
+    return jsonify({"ok": True, "device": matched["name"], "ts": now_iso()})
 
 
 if __name__ == "__main__":

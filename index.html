@@ -178,6 +178,7 @@
         <button class="nav-link" data-view="workers" data-ui-i18n="navWorkers">Mitarbeiter</button>
         <button class="nav-link" data-view="badge" data-ui-i18n="navBadge">Ausweis</button>
         <button class="nav-link" data-view="access" data-ui-i18n="navAccess">Zutritt</button>
+        <button class="nav-link" data-view="devices" data-ui-i18n="navDevices">Geräte</button>
         <button class="nav-link" data-view="documents" data-ui-i18n="navDocuments">Dokumente</button>
         <button class="nav-link" data-view="invoices" data-ui-i18n="navInvoices">Rechnungen</button>
         <button class="nav-link" data-view="admin" data-ui-i18n="navAdmin">Admin</button>
@@ -211,6 +212,9 @@
         </div>
         <button id="systemAlertActionBtn" type="button" class="ghost-button">Zu Rechnungen</button>
       </div>
+
+      <!-- Begrüssungs-Toast -->
+      <div id="loginGreetingToast" class="login-greeting-toast hidden" role="status" aria-live="polite"></div>
 
       <section class="view active" data-view="dashboard">
         <div id="sessionCard" class="session-card" style="margin-bottom:24px;"></div>
@@ -509,6 +513,7 @@
                 <p class="eyebrow" data-ui-i18n="badgeEyebrow">Digitaler Ausweis</p>
                 <h3 data-ui-i18n="badgeH3">Badge-Vorschau</h3>
               </div>
+              <button id="printBadgeButton" type="button" class="ghost-button" data-ui-i18n="btnPrintBadge" style="display:none;">Ausweis drucken</button>
             </div>
             <div id="badgePreview" class="badge-shell empty-state" data-ui-i18n="badgeEmptyState">
               Bitte zuerst einen Mitarbeiter anlegen oder aus der Liste auswählen.
@@ -765,6 +770,54 @@
             </div>
             <div id="collectionsKpiGrid" class="list invoice-kpi-grid"></div>
             <div id="collectionsList" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ── Geräte-Status (Hardware Watchdog / OSDP) ───────────────── -->
+      <section class="view" data-view="devices">
+        <div class="panel-grid two-columns">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-ui-i18n="devicesEyebrow">Hardware</p>
+                <h3 data-ui-i18n="devicesH3">Smart-Boxen und OSDP-Geräte</h3>
+              </div>
+              <button id="addDeviceButton" type="button" class="ghost-button" data-ui-i18n="btnAddDevice">Gerät hinzufügen</button>
+            </div>
+            <div class="meta-box">
+              <p data-ui-i18n="devicesHint">Jede Smart-Box sendet alle 30–60 s einen Heartbeat an <code>/api/device/heartbeat</code> (Header: <code>X-Device-API-Key</code>). Bleibt der Heartbeat &gt; 90 s aus, gilt das Gerät als offline. OSDP-Controller kommunizieren über RS-485 mit den Lesern und melden ihren Status hierher.</p>
+            </div>
+            <div id="deviceStatusList" class="device-status-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow" data-ui-i18n="addDeviceEyebrow">Neues Gerät</p>
+                <h3 data-ui-i18n="addDeviceH3">Gerät registrieren</h3>
+              </div>
+            </div>
+            <form id="deviceForm" class="form-grid compact-grid">
+              <label>
+                <span data-ui-i18n="labelDeviceName">Name</span>
+                <input id="deviceName" type="text" placeholder="z. B. Drehkreuz Nord" required />
+              </label>
+              <label>
+                <span data-ui-i18n="labelDeviceLocation">Standort</span>
+                <input id="deviceLocation" type="text" placeholder="z. B. Eingang West, Baustelle A" />
+              </label>
+              <label>
+                <span data-ui-i18n="labelDeviceType">Typ / Protokoll</span>
+                <select id="deviceType">
+                  <option value="osdp">OSDP (RS-485)</option>
+                  <option value="tcp">TCP/IP Smart-Box</option>
+                  <option value="wiegand">Wiegand-Reader</option>
+                  <option value="other">Sonstiges</option>
+                </select>
+              </label>
+              <button type="submit" class="primary-button full-width" data-ui-i18n="btnDeviceRegister">Gerät registrieren und API-Schlüssel erzeugen</button>
+            </form>
+            <div id="deviceApiKeyResult" class="device-apikey-result hidden"></div>
           </article>
         </div>
       </section>
