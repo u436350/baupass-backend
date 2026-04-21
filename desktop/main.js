@@ -17,6 +17,24 @@ let backendProcess = null;
 let backendStartedByDesktop = false;
 const SPLASH_MAX_VISIBLE_MS = 12000;
 
+function updateSplashProgress(percent, message, detail) {
+  if (!splashWindow || splashWindow.isDestroyed()) {
+    return;
+  }
+
+  const safePercent = Math.max(0, Math.min(100, Number(percent || 0)));
+  try {
+    splashWindow.setProgressBar(safePercent / 100);
+    splashWindow.webContents.send("splash:progress", {
+      percent: safePercent,
+      message: String(message || "Ladevorgang läuft"),
+      detail: String(detail || "Bitte kurz warten"),
+    });
+  } catch {
+    // Ignore if splash has just been destroyed during shutdown.
+  }
+}
+
 function buildHealthUrl(baseUrl) {
   const normalized = String(baseUrl || "").replace(/\/+$/, "");
   return `${normalized}/api/health`;
@@ -121,8 +139,11 @@ async function ensureBackend() {
     return;
   }
 
+  updateSplashProgress(22, "Lokalen Dienst prüfen", "Backend-Verbindung wird getestet");
+
   const available = await probeBackend(DESKTOP_URL);
   if (available) {
+    updateSplashProgress(32, "Lokaler Dienst bereit", "Anwendung wird vorbereitet");
     return;
   }
   if (!AUTOSTART_BACKEND) {
@@ -130,6 +151,7 @@ async function ensureBackend() {
   }
 
   startBackend();
+  updateSplashProgress(36, "Lokalen Dienst starten", "Bitte kurz warten");
   for (let i = 0; i < 30; i += 1) {
     // Wait up to about 15s for backend startup.
     // If still unavailable, the shell still opens and user sees unreachable message.
@@ -138,7 +160,11 @@ async function ensureBackend() {
     await wait(500);
     // eslint-disable-next-line no-await-in-loop
     if (await probeBackend(DESKTOP_URL)) {
+      updateSplashProgress(48, "Lokaler Dienst verbunden", "UI wird jetzt geladen");
       return;
+    }
+    if (i % 5 === 0) {
+      updateSplashProgress(38 + Math.min(8, Math.floor(i / 5) * 2), "Lokaler Dienst startet", "Verbindung wird aufgebaut");
     }
   }
 }
@@ -157,6 +183,7 @@ function closeSplashWindow() {
     splashWindow = null;
     return;
   }
+  splashWindow.setProgressBar(-1);
   splashWindow.close();
   splashWindow = null;
 }
@@ -183,9 +210,10 @@ function createSplashWindow() {
     autoHideMenuBar: true,
     icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
     webPreferences: {
+      preload: path.join(__dirname, "splash-preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
       spellcheck: false,
     },
   });
@@ -194,12 +222,18 @@ function createSplashWindow() {
     closeSplashWindow();
   });
 
+  splashWindow.webContents.on("did-finish-load", () => {
+    updateSplashProgress(8, "BauPass startet", "Arbeitsbereich wird aufgebaut");
+  });
+
   splashWindow.on("closed", () => {
     splashWindow = null;
   });
 }
 
 function createWindow() {
+  updateSplashProgress(16, "Fenster wird vorbereitet", "Sichere Umgebung wird geladen");
+
   mainWindow = new BrowserWindow({
     width: 1480,
     height: 920,
@@ -219,6 +253,14 @@ function createWindow() {
     },
   });
 
+  mainWindow.webContents.on("did-start-loading", () => {
+    updateSplashProgress(58, "Anwendung wird geladen", "Komponenten werden initialisiert");
+  });
+
+  mainWindow.webContents.on("dom-ready", () => {
+    updateSplashProgress(78, "Fast fertig", "Benutzeroberfläche wird gerendert");
+  });
+
   mainWindow.loadURL(DESKTOP_URL);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -227,24 +269,27 @@ function createWindow() {
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
+    updateSplashProgress(100, "Bereit", "Willkommen in BauPass Control");
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
     }
-    closeSplashWindow();
+    setTimeout(closeSplashWindow, 160);
     sendWindowState();
   });
 
   mainWindow.webContents.on("did-fail-load", () => {
+    updateSplashProgress(100, "Verbindung fehlgeschlagen", "Die Oberfläche wird trotzdem geöffnet");
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
     }
-    closeSplashWindow();
+    setTimeout(closeSplashWindow, 300);
   });
 
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      updateSplashProgress(96, "Start dauert länger", "Anwendung wird jetzt angezeigt");
       mainWindow.show();
       mainWindow.focus();
       closeSplashWindow();
@@ -290,6 +335,7 @@ ipcMain.handle("desktop:get-window-state", () => ({
 
 async function bootstrap() {
   createSplashWindow();
+  updateSplashProgress(4, "Start initialisiert", "Bitte kurz warten");
   createWindow();
   if (IS_LOCAL) {
     ensureBackend().catch(() => {});

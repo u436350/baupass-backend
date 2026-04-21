@@ -111,14 +111,13 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .progress::before {
-      content: "";
+    .progress-fill {
       position: absolute;
       inset: 0;
-      width: 36%;
+      width: 0%;
       border-radius: 999px;
       background: linear-gradient(90deg, #e3b88f 0%, var(--coffee) 55%, var(--coffee-dark) 100%);
-      animation: slide 1.55s ease-in-out infinite;
+      transition: width 220ms ease;
       box-shadow: 0 0 22px rgba(199, 134, 82, 0.5);
     }
 
@@ -130,11 +129,6 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-    }
-
-    @keyframes slide {
-      0% { transform: translateX(-110%); }
-      100% { transform: translateX(320%); }
     }
 
     @keyframes drift {
@@ -156,10 +150,10 @@
         </div>
       </header>
       <footer class="foot">
-        <div class="progress" aria-hidden="true"></div>
+        <div class="progress" aria-hidden="true"><div id="splashProgressFill" class="progress-fill"></div></div>
         <div class="meta">
-          <span>Ladevorgang läuft</span>
-          <span>Bitte kurz warten</span>
+          <span id="splashMessage">Ladevorgang läuft</span>
+          <span id="splashDetail">0%</span>
         </div>
       </footer>
     </section>
