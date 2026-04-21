@@ -1244,14 +1244,15 @@ async function loginWithAccessToken(accessToken, { keepUrlToken = false, silent 
     // Einmaltoken ist jetzt verbraucht – aus Storage löschen, damit beim nächsten
     // App-Start kein Fehler „Anmeldung fehlgeschlagen" wegen ungültigem Token entsteht.
     localStorage.removeItem(WORKER_ACCESS_TOKEN_KEY);
-    // Badge-ID für nächste Session vormerken, damit das Feld vorausgefüllt ist.
+    // Badge-ID für nächste Session speichern (Feld wird beim nächsten Start vorausgefüllt).
     try {
       const cached = JSON.parse(localStorage.getItem(WORKER_CACHED_PAYLOAD_KEY) || "{}");
-      if (cached.badgeId) {
-        localStorage.setItem(WORKER_BADGE_LOGIN_KEY, cached.badgeId);
+      const badgeId = cached.worker?.badgeId || cached.badgeId || "";
+      if (badgeId) {
+        localStorage.setItem(WORKER_BADGE_LOGIN_KEY, badgeId);
       }
     } catch {
-      // Ignore – not critical
+      // Nicht kritisch
     }
 
     if (!isStandaloneMode() && elements.installButton) {
