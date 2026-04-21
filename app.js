@@ -2997,6 +2997,7 @@ const elements = {
   accessOpenWarnings: document.querySelector("#accessOpenWarnings"),
   dayCloseBanner: document.querySelector("#dayCloseBanner"),
   porterLivePanel: document.querySelector("#porterLivePanel"),
+  accessDuplicateError: document.querySelector("#accessDuplicateError"),
   accessFeedbackOverlay: document.querySelector("#accessFeedbackOverlay"),
   accessFeedbackTitle: document.querySelector("#accessFeedbackTitle"),
   accessFeedbackMeta: document.querySelector("#accessFeedbackMeta"),
@@ -6727,7 +6728,19 @@ async function renderRealQr(elementId, payload) {
 }
 
 function renderRecentAccess() {
-  const recent = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp)).slice(0, 5);
+  // Nur den jeweils letzten Eintrag pro Mitarbeiter anzeigen (keine Duplikate)
+  const sortedAll = [...state.accessLogs].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
+  const seenWorkers = new Set();
+  const deduplicated = [];
+  for (const entry of sortedAll) {
+    const key = entry.workerId || entry.id;
+    if (!seenWorkers.has(key)) {
+      seenWorkers.add(key);
+      deduplicated.push(entry);
+    }
+    if (deduplicated.length >= 5) break;
+  }
+  const recent = deduplicated;
 
   if (!recent.length) {
     elements.recentAccessList.innerHTML = `<div class="empty-state">${runtimeText("recentAccessEmpty")}</div>`;
@@ -6855,10 +6868,15 @@ function renderPorterLivePanel() {
     return;
   }
 
+  const totalOnSite = onSiteByCompany.reduce((sum, entry) => sum + entry.count, 0);
   panel.className = "porter-live-card";
   panel.innerHTML = `
     <div class="porter-company-summary">
-      <strong>Aktuell auf der Baustelle je Firma</strong>
+      <strong>Aktuell auf der Baustelle</strong>
+      <div class="porter-company-total">
+        <span>Gesamt</span>
+        <span class="porter-company-count">${totalOnSite} ${totalOnSite === 1 ? "Person" : "Personen"}</span>
+      </div>
       <div class="porter-company-list">
         ${onSiteByCompany.map((entry) => `
           <div class="porter-company-item">
@@ -7599,7 +7617,15 @@ async function bookAccess(workerId, direction, gate, note) {
         tone: "error"
       });
     } else {
-      window.alert(duplicateMessage);
+      // Roten Banner im Formular anzeigen statt window.alert
+      const banner = elements.accessDuplicateError;
+      if (banner) {
+        banner.textContent = duplicateMessage;
+        banner.classList.remove("hidden");
+        // Nach 5 Sekunden automatisch ausblenden
+        clearTimeout(banner._hideTimer);
+        banner._hideTimer = setTimeout(() => banner.classList.add("hidden"), 5000);
+      }
     }
     return { ok: false, reason: "duplicate_direction", message: duplicateMessage };
   }

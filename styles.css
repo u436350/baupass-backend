@@ -2204,7 +2204,51 @@ body[data-branding-preset="premium"] {
   background: rgba(23, 23, 23, 0.05);
 }
 
-.access-entry-layout {
+/* Duplikat-Buchung Fehler-Banner im Zutrittsformular */
+.access-duplicate-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.10);
+  border: 1.5px solid rgba(220, 38, 38, 0.38);
+  color: #991b1b;
+  font-weight: 600;
+  font-size: 0.92rem;
+  animation: duplicateErrorShake 0.34s ease;
+}
+.access-duplicate-error::before {
+  content: "⛔";
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+@keyframes duplicateErrorShake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+.access-duplicate-error.hidden { display: none !important; }
+
+/* Porter: Firmen-Gesamtzahl-Leiste */
+.porter-company-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 76, 92, 0.14);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0b2430;
+}
+.porter-company-total .porter-company-count {
+  background: rgba(15, 76, 92, 0.22);
+}
   display: grid;
   grid-template-columns: 56px 1fr;
   gap: 12px;
