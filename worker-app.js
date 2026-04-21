@@ -732,9 +732,10 @@ async function init() {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = urlToken;
     }
+    const locationPayload = await resolveLoginLocation();
     // keepUrlToken: false → URL wird sofort bereinigt, damit ein Seitenrefresh
     // nicht denselben (bereits verbrauchten) Einmalcode nochmals sendet.
-    await loginWithAccessToken(urlToken, { keepUrlToken: false, silent: false });
+    await loginWithAccessToken(urlToken, { keepUrlToken: false, silent: false, locationPayload });
     return;
   }
 
@@ -749,7 +750,8 @@ async function init() {
     if (elements.workerAccessToken) {
       elements.workerAccessToken.value = storedAccessToken;
     }
-    await loginWithAccessToken(storedAccessToken, { keepUrlToken: false, silent: true });
+    const locationPayload = await resolveLoginLocation();
+    await loginWithAccessToken(storedAccessToken, { keepUrlToken: false, silent: true, locationPayload });
     if (workerToken) {
       return;
     }
