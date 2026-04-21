@@ -4120,6 +4120,7 @@ function clearWorkerEditor() {
 }
 
 function applyWebsiteLogo(dataUrl) {
+  const fixedBpIconPath = "./worker-icon-192.png?v=20260421bp";
   const hasLogo = Boolean(dataUrl);
   document.querySelectorAll(".website-logo-sync").forEach((img) => {
     if (hasLogo) {
@@ -4130,10 +4131,10 @@ function applyWebsiteLogo(dataUrl) {
 
   const appFavicon = document.querySelector("#appFavicon");
   if (appFavicon) {
-    appFavicon.href = hasLogo ? dataUrl : "./worker-icon-192.png";
+    appFavicon.href = fixedBpIconPath;
   }
   document.querySelectorAll('link[rel="apple-touch-icon"]').forEach((link) => {
-    link.href = hasLogo ? dataUrl : "./worker-icon-192.png";
+    link.href = fixedBpIconPath;
   });
 }
 
