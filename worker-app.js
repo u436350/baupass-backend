@@ -757,7 +757,7 @@ async function init() {
 
   if (storedBadgeId) {
     if (elements.workerAccessToken) {
-      elements.workerAccessToken.value = storedBadgeId;
+      elements.workerAccessToken.value = normalizeBadgeIdInput(storedBadgeId);
       const pinWrapper = document.querySelector("#pinFieldWrapper");
       if (pinWrapper && !isVisitorBadgeId(storedBadgeId)) pinWrapper.classList.remove("hidden");
     }
@@ -823,6 +823,16 @@ function bindEvents() {
   if (elements.workerAccessToken) {
     const pinWrapper = document.querySelector("#pinFieldWrapper");
     elements.workerAccessToken.addEventListener("input", () => {
+      const rawValue = elements.workerAccessToken.value || "";
+      const normalizedCandidate = normalizeBadgeIdInput(rawValue);
+      const shouldNormalizeBadgeInput =
+        looksLikeBadgeId(normalizedCandidate)
+        || /^\s*(BP|VS)[\s\-‐‑–—‒_]/i.test(rawValue);
+
+      if (shouldNormalizeBadgeInput && normalizedCandidate && rawValue !== normalizedCandidate) {
+        elements.workerAccessToken.value = normalizedCandidate;
+      }
+
       const val = (elements.workerAccessToken.value || "").trim();
       const needsPin = looksLikeBadgeId(val) && !isVisitorBadgeId(val);
       const isBadge = looksLikeBadgeId(val) && !isVisitorBadgeId(val);
