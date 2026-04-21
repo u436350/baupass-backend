@@ -4454,7 +4454,7 @@ def create_worker():
     site_value = clean_text_input(payload.get("site", ""), max_len=120)
     valid_until_value = clean_text_input(payload.get("validUntil", ""), max_len=32)
     status_value = clean_text_input(payload.get("status", "aktiv"), max_len=32) or "aktiv"
-    badge_id_value = clean_text_input(payload.get("badgeId", f"{'VS' if worker_type == 'visitor' else 'BP'}-{secrets.token_hex(3).upper()}"), max_len=64)
+    badge_id_value = normalize_badge_id(clean_text_input(payload.get("badgeId", f"{'VS' if worker_type == 'visitor' else 'BP'}-{secrets.token_hex(3).upper()}"), max_len=64))
 
     worker_id = f"wrk-{secrets.token_hex(6)}"
     db.execute(
@@ -4927,6 +4927,14 @@ def validate_worker_login_distance_or_raise(db, worker, payload):
     }
 
 
+def normalize_badge_id(value):
+    normalized = str(value or "").strip().upper()
+    # Normalize unicode dash variants and remove all whitespace inside the ID.
+    normalized = re.sub(r"[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]", "-", normalized)
+    normalized = re.sub(r"\s+", "", normalized)
+    return normalized
+
+
 def normalize_badge_pin(value):
     return re.sub(r"\s+", "", str(value or "").strip())
 
@@ -5035,7 +5043,7 @@ def create_worker_app_access(worker_id):
 def worker_app_login():
     payload = request.get_json(silent=True) or {}
     access_token = (payload.get("accessToken") or "").strip()
-    badge_id = (payload.get("badgeId") or "").strip().upper()
+    badge_id = normalize_badge_id(payload.get("badgeId"))
     badge_pin = normalize_badge_pin(payload.get("badgePin"))
     if not access_token and not badge_id:
         return jsonify({"error": "missing_worker_app_credentials"}), 400
@@ -5104,7 +5112,8 @@ def worker_app_login():
         """
         SELECT *
         FROM workers
-        WHERE UPPER(badge_id) = ? AND deleted_at IS NULL
+                WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(badge_id, ' ', ''), char(9), ''), char(10), ''), char(13), ''), '‐', '-'), '‑', '-'), '–', '-'), '—', '-')) = ?
+                    AND deleted_at IS NULL
         ORDER BY id
         LIMIT 2
         """,

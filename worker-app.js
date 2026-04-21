@@ -1874,7 +1874,11 @@ function buildQrPayload(worker) {
 }
 
 function normalizeBadgeIdInput(value) {
-  return String(value || "").trim().toUpperCase();
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, "-")
+    .replace(/\s+/g, "");
 }
 
 function normalizeBadgePinInput(value) {
