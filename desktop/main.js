@@ -12,8 +12,10 @@ const IS_LOCAL = DESKTOP_URL.includes("127.0.0.1") || DESKTOP_URL.includes("loca
 const AUTOSTART_BACKEND = IS_LOCAL && String(process.env.BAUPASS_DESKTOP_AUTOSTART_BACKEND || "1").trim() !== "0";
 
 let mainWindow = null;
+let splashWindow = null;
 let backendProcess = null;
 let backendStartedByDesktop = false;
+const SPLASH_MAX_VISIBLE_MS = 12000;
 
 function buildHealthUrl(baseUrl) {
   const normalized = String(baseUrl || "").replace(/\/+$/, "");
@@ -150,6 +152,53 @@ function sendWindowState() {
   });
 }
 
+function closeSplashWindow() {
+  if (!splashWindow || splashWindow.isDestroyed()) {
+    splashWindow = null;
+    return;
+  }
+  splashWindow.close();
+  splashWindow = null;
+}
+
+function createSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    return;
+  }
+
+  splashWindow = new BrowserWindow({
+    width: 560,
+    height: 340,
+    minWidth: 560,
+    minHeight: 340,
+    maxWidth: 560,
+    maxHeight: 340,
+    frame: false,
+    resizable: false,
+    movable: true,
+    alwaysOnTop: true,
+    show: true,
+    center: true,
+    backgroundColor: "#0b1218",
+    autoHideMenuBar: true,
+    icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+    },
+  });
+
+  splashWindow.loadFile(path.join(__dirname, "splash.html")).catch(() => {
+    closeSplashWindow();
+  });
+
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1480,
@@ -157,7 +206,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     frame: false,
-    show: true,
+    show: false,
     backgroundColor: "#0d131a",
     autoHideMenuBar: true,
     icon: path.join(PROJECT_ROOT, process.platform === "win32" ? "worker-icon-512.ico" : "worker-icon-512.png"),
@@ -177,11 +226,36 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  mainWindow.webContents.on("did-finish-load", sendWindowState);
+  mainWindow.webContents.on("did-finish-load", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    closeSplashWindow();
+    sendWindowState();
+  });
+
+  mainWindow.webContents.on("did-fail-load", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    closeSplashWindow();
+  });
+
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
+      closeSplashWindow();
+    }
+  }, SPLASH_MAX_VISIBLE_MS);
+
   mainWindow.on("maximize", sendWindowState);
   mainWindow.on("unmaximize", sendWindowState);
 
   mainWindow.on("closed", () => {
+    closeSplashWindow();
     mainWindow = null;
   });
 }
@@ -215,11 +289,10 @@ ipcMain.handle("desktop:get-window-state", () => ({
 }));
 
 async function bootstrap() {
-  // Always create the window immediately so the app appears in <1s.
-  // For local backends, probe / start in background after window is shown.
+  createSplashWindow();
   createWindow();
   if (IS_LOCAL) {
-    ensureBackend();
+    ensureBackend().catch(() => {});
   }
 }
 

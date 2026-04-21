@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BauPass Start</title>
+  <style>
+    :root {
+      --bg0: #091118;
+      --bg1: #10202b;
+      --bg2: #173445;
+      --coffee: #c78652;
+      --coffee-dark: #8a5230;
+      --ink: #f4ede5;
+      --muted: #b6c8d3;
+      --line: rgba(244, 237, 229, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
+      background: radial-gradient(120% 120% at 80% 10%, #1c3f53 0%, transparent 48%),
+                  linear-gradient(140deg, var(--bg0) 0%, var(--bg1) 48%, var(--bg2) 100%);
+      color: var(--ink);
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 30px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .orb {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      right: -90px;
+      top: -90px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(199, 134, 82, 0.58), rgba(138, 82, 48, 0.06));
+      filter: blur(8px);
+      animation: drift 8s ease-in-out infinite;
+    }
+
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 1;
+    }
+
+    .logo {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: linear-gradient(150deg, var(--coffee) 0%, var(--coffee-dark) 100%);
+      color: #f8f0e8;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .foot {
+      z-index: 1;
+    }
+
+    .progress {
+      position: relative;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .progress::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      width: 36%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #e3b88f 0%, var(--coffee) 55%, var(--coffee-dark) 100%);
+      animation: slide 1.55s ease-in-out infinite;
+      box-shadow: 0 0 22px rgba(199, 134, 82, 0.5);
+    }
+
+    .meta {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #d9e2e8;
+      letter-spacing: 0.02em;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    @keyframes slide {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(320%); }
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0); }
+      50% { transform: translate(-14px, 10px); }
+      100% { transform: translate(0, 0); }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" aria-live="polite">
+    <section class="card">
+      <div class="orb" aria-hidden="true"></div>
+      <header class="head">
+        <div class="logo" aria-hidden="true">BP</div>
+        <div>
+          <h1 class="title">BauPass Control startet</h1>
+          <p class="subtitle">Sichere Verbindung und Arbeitsbereich werden vorbereitet</p>
+        </div>
+      </header>
+      <footer class="foot">
+        <div class="progress" aria-hidden="true"></div>
+        <div class="meta">
+          <span>Ladevorgang läuft</span>
+          <span>Bitte kurz warten</span>
+        </div>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>
