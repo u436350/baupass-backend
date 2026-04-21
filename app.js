@@ -4831,6 +4831,96 @@ function printBadge(worker, company) {
   });
 }
 
+function normalizeWorkerCardStatus(status) {
+  const normalized = String(status || "aktiv").trim().toLowerCase();
+  if (!normalized) {
+    return "aktiv";
+  }
+  return normalized;
+}
+
+function getWorkerCardRoleLabel(worker) {
+  if (isVisitorWorker(worker)) {
+    return uiT("optVisitor");
+  }
+  return worker.role || "Mitarbeiter";
+}
+
+function getWorkerCardPassSubLabel(worker) {
+  return isVisitorWorker(worker) ? "Besucherkarte" : "Mitarbeiterausweis";
+}
+
+function buildPrintableWorkerCardMarkup(worker, company) {
+  const safeBadgePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
+  const normalizedStatus = normalizeWorkerCardStatus(worker.status);
+  const subcompanyLabel = getSubcompanyLabel(worker);
+  const validUntilLabel = formatDate(worker.validUntil);
+  return `
+    <article class="wallet-card badge-wallet-card" data-status="${escapeHtml(normalizedStatus)}">
+      <div class="wc-shimmer"></div>
+      <div class="wc-grid"></div>
+
+      <div class="wc-top">
+        <div class="wc-brand">
+          <div class="wc-brand-mark" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M3 17L12 4l9 13H3z" fill="#fff" fill-opacity=".9"></path>
+              <rect x="7" y="17" width="10" height="4" rx="1" fill="#fff" fill-opacity=".7"></rect>
+              <rect x="10" y="13" width="4" height="4" fill="#fff" fill-opacity=".5"></rect>
+            </svg>
+          </div>
+          <div class="wc-brand-text">
+            <span class="wc-brand-name">BAUPASS</span>
+            <span class="wc-brand-sub">${escapeHtml(getWorkerCardPassSubLabel(worker))}</span>
+          </div>
+        </div>
+        <svg class="wc-nfc" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M4 13a9 9 0 019-9" stroke="rgba(255,255,255,.75)" stroke-width="2.2" stroke-linecap="round"></path>
+          <path d="M7.5 13a5.5 5.5 0 015.5-5.5" stroke="rgba(255,255,255,.55)" stroke-width="2.2" stroke-linecap="round"></path>
+          <path d="M11 13a2 2 0 012-2" stroke="rgba(255,255,255,.4)" stroke-width="2.2" stroke-linecap="round"></path>
+          <circle cx="13" cy="13" r="1.2" fill="rgba(255,255,255,.6)"></circle>
+        </svg>
+      </div>
+
+      <div class="wc-middle">
+        <div class="wc-qr-holder">
+          <div class="wc-qr-frame" aria-hidden="true"></div>
+          <img id="badge-card-qr-${escapeHtml(worker.id)}" class="badge-wallet-qr" alt="QR-Code fuer ${escapeHtml(worker.badgeId)}" />
+        </div>
+        <img class="wc-photo" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" />
+      </div>
+
+      <div class="wc-bottom">
+        <p class="wc-name">${escapeHtml(`${worker.firstName || ""} ${worker.lastName || ""}`.trim())}</p>
+        <p class="wc-role-text">${escapeHtml(getWorkerCardRoleLabel(worker))}</p>
+        <div class="wc-footer">
+          <div>
+            <div class="wc-fields">
+              <div class="wc-field">
+                <span class="wc-field-label">Badge-ID</span>
+                <span class="wc-field-value">${escapeHtml(worker.badgeId || "-")}</span>
+              </div>
+              <div class="wc-field">
+                <span class="wc-field-label">Gueltig bis</span>
+                <span class="wc-field-value">${escapeHtml(validUntilLabel || "-")}</span>
+              </div>
+              <div class="wc-field">
+                <span class="wc-field-label">Baustelle</span>
+                <span class="wc-field-value">${escapeHtml(worker.site || "-")}</span>
+              </div>
+            </div>
+            ${subcompanyLabel ? `<p class="wc-subcompany" title="Subunternehmen: ${escapeHtml(subcompanyLabel)}">${escapeHtml(subcompanyLabel)}</p>` : ""}
+          </div>
+          <div class="wc-right">
+            <span class="wc-status" data-status="${escapeHtml(normalizedStatus)}">${escapeHtml(worker.status || "aktiv")}</span>
+            <p class="wc-company">${escapeHtml(company?.name || uiT("badgeUnknownCompany"))}</p>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function renderSystemAlertBanner(loggedIn) {
   if (!elements.systemAlertBanner || !elements.systemAlertText || !elements.systemAlertActionBtn) {
     return;
@@ -6615,52 +6705,20 @@ function renderBadge() {
 
   state.selectedWorkerId = worker.id;
   const company = state.companies.find((entry) => entry.id === worker.companyId);
-  const normalizedPlan = String(company?.plan || "").trim().toLowerCase();
-  const isDayPass = normalizedPlan === "tageskarte";
-  const visitor = isVisitorWorker(worker);
-  const badgeTitle = visitor
-    ? uiT("badgeTitleVisitor")
-    : (isDayPass ? uiT("badgeTitleDayPass") : uiT("badgeTitleRegular"));
-  const badgeClass = isDayPass ? "badge-card badge-card-daypass" : "badge-card";
-  const planLabel = getPlanLabel(normalizedPlan || "tageskarte");
   const subcompanyLabel = getSubcompanyLabel(worker);
-  const qrId = `qr-${worker.id}`;
-  const safeBadgePhoto = sanitizeImageSrc(worker.photoData, createAvatar(worker));
+  const qrId = `badge-card-qr-${worker.id}`;
+  const visitor = isVisitorWorker(worker);
 
   elements.badgePreview.className = "badge-shell";
   elements.badgePreview.innerHTML = `
-    <article class="${badgeClass}">
-      <div class="badge-top">
-        <div>
-          <p class="eyebrow">${escapeHtml(state.settings.platformName)}</p>
-          <h3>${escapeHtml(badgeTitle)}</h3>
-          <p>${escapeHtml(company?.name || uiT("badgeUnknownCompany"))}</p>
-        </div>
-        <span class="badge-chip">${escapeHtml(worker.status)}</span>
+    <div class="badge-card-stage">
+      ${buildPrintableWorkerCardMarkup(worker, company)}
+      <div class="badge-card-note">
+        <p class="helper-text">Diese Karte zeigt denselben Drehkreuz-QR wie die Mitarbeiter-App und kann direkt gedruckt werden.</p>
+        ${visitor ? `<p class="helper-text">${uiT("labelVisitorCompany")}: ${escapeHtml(worker.visitorCompany || "-")} | ${uiT("labelVisitPurpose")}: ${escapeHtml(worker.visitPurpose || "-")}</p>` : ""}
+        ${subcompanyLabel ? `<p class="helper-text">${uiT("labelSubcompany")}: ${escapeHtml(subcompanyLabel)}</p>` : ""}
       </div>
-
-      <div class="badge-body">
-        <div class="badge-copy">
-          <img class="badge-photo${!worker.photoData ? ' badge-photo-placeholder' : ''}" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" style="${!worker.photoData ? 'cursor:pointer;outline:2px dashed #b07d00;' : ''}" />
-          <p><strong>${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}</strong></p>
-          <p>${escapeHtml(visitor ? uiT("optVisitor") : worker.role)}</p>
-          ${subcompanyLabel ? `<p>${uiT("labelSubcompany")}: ${escapeHtml(subcompanyLabel)}</p>` : ""}
-          ${visitor ? `<p>${uiT("labelVisitorCompany")}: ${escapeHtml(worker.visitorCompany || "-")}</p><p>${uiT("labelVisitPurpose")}: ${escapeHtml(worker.visitPurpose || "-")}</p><p>${uiT("labelHostName")}: ${escapeHtml(worker.hostName || "-")}</p><p>${uiT("labelVisitEndAt")}: ${escapeHtml(worker.visitEndAt ? formatTimestamp(worker.visitEndAt) : "-")}</p>` : ""}
-          <p>${uiT("labelPlan")}: ${escapeHtml(planLabel)}</p>
-          <p>${uiT("labelSite")}: ${escapeHtml(worker.site)}</p>
-          <p>${uiT("labelValidUntil")}: ${formatDate(worker.validUntil)}</p>
-        </div>
-        <div class="qr-block">
-          <img id="${qrId}" alt="Mitarbeiter-App QR fuer ${escapeHtml(worker.badgeId)}" style="width:100%; border-radius:12px;" />
-          <p class="helper-text" style="margin-top:10px; text-align:center;">${uiT("badgeQrHint")}</p>
-        </div>
-      </div>
-
-      <div class="badge-footer">
-        <p>${uiT("badgeLabelBadgeId")}: ${escapeHtml(worker.badgeId)}</p>
-        <p>${escapeHtml(state.settings.operatorName)}</p>
-      </div>
-    </article>
+    </div>
   `;
 
   // Make badge photo placeholder clickable if no photo is present
@@ -6704,12 +6762,12 @@ function renderBadge() {
       <code>${escapeHtml(worker.badgeId)}</code>
     </div>
     <div class="meta-box">
-      <p>${uiT("badgeMetaQrFunc")}</p>
-      <code>${uiT("badgeMetaQrFuncVal")}</code>
+      <p>Druckformat</p>
+      <code>ID-1 Karte 85.6 x 54 mm</code>
     </div>
     <div class="meta-box">
-      <p>${uiT("badgeMetaRoleLabel")}</p>
-      <p>${escapeHtml(getRoleLabel(getCurrentUser()?.role || "unbekannt"))}</p>
+      <p>QR-Nutzung</p>
+      <p>Drehkreuz-Scan wie in der Mitarbeiter-App</p>
     </div>
   `;
 
@@ -6721,7 +6779,7 @@ function renderBadge() {
   if (elements.printBadgeButton) elements.printBadgeButton.style.display = "";
   elements.printBadgeButton.onclick = () => printBadge(worker, state.companies.find(c => c.id === worker.companyId));
 
-  renderWorkerBadgeAppQr(worker.id, qrId, worker.badgeId);
+  renderRealQr(qrId, worker.badgeId || worker.id);
 }
 
 async function renderWorkerBadgeAppQr(workerId, qrId, fallbackBadgeId) {
