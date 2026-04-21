@@ -15,7 +15,7 @@ let mainWindow = null;
 let splashWindow = null;
 let backendProcess = null;
 let backendStartedByDesktop = false;
-const SPLASH_MAX_VISIBLE_MS = 12000;
+const SPLASH_MAX_VISIBLE_MS = 1500;
 
 function updateSplashProgress(percent, message, detail) {
   if (!splashWindow || splashWindow.isDestroyed()) {
@@ -40,7 +40,7 @@ function buildHealthUrl(baseUrl) {
   return `${normalized}/api/health`;
 }
 
-function probeBackend(baseUrl, timeoutMs = 1200) {
+function probeBackend(baseUrl, timeoutMs = 600) {
   const healthUrl = buildHealthUrl(baseUrl);
   return new Promise((resolve) => {
     let parsed;
@@ -153,11 +153,11 @@ async function ensureBackend() {
   startBackend();
   updateSplashProgress(36, "Lokalen Dienst starten", "Bitte kurz warten");
   for (let i = 0; i < 30; i += 1) {
-    // Wait up to about 15s for backend startup.
+    // Wait up to about 6s for backend startup.
     // If still unavailable, the shell still opens and user sees unreachable message.
     // This avoids hanging desktop startup forever.
     // eslint-disable-next-line no-await-in-loop
-    await wait(500);
+    await wait(200);
     // eslint-disable-next-line no-await-in-loop
     if (await probeBackend(DESKTOP_URL)) {
       updateSplashProgress(48, "Lokaler Dienst verbunden", "UI wird jetzt geladen");
@@ -276,7 +276,7 @@ function createWindow() {
   // Show as soon as first paint is ready to reduce perceived startup delay.
   mainWindow.once("ready-to-show", () => {
     updateSplashProgress(90, "Anwendung bereit", "Oberfläche wird angezeigt");
-    revealMainWindow(140);
+    revealMainWindow(0);
   });
 
   mainWindow.loadURL(DESKTOP_URL);
@@ -288,7 +288,7 @@ function createWindow() {
 
   mainWindow.webContents.on("did-finish-load", () => {
     updateSplashProgress(100, "Bereit", "Willkommen in BauPass Control");
-    revealMainWindow(120);
+    revealMainWindow(0);
   });
 
   mainWindow.webContents.on("did-fail-load", () => {
@@ -301,7 +301,7 @@ function createWindow() {
       updateSplashProgress(96, "Start dauert länger", "Anwendung wird jetzt angezeigt");
       revealMainWindow(0);
     }
-  }, SPLASH_MAX_VISIBLE_MS);
+  }, 1000);
 
   mainWindow.on("maximize", sendWindowState);
   mainWindow.on("unmaximize", sendWindowState);
