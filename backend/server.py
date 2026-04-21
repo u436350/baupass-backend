@@ -1758,6 +1758,20 @@ def init_db():
         """
     )
 
+    # Bestehende Installationen nachziehen, falls die Tabelle schon vor der finalen
+    # Geraete-Struktur angelegt wurde (verhindert 500 bei SELECT/Serialize).
+    device_columns = [row[1] for row in cur.execute("PRAGMA table_info(devices)").fetchall()]
+    if "location" not in device_columns:
+        cur.execute("ALTER TABLE devices ADD COLUMN location TEXT NOT NULL DEFAULT ''")
+    if "device_type" not in device_columns:
+        cur.execute("ALTER TABLE devices ADD COLUMN device_type TEXT NOT NULL DEFAULT 'osdp'")
+    if "api_key_hash" not in device_columns:
+        cur.execute("ALTER TABLE devices ADD COLUMN api_key_hash TEXT NOT NULL DEFAULT ''")
+    if "last_seen_at" not in device_columns:
+        cur.execute("ALTER TABLE devices ADD COLUMN last_seen_at TEXT")
+    if "created_at" not in device_columns:
+        cur.execute("ALTER TABLE devices ADD COLUMN created_at TEXT NOT NULL DEFAULT ''")
+
     db.commit()
     db.close()
 
@@ -9634,7 +9648,7 @@ def list_devices():
         rows = db.execute("SELECT * FROM devices WHERE company_id = ? ORDER BY name", (company_id,)).fetchall()
     else:
         rows = db.execute("SELECT * FROM devices ORDER BY company_id, name").fetchall()
-    return jsonify([_serialize_device(r) for r in rows])
+    return jsonify({"devices": [_serialize_device(r) for r in rows]})
 
 
 @app.post("/api/admin/devices")

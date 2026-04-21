@@ -4692,7 +4692,7 @@ async function loadDevices() {
   if (!user || !["superadmin", "company-admin"].includes(user.role)) return;
   try {
     const data = await apiRequest(`${API_BASE}/api/admin/devices`);
-    state.devices = data.devices || [];
+    state.devices = Array.isArray(data) ? data : (data.devices || []);
     renderDevices();
   } catch (e) {
     console.warn("loadDevices failed", e);
@@ -4753,8 +4753,9 @@ async function deleteDevice(id) {
         body: JSON.stringify({ name, location, deviceType }),
       });
       if (keyResult) {
+        const createdKey = res?.apiKey || res?.device?.apiKey || "";
         keyResult.classList.remove("hidden");
-        keyResult.innerHTML = `<strong>API-Schlüssel (nur einmal sichtbar):</strong><br><code style="word-break:break-all;">${escapeHtml(res.apiKey)}</code>`;
+        keyResult.innerHTML = `<strong>API-Schlüssel (nur einmal sichtbar):</strong><br><code style="word-break:break-all;">${escapeHtml(createdKey || "-")}</code>`;
       }
       form.reset();
       await loadDevices();
