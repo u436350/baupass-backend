@@ -4372,7 +4372,7 @@ body.desktop-app .topbar {
   .print-badge-root .wallet-card .wc-brand-sub  { font-size: 4pt !important; }
   .print-badge-root .wallet-card .wc-nfc        { width: 5.5mm !important; height: 5.5mm !important; }
   .print-badge-root .wallet-card .wc-qr-holder  { width: 20mm !important; height: 20mm !important; min-width: 20mm !important; flex-shrink: 0 !important; }
-  .print-badge-root .wallet-card .wc-middle { display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 2mm !important; }
+  .print-badge-root .wallet-card .wc-middle { display: flex !important; justify-content: space-between !important; align-items: center !important; gap: 2mm !important; }
   .print-badge-root .wallet-card .wc-qr-frame   { inset: -1.5mm !important; border-radius: 3mm !important; }
   .print-badge-root .wallet-card .wc-qr-frame::before { display: none !important; }
   .print-badge-root .wallet-card .badge-wallet-qr { border-radius: 1.5mm !important; padding: 0.5mm !important; }
