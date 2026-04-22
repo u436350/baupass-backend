@@ -4484,28 +4484,21 @@ async function loadAllData() {
 
   sessionExpiryNoticeShown = false;
 
-  // Split requests into critical-path (fast) and background (slower).
-  // Load critical data first, then non-blocking background data in parallel.
-  const criticalRequests = await Promise.allSettled([
+  const reportUrl = `${API_BASE}/api/reporting/summary`;
+  const requests = await Promise.allSettled([
     apiRequest(`${API_BASE}/api/settings`),
     apiRequest(`${API_BASE}/api/companies`),
-    apiRequest(`${API_BASE}/api/workers`),
-  ]);
-
-  // Start background requests without waiting (fire-and-forget via Promise.allSettled)
-  const backgroundRequests = Promise.allSettled([
     apiRequest(`${API_BASE}/api/subcompanies`),
+    apiRequest(`${API_BASE}/api/workers`),
     apiRequest(`${API_BASE}/api/access-logs`),
     apiRequest(`${API_BASE}/api/invoices`),
     apiRequest(`${API_BASE}/api/access-logs/summary`),
     apiRequest(`${API_BASE}/api/access-logs/day-close-check`),
     apiRequest(`${API_BASE}/api/audit-logs?eventType=company.repair&targetType=company&limit=120`),
-    apiRequest(`${API_BASE}/api/reporting/summary`),
+    apiRequest(reportUrl),
     apiRequest(`${API_BASE}/api/compliance/overview`),
     apiRequest(`${API_BASE}/api/audit-logs?limit=50`)
   ]);
-
-  const requests = [...criticalRequests, ...(await backgroundRequests)];
 
   const [settings, companies, subcompanies, workers, accessLogs, invoices, summary, dayClose, repairAudit, reporting, complianceOverview, auditLogs] = requests;
   if (settings.status === "fulfilled") {
