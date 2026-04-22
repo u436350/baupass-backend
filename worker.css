@@ -708,8 +708,8 @@ body.worker-loaded .app-shell {
 /* QR-Chip */
 .wc-qr-holder {
   position: relative;
-  width: clamp(84px, 22%, 108px);
-  height: clamp(84px, 22%, 108px);
+  width: clamp(90px, 35%, 150px);
+  height: clamp(90px, 35%, 150px);
   flex-shrink: 0;
 }
 
@@ -748,8 +748,8 @@ body.worker-loaded .app-shell {
 
 /* Mitarbeiterfoto */
 .wc-photo {
-  width: clamp(72px, 21%, 92px);
-  height: clamp(72px, 21%, 92px);
+  width: clamp(78px, 24%, 110px);
+  height: clamp(78px, 24%, 110px);
   border-radius: 14px;
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, .22);
