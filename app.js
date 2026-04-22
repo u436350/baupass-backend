@@ -4832,7 +4832,7 @@ function printBadge(worker, company) {
   // Badge-Inhalt in Druck-Overlay klonen (nutzt dieselben Styles wie die App)
   const root = document.createElement("div");
   root.className = "print-badge-root";
-  root.innerHTML = preview.innerHTML;
+  root.innerHTML = `<div class="badge-shell">${preview.innerHTML}</div>`;
   document.body.appendChild(root);
 
   // Auf alle Bilder (insbesondere QR-Code) warten bevor gedruckt wird
