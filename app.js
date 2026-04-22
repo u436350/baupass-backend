@@ -294,6 +294,7 @@ const UI_TRANSLATIONS = {
     labelInsuranceNumber: "Rentenversicherungsnummer",
     labelRoleField: "Funktion",
     labelSite: "Baustelle",
+    siteFieldHint: "Vollständige Adresse eingeben – wird für GPS-Prüfung beim Login benötigt",
     labelPhysicalCard: "Physische Karten-ID (NFC/RFID)",
     labelValidUntil: "G\u00fcltig bis",
     labelVisitorCompany: "Besucherfirma",
@@ -648,6 +649,7 @@ const UI_TRANSLATIONS = {
     labelInsuranceNumber: "Social security number",
     labelRoleField: "Job title",
     labelSite: "Construction site",
+    siteFieldHint: "Enter full address – required for GPS check on login",
     labelPhysicalCard: "Physical card ID (NFC/RFID)",
     labelValidUntil: "Valid until",
     labelVisitorCompany: "Visitor company",
@@ -4826,11 +4828,21 @@ function printBadge(worker, company) {
   root.innerHTML = preview.innerHTML;
   document.body.appendChild(root);
 
-  // Kurz warten damit der Browser rendert, dann drucken
-  requestAnimationFrame(() => {
+  // Auf alle Bilder (insbesondere QR-Code) warten bevor gedruckt wird
+  const images = Array.from(root.querySelectorAll("img"));
+  const loadPromises = images.map((img) => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+      setTimeout(resolve, 5000); // Fallback nach 5s
+    });
+  });
+
+  Promise.all(loadPromises).then(() => {
     window.print();
     // Nach dem Drucken (oder Abbrechen) aufräumen
-    setTimeout(() => root.remove(), 2000);
+    setTimeout(() => root.remove(), 2500);
   });
 }
 
