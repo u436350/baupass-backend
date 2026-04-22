@@ -173,6 +173,7 @@ const TRANSLATIONS = {
     expiringSoonNotice: "Hinweis: Deine Besucherkarte laeuft in weniger als 5 Minuten ab.",
     scannerAutoOpened: "Scanner wurde automatisch geoeffnet, weil weniger als 2 Minuten verbleiben.",
     autoEndedAtMidnight: "Digitale Besucherkarte wurde um 00:00 automatisch beendet. Bitte neu anmelden.",
+    siteLocationUnavailable: "Standort dieser Baustelle konnte nicht ermittelt werden – Login trotzdem erlaubt. Bitte Admin informieren.",
   },
   en: {
     pageTitle: "BauPass Worker App",
@@ -1363,6 +1364,10 @@ async function loginWithBadgeId(badgeId, badgePin, { silent = false, locationPay
     }
     if (error.code === "worker_app_disabled") {
       showWorkerNotice(t("workerAppDisabled"));
+      return;
+    }
+    if (error.message === "site_location_unavailable") {
+      showWorkerNotice(t("siteLocationUnavailable"));
       return;
     }
     showWorkerNotice(`${t("loginFailed")}: ${error.message}`);
