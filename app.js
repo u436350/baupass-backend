@@ -4863,61 +4863,57 @@ function buildPrintableWorkerCardMarkup(worker, company) {
   const companyName = company?.name || uiT("badgeUnknownCompany");
 
   return `
-    <article class="wallet-card badge-wallet-card" data-status="${escapeHtml(normalizedStatus)}">
+    <article class="badge-wallet-card" data-status="${escapeHtml(normalizedStatus)}">
       <div class="wc-shimmer"></div>
       <div class="wc-grid"></div>
-      <div class="wc-side-stripe"></div>
 
-      <div class="wc-top">
+      <!-- Header: Brand + Company -->
+      <div class="wc-header">
         <div class="wc-brand">
-          <div class="wc-brand-mark" aria-hidden="true">BP</div>
+          <div class="wc-brand-mark">BP</div>
           <div class="wc-brand-text">
             <span class="wc-brand-name">BAUPASS</span>
             <span class="wc-brand-sub">${escapeHtml(passSubLabel)}</span>
           </div>
         </div>
-        <div class="wc-top-right">
-          <span class="wc-company-top">${escapeHtml(companyName)}</span>
-          <svg class="wc-nfc" width="22" height="22" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-            <path d="M4 13a9 9 0 019-9" stroke="rgba(255,255,255,.7)" stroke-width="2.2" stroke-linecap="round"></path>
-            <path d="M7.5 13a5.5 5.5 0 015.5-5.5" stroke="rgba(255,255,255,.5)" stroke-width="2.2" stroke-linecap="round"></path>
-            <path d="M11 13a2 2 0 012-2" stroke="rgba(255,255,255,.35)" stroke-width="2.2" stroke-linecap="round"></path>
-            <circle cx="13" cy="13" r="1.2" fill="rgba(255,255,255,.55)"></circle>
-          </svg>
-        </div>
+        <span class="wc-status" data-status="${escapeHtml(normalizedStatus)}">${escapeHtml(worker.status || "aktiv")}</span>
       </div>
 
-      <div class="wc-main">
-        <div class="wc-info">
-          <div class="wc-name-block">
-            <p class="wc-name">${escapeHtml(`${worker.firstName || ""} ${worker.lastName || ""}`.trim())}</p>
-            <p class="wc-role-text">${escapeHtml(roleLabel)}</p>
-            ${subcompanyLabel ? `<p class="wc-subcompany">${escapeHtml(subcompanyLabel)}</p>` : ""}
-          </div>
-          <div class="wc-qr-row">
-            <div class="wc-qr-holder">
-              <div class="wc-qr-frame" aria-hidden="true"></div>
-              <img id="badge-card-qr-${escapeHtml(worker.id)}" class="badge-wallet-qr" alt="QR fuer ${escapeHtml(worker.badgeId)}" />
-            </div>
-            <div class="wc-fields-col">
-              <div class="wc-field">
-                <span class="wc-field-label">Badge-ID</span>
-                <span class="wc-field-value">${escapeHtml(worker.badgeId || "-")}</span>
-              </div>
-              <div class="wc-field">
-                <span class="wc-field-label">Baustelle</span>
-                <span class="wc-field-value wc-field-value-site">${escapeHtml(worker.site || "-")}</span>
-              </div>
-              <div class="wc-field">
-                <span class="wc-field-label">Gueltig bis</span>
-                <span class="wc-field-value">${escapeHtml(validUntilLabel || "-")}</span>
-              </div>
-            </div>
-          </div>
+      <!-- Photo -->
+      <div class="wc-photo-wrap">
+        <img class="wc-photo" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" />
+      </div>
+
+      <!-- Name / Role -->
+      <div class="wc-identity">
+        <p class="wc-name">${escapeHtml(`${worker.firstName || ""} ${worker.lastName || ""}`.trim())}</p>
+        <p class="wc-role-text">${escapeHtml(roleLabel)}</p>
+        ${subcompanyLabel ? `<p class="wc-subcompany">${escapeHtml(subcompanyLabel)}</p>` : ""}
+        <p class="wc-company">${escapeHtml(companyName)}</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="wc-divider"></div>
+
+      <!-- QR + Fields -->
+      <div class="wc-footer-row">
+        <div class="wc-qr-holder">
+          <div class="wc-qr-frame"></div>
+          <img id="badge-card-qr-${escapeHtml(worker.id)}" class="badge-wallet-qr" alt="QR" />
         </div>
-        <div class="wc-photo-col">
-          <img class="wc-photo" src="${safeBadgePhoto}" alt="${escapeHtml(worker.firstName)} ${escapeHtml(worker.lastName)}" />
-          <span class="wc-status" data-status="${escapeHtml(normalizedStatus)}">${escapeHtml(worker.status || "aktiv")}</span>
+        <div class="wc-fields">
+          <div class="wc-field">
+            <span class="wc-field-label">Badge-ID</span>
+            <span class="wc-field-value">${escapeHtml(worker.badgeId || "-")}</span>
+          </div>
+          <div class="wc-field">
+            <span class="wc-field-label">Baustelle</span>
+            <span class="wc-field-value">${escapeHtml(worker.site || "-")}</span>
+          </div>
+          <div class="wc-field">
+            <span class="wc-field-label">Gueltig bis</span>
+            <span class="wc-field-value">${escapeHtml(validUntilLabel || "-")}</span>
+          </div>
         </div>
       </div>
     </article>
