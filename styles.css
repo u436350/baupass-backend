@@ -4353,13 +4353,16 @@ body.desktop-app .topbar {
     height: 54mm !important;
     padding: 4mm 4.8mm !important;
     border-radius: 4.2mm !important;
+    background: #0f1923 !important;
     box-shadow: none !important;
     break-inside: avoid;
     page-break-inside: avoid;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  /* Fixe Schriftgrössen für Druck (clamp/vw funktioniert nicht im Druckmodus) */
+  .print-badge-root .wallet-card::before { display: none !important; }
+  .print-badge-root .wallet-card .wc-shimmer { display: none !important; }
+  .print-badge-root .wallet-card .wc-grid { display: none !important; }
   .print-badge-root .wallet-card .wc-brand-mark {
     width: 6.5mm !important; height: 6.5mm !important; border-radius: 1.5mm !important;
   }
