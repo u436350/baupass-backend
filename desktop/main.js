@@ -5,6 +5,13 @@ const https = require("https");
 const { spawn } = require("child_process");
 const { app, BrowserWindow, ipcMain, shell, screen } = require("electron");
 
+// Ensure only one instance of the desktop app runs at a time.
+// Extra clicks on the shortcut will just raise the existing window.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DESKTOP_URL = (process.env.BAUPASS_DESKTOP_URL || "https://web-production-c21ed.up.railway.app").trim();
 // Backend auto-start only makes sense when pointing at localhost.
@@ -348,15 +355,27 @@ ipcMain.handle("desktop:get-window-state", () => ({
 }));
 
 async function bootstrap() {
+  // For cloud deployments skip the splash entirely — show the main window
+  // immediately so it appears within the first second.
+  if (!IS_LOCAL) {
+    createWindow();
+    return;
+  }
   createSplashWindow();
   updateSplashProgress(4, "Start initialisiert", "Bitte kurz warten");
   createWindow();
-  if (IS_LOCAL) {
-    ensureBackend().catch(() => {});
-  }
+  ensureBackend().catch(() => {});
 }
 
 app.whenReady().then(bootstrap);
+
+// Raise the existing window when the user clicks the icon again.
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
