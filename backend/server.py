@@ -4919,7 +4919,9 @@ def validate_worker_login_distance_or_raise(db, worker, payload):
 
     site_coordinates = ensure_worker_site_coordinates(db, worker)
     if not site_coordinates:
-        raise ValueError("site_location_unavailable")
+        # Koordinaten nicht ermittelbar – Geofence-Prüfung überspringen, Login erlauben.
+        # Dies passiert wenn der Baustellen-Name keine geocodierbare Adresse ist.
+        return None
 
     distance_meters = _haversine_meters(site_coordinates[0], site_coordinates[1], device_latitude, device_longitude)
     if distance_meters > WORKER_LOGIN_MAX_DISTANCE_METERS:
