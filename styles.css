@@ -4347,6 +4347,8 @@ body.desktop-app .topbar {
     background: transparent !important;
   }
   .print-badge-root .badge-card-stage {
+    display: block !important;
+    width: 85.6mm !important;
     justify-items: start !important;
   }
   .print-badge-root .wallet-card {
@@ -4387,11 +4389,16 @@ body.desktop-app .topbar {
   .print-badge-root .wallet-card .wc-status::before { width: 3px !important; height: 3px !important; }
   .print-badge-root .wallet-card .wc-company    { font-size: 4.5pt !important; }
   .print-badge-root .wallet-card .wc-subcompany { font-size: 4pt !important; padding: 1px 3px !important; }
+  .print-badge-root .wallet-card .wc-company,
+  .print-badge-root .wallet-card .wc-subcompany,
+  .print-badge-root .wallet-card .wc-field-value {
+    max-width: 26mm !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
   .print-badge-root .badge-card-note {
-    width: 85.6mm !important;
-    background: #fff !important;
-    box-shadow: none !important;
-    border: 0.3mm solid rgba(176, 125, 0, .25) !important;
+    display: none !important;
   }
   .print-badge-root button,
   .print-badge-root .print-badge-root-hide { display: none !important; }
