@@ -3242,6 +3242,7 @@ body[data-branding-preset="premium"] {
   align-items: flex-start;
   position: relative;
   z-index: 1;
+  margin-top: -2px;
 }
 
 .badge-shell .wallet-card .wc-brand {
@@ -3296,6 +3297,7 @@ body[data-branding-preset="premium"] {
   align-items: center;
   position: relative;
   z-index: 1;
+  margin-top: 2px;
 }
 
 .badge-shell .wallet-card .wc-qr-holder {
@@ -3307,10 +3309,11 @@ body[data-branding-preset="premium"] {
 
 .badge-shell .wallet-card .wc-qr-frame {
   position: absolute;
-  inset: -6px;
-  border-radius: 14px;
+  inset: -7px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #b88628 0%, #efd26b 26%, #fff2a5 45%, #d09b2f 62%, #8d6420 100%);
-  box-shadow: 0 10px 22px rgba(212, 168, 67, .34), inset 0 1px 0 rgba(255, 255, 255, .42), inset 0 -1px 0 rgba(96, 61, 12, .45);
+  border: 1px solid rgba(255, 220, 140, .42);
+  box-shadow: 0 12px 24px rgba(212, 168, 67, .4), inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -1px 0 rgba(96, 61, 12, .48);
 }
 
 .badge-shell .wallet-card .wc-qr-frame::before {
@@ -3349,6 +3352,7 @@ body[data-branding-preset="premium"] {
 .badge-shell .wallet-card .wc-bottom {
   position: relative;
   z-index: 1;
+  margin-top: clamp(4px, 1.4vw, 8px);
 }
 
 .badge-shell .wallet-card .wc-name {
