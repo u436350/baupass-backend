@@ -518,7 +518,10 @@
                 <p class="eyebrow" data-ui-i18n="badgeEyebrow">Digitaler Ausweis</p>
                 <h3 data-ui-i18n="badgeH3">Badge-Vorschau</h3>
               </div>
-              <button id="printBadgeButton" type="button" class="ghost-button" data-ui-i18n="btnPrintBadge" style="display:none;">Ausweis drucken</button>
+              <div class="badge-action-row" style="display:none;" id="badgeActionRow">
+                <button id="printBadgeButton" type="button" class="ghost-button" data-ui-i18n="btnPrintBadge">Ausweis drucken</button>
+                <button id="appLinkBadgeButton" type="button" class="primary-button">📱 App auf Smartphone</button>
+              </div>
             </div>
             <div id="badgePreview" class="badge-shell empty-state" data-ui-i18n="badgeEmptyState">
               Bitte zuerst einen Mitarbeiter anlegen oder aus der Liste auswählen.
