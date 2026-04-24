@@ -277,6 +277,7 @@ const TRANSLATIONS = {
     expiringSoonNotice: "Notice: Your visitor pass expires in less than 5 minutes.",
     scannerAutoOpened: "Scanner opened automatically because less than 2 minutes remain.",
     autoEndedAtMidnight: "Digital visitor pass ended automatically at 00:00. Please log in again.",
+    siteLocationUnavailable: "Site location could not be determined – login still allowed. Please inform admin.",
   },
   tr: {
     pageTitle: "BauPass Çalışan Uygulaması",
