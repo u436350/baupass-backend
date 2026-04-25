@@ -2216,10 +2216,29 @@ def _normalize_env_value(raw):
 
 def _get_resend_api_key_and_source():
     # Accept common variable names to reduce deployment misconfiguration issues.
-    for key_name in ("RESEND_API_KEY", "RESEND_KEY", "RESEND_API_TOKEN"):
+    for key_name in (
+        "RESEND_API_KEY",
+        "RESEND_KEY",
+        "RESEND_API_TOKEN",
+        "BAUPASS_RESEND_API_KEY",
+        "RESEND_APIKEY",
+        "RESEND_TOKEN",
+    ):
         candidate = _normalize_env_value(os.getenv(key_name))
         if candidate:
             return candidate, key_name
+
+    # Last-resort heuristic: detect any non-empty env var that looks like a Resend key/token.
+    for env_name, env_value in os.environ.items():
+        upper_name = str(env_name or "").upper()
+        if "RESEND" not in upper_name:
+            continue
+        if not any(token in upper_name for token in ("API_KEY", "APIKEY", "TOKEN", "KEY")):
+            continue
+        candidate = _normalize_env_value(env_value)
+        if candidate:
+            return candidate, env_name
+
     return "", ""
 
 
@@ -3338,11 +3357,14 @@ def phone_test_page():
 
 
 def get_runtime_diagnostics():
+    resend_api_key, resend_key_source = _get_resend_api_key_and_source()
     diagnostics = {
         "warnings": [],
         "recoveryEnabled": bool((os.getenv("BAUPASS_RECOVERY_SECRET") or "").strip()),
         "gateApiConfigured": bool((os.getenv("BAUPASS_GATE_API_KEY") or "").strip()),
         "publicBaseUrlConfigured": bool((os.getenv("PUBLIC_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").strip()),
+        "resendConfigured": bool(resend_api_key),
+        "resendKeySource": resend_key_source,
     }
 
     if not diagnostics["recoveryEnabled"]:
@@ -3364,6 +3386,16 @@ def get_runtime_diagnostics():
             {
                 "code": "missing_public_base_url",
                 "message": "PUBLIC_BASE_URL ist nicht gesetzt. Externe Links koennen auf lokalen Host zeigen.",
+            }
+        )
+    if not diagnostics["resendConfigured"]:
+        diagnostics["warnings"].append(
+            {
+                "code": "missing_resend_api_key",
+                "message": (
+                    "Resend API Key nicht erkannt. Erwartet z.B. RESEND_API_KEY "
+                    "(alternativ RESEND_KEY / RESEND_API_TOKEN)."
+                ),
             }
         )
 
