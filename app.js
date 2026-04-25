@@ -8396,6 +8396,89 @@ function getGreetingMeta(lang) {
   return map[normalized] || map.de;
 }
 
+function loadTtsVoiceList() {
+  const panel = document.getElementById("ttsVoiceListPanel");
+  if (!panel) return;
+
+  if (!window.speechSynthesis) {
+    panel.innerHTML = `<p style="color:#dc2626">Sprachausgabe (Web Speech API) wird von diesem Browser nicht unterstützt.</p>`;
+    return;
+  }
+
+  function renderVoices() {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) {
+      panel.innerHTML = `<p style="color:#888;font-size:0.88rem">Keine Stimmen gefunden. Bitte erneut versuchen.</p>`;
+      return;
+    }
+
+    // Gruppiere nach Sprache
+    const byLang = {};
+    for (const v of voices) {
+      const lang = v.lang || "unbekannt";
+      if (!byLang[lang]) byLang[lang] = [];
+      byLang[lang].push(v);
+    }
+
+    const langKeys = Object.keys(byLang).sort();
+    const highlighted = ["de", "ar", "tr", "en", "fr", "es", "it", "pl"];
+
+    let html = `<p style="font-size:0.82rem;color:#555;margin:0 0 10px">${voices.length} Stimmen verfügbar</p>`;
+    html += `<div style="max-height:400px;overflow-y:auto;font-size:0.83rem">`;
+
+    for (const lang of langKeys) {
+      const prefix = lang.split("-")[0].toLowerCase();
+      const isHighlighted = highlighted.includes(prefix);
+      const color = isHighlighted ? "#0f4c5c" : "#555";
+      const weight = isHighlighted ? "600" : "400";
+      html += `<div style="margin-bottom:6px">`;
+      html += `<span style="font-weight:${weight};color:${color}">${escapeHtml(lang)}</span>`;
+      html += `<span style="color:#999;margin-left:6px">(${byLang[lang].length} Stimme${byLang[lang].length !== 1 ? "n" : ""})</span>`;
+      html += `<div style="margin-left:12px;display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">`;
+      for (const v of byLang[lang]) {
+        const label = v.name + (v.localService ? " 🖥️" : " ☁️");
+        const voiceIdx = voices.indexOf(v);
+        html += `<button type="button" class="ghost-button" style="font-size:0.78rem;padding:2px 7px"
+          onclick="testTtsVoice(${voiceIdx})">${escapeHtml(label)}</button>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+    html += `<p style="font-size:0.78rem;color:#888;margin-top:8px">🖥️ = lokale Stimme &nbsp; ☁️ = Cloud-Stimme &nbsp; Fett = in BauPass genutzte Sprachen</p>`;
+    panel.innerHTML = html;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    renderVoices();
+  } else {
+    window.speechSynthesis.addEventListener("voiceschanged", function once() {
+      window.speechSynthesis.removeEventListener("voiceschanged", once);
+      renderVoices();
+    });
+    panel.innerHTML = `<p style="color:#888;font-size:0.88rem">Lade Stimmen…</p>`;
+    setTimeout(renderVoices, 800);
+  }
+}
+
+function testTtsVoice(voiceIndex) {
+  if (!window.speechSynthesis) return;
+  const voices = window.speechSynthesis.getVoices();
+  const voice = voices[voiceIndex];
+  if (!voice) return;
+  window.speechSynthesis.cancel();
+  const lang = getStoredUiLang ? getStoredUiLang() : "de";
+  const greetingMeta = getGreetingMeta(lang);
+  const h = new Date().getHours();
+  const text = h < 12 ? greetingMeta.morning : h < 18 ? greetingMeta.day : greetingMeta.evening;
+  const utter = new SpeechSynthesisUtterance(text + "!");
+  utter.voice  = voice;
+  utter.lang   = voice.lang;
+  utter.volume = 0.8;
+  utter.rate   = 0.92;
+  window.speechSynthesis.speak(utter);
+}
+
 function showLoginGreeting() {
   const user = state.currentUser;
   const el = document.getElementById("loginGreetingToast");
