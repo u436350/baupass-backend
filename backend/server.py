@@ -2211,7 +2211,29 @@ def _build_email_html(platform_name: str, primary_color: str, accent_color: str,
 </body></html>"""
 
 
-def _send_otp_email_to_user(db, user_row, code):
+def _resolve_smtp_settings(saved_settings, override_payload=None):
+    payload = override_payload or {}
+    smtp_settings = {
+        "smtp_host": str(payload.get("smtpHost") if "smtpHost" in payload else (saved_settings["smtp_host"] if saved_settings else "") or "").strip(),
+        "smtp_port": int(payload.get("smtpPort") or (saved_settings["smtp_port"] if saved_settings else 587) or 587),
+        "smtp_username": str(payload.get("smtpUsername") if "smtpUsername" in payload else (saved_settings["smtp_username"] if saved_settings else "") or "").strip(),
+        "smtp_password": str(payload.get("smtpPassword") if "smtpPassword" in payload else (saved_settings["smtp_password"] if saved_settings else "") or ""),
+        "smtp_sender_email": str(payload.get("smtpSenderEmail") if "smtpSenderEmail" in payload else (saved_settings["smtp_sender_email"] if saved_settings else "") or "").strip(),
+        "smtp_sender_name": str(payload.get("smtpSenderName") if "smtpSenderName" in payload else (saved_settings["smtp_sender_name"] if saved_settings else "") or "").strip(),
+        "smtp_use_tls": 1 if bool(payload.get("smtpUseTls")) else (int(saved_settings["smtp_use_tls"] or 0) if saved_settings else 0),
+        "platform_name": str(payload.get("platformName") if "platformName" in payload else (saved_settings["platform_name"] if saved_settings else "BauPass Control") or "BauPass Control").strip(),
+        "operator_name": str(payload.get("operatorName") if "operatorName" in payload else (saved_settings["operator_name"] if saved_settings else "BauPass Control") or "BauPass Control").strip(),
+        "invoice_primary_color": str(payload.get("invoicePrimaryColor") if "invoicePrimaryColor" in payload else (saved_settings["invoice_primary_color"] if saved_settings else "#0f4c5c") or "#0f4c5c").strip(),
+        "invoice_accent_color": str(payload.get("invoiceAccentColor") if "invoiceAccentColor" in payload else (saved_settings["invoice_accent_color"] if saved_settings else "#e36414") or "#e36414").strip(),
+    }
+    if not smtp_settings["smtp_sender_name"]:
+        smtp_settings["smtp_sender_name"] = smtp_settings["platform_name"]
+    if not smtp_settings["operator_name"]:
+        smtp_settings["operator_name"] = smtp_settings["platform_name"]
+    return smtp_settings
+
+
+def _send_otp_email_to_user(db, user_row, code, smtp_settings_override=None):
     """Send a 6-digit OTP code to the user's stored email address via SMTP."""
     try:
         user_keys = set(user_row.keys()) if hasattr(user_row, "keys") else set()
@@ -2228,30 +2250,21 @@ def _send_otp_email_to_user(db, user_row, code):
         app.logger.error("[OTP-MAIL] Keine Settings in der Datenbank gefunden")
         return False
 
-    smtp_host = (settings["smtp_host"] or "").strip()
-    smtp_sender = (settings["smtp_sender_email"] or "").strip()
+    smtp_settings = _resolve_smtp_settings(settings, smtp_settings_override)
+    smtp_host = smtp_settings["smtp_host"]
+    smtp_sender = smtp_settings["smtp_sender_email"]
     if not smtp_host:
         app.logger.warning("[OTP-MAIL] SMTP-Host nicht konfiguriert – E-Mail-Versand nicht möglich")
         return False
     if not smtp_sender:
         app.logger.warning("[OTP-MAIL] SMTP-Absender nicht konfiguriert – E-Mail-Versand nicht möglich")
         return False
-
-    platform_name = (settings["platform_name"] or "BauPass Control").strip()
-    smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
-    primary_color = (settings.get("invoice_primary_color") or "#0f4c5c") if hasattr(settings, "get") else "#0f4c5c"
-    accent_color = (settings.get("invoice_accent_color") or "#e36414") if hasattr(settings, "get") else "#e36414"
-    try:
-        primary_color = (settings["invoice_primary_color"] or "#0f4c5c").strip()
-        accent_color = (settings["invoice_accent_color"] or "#e36414").strip()
-    except Exception:
-        pass
+    platform_name = smtp_settings["platform_name"]
+    smtp_sender_name = smtp_settings["smtp_sender_name"]
+    primary_color = smtp_settings["invoice_primary_color"]
+    accent_color = smtp_settings["invoice_accent_color"]
     username = user_row["username"] if hasattr(user_row, "keys") else str(user_row)
-    operator_name = ""
-    try:
-        operator_name = (settings["operator_name"] or platform_name).strip()
-    except Exception:
-        operator_name = platform_name
+    operator_name = smtp_settings["operator_name"]
 
     body_html = f"""
         <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
@@ -2289,10 +2302,10 @@ def _send_otp_email_to_user(db, user_row, code):
     msg.add_alternative(html_content, subtype="html")
 
     try:
-        with _smtp_connect(smtp_host, settings["smtp_port"] or 587, settings["smtp_use_tls"] or 0) as smtp:
-            smtp_username = (settings["smtp_username"] or "").strip()
+        with _smtp_connect(smtp_host, smtp_settings["smtp_port"], smtp_settings["smtp_use_tls"]) as smtp:
+            smtp_username = smtp_settings["smtp_username"]
             if smtp_username:
-                smtp.login(smtp_username, settings["smtp_password"] or "")
+                smtp.login(smtp_username, smtp_settings["smtp_password"])
             smtp.send_message(msg)
         app.logger.info(f"[OTP-MAIL] OTP-Code erfolgreich gesendet an {email} (Benutzer: {username})")
         return True
@@ -3824,28 +3837,28 @@ def get_settings():
 def smtp_test():
     """Send a test e-mail using the currently saved SMTP settings."""
     db = get_db()
+    payload = request.get_json(silent=True) or {}
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
     if not settings:
         return jsonify({"ok": False, "error": "no_settings"}), 400
-    smtp_host = (settings["smtp_host"] or "").strip()
-    smtp_sender = (settings["smtp_sender_email"] or "").strip()
-    if not smtp_host or not smtp_sender:
-        return jsonify({"ok": False, "error": "smtp_not_configured"}), 400
+    smtp_settings = _resolve_smtp_settings(settings, payload)
+    missing_fields = []
+    if not smtp_settings["smtp_host"]:
+        missing_fields.append("smtpHost")
+    if not smtp_settings["smtp_sender_email"]:
+        missing_fields.append("smtpSenderEmail")
+    if missing_fields:
+        return jsonify({"ok": False, "error": "smtp_not_configured", "missingFields": missing_fields}), 400
     # Send to the logged-in user's email, or the sender address as fallback
-    recipient = (g.current_user["email"] or "").strip() or smtp_sender
-    platform_name = (settings["platform_name"] or "BauPass Control").strip()
-    smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
-    primary_color = "#0f4c5c"
-    accent_color = "#e36414"
-    try:
-        primary_color = (settings["invoice_primary_color"] or "#0f4c5c").strip()
-        accent_color = (settings["invoice_accent_color"] or "#e36414").strip()
-    except Exception:
-        pass
+    recipient = (str(payload.get("recipient") or "").strip() or (g.current_user["email"] or "").strip() or smtp_settings["smtp_sender_email"])
+    platform_name = smtp_settings["platform_name"]
+    smtp_sender_name = smtp_settings["smtp_sender_name"]
+    primary_color = smtp_settings["invoice_primary_color"]
+    accent_color = smtp_settings["invoice_accent_color"]
     try:
         msg = EmailMessage()
         msg["Subject"] = f"{platform_name}: SMTP Test-Mail ✅"
-        msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
+        msg["From"] = f'"{smtp_sender_name}" <{smtp_settings["smtp_sender_email"]}>'
         msg["To"] = recipient
         body_html = f"""
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px;">
@@ -3856,25 +3869,25 @@ def smtp_test():
                     <p style="margin:0 0 6px;color:#15803d;font-size:14px;font-weight:700;">✅ Verbindung erfolgreich</p>
                     <p style="margin:0;color:#374151;font-size:13px;">
                         <strong>Empfänger:</strong> {recipient}<br>
-                        <strong>Absender:</strong> {smtp_sender}<br>
-                        <strong>SMTP-Host:</strong> {smtp_host}:{settings["smtp_port"] or 587}
+                        <strong>Absender:</strong> {smtp_settings["smtp_sender_email"]}<br>
+                        <strong>SMTP-Host:</strong> {smtp_settings["smtp_host"]}:{smtp_settings["smtp_port"]}
                     </p>
                 </td></tr>
             </table>
             <p style="color:#6c757d;font-size:13px;margin:0;">
                 OTP-Codes für die Zwei-Faktor-Anmeldung werden ab sofort an diese Adresse zugestellt.
             </p>"""
-        operator_name = (settings["operator_name"] or platform_name).strip()
+        operator_name = smtp_settings["operator_name"]
         html_content = _build_email_html(platform_name, primary_color, accent_color,
                                          "SMTP Konfiguration erfolgreich", body_html, operator_name)
         msg.set_content(
-            f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_sender}\nHost: {smtp_host}\n\n{operator_name}"
+            f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_settings['smtp_sender_email']}\nHost: {smtp_settings['smtp_host']}\n\n{operator_name}"
         )
         msg.add_alternative(html_content, subtype="html")
-        with _smtp_connect(smtp_host, settings["smtp_port"] or 587, settings["smtp_use_tls"] or 0) as s:
-            smtp_username = (settings["smtp_username"] or "").strip()
+        with _smtp_connect(smtp_settings["smtp_host"], smtp_settings["smtp_port"], smtp_settings["smtp_use_tls"]) as s:
+            smtp_username = smtp_settings["smtp_username"]
             if smtp_username:
-                s.login(smtp_username, settings["smtp_password"] or "")
+                s.login(smtp_username, smtp_settings["smtp_password"])
             s.send_message(msg)
         return jsonify({"ok": True, "recipient": recipient})
     except Exception as exc:
@@ -9856,7 +9869,7 @@ def otp_test_send():
             return target_email if k == "email" else "test-otp"
         def get(self, k, default=""):
             return target_email if k == "email" else ("test-otp" if k == "username" else default)
-    sent = _send_otp_email_to_user(db, _FakeUser(), test_code)
+    sent = _send_otp_email_to_user(db, _FakeUser(), test_code, smtp_settings_override=payload)
     if sent:
         return jsonify({"ok": True, "recipient": target_email})
     return jsonify({"ok": False, "error": "send_failed_check_logs"}), 500

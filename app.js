@@ -8047,7 +8047,11 @@ async function apiRequest(url, options = {}) {
         throw new Error("session_expired");
       }
     }
-    throw new Error(payload?.error || `http_${response.status}`);
+    const requestError = new Error(payload?.error || `http_${response.status}`);
+    requestError.code = payload?.error || `http_${response.status}`;
+    requestError.payload = payload;
+    requestError.status = response.status;
+    throw requestError;
   }
   return payload;
 }
@@ -12203,6 +12207,37 @@ async function handleSettingsSubmit(event) {
   }
 }
 
+function getCurrentSmtpSettingsFromForm() {
+  return {
+    platformName: document.querySelector("#platformName")?.value.trim() || "",
+    operatorName: document.querySelector("#operatorName")?.value.trim() || "",
+    invoicePrimaryColor: document.querySelector("#invoicePrimaryColor")?.value || "#0f4c5c",
+    invoiceAccentColor: document.querySelector("#invoiceAccentColor")?.value || "#e36414",
+    smtpHost: document.querySelector("#smtpHost")?.value.trim() || "",
+    smtpPort: Number(document.querySelector("#smtpPort")?.value || 587),
+    smtpUsername: document.querySelector("#smtpUsername")?.value.trim() || "",
+    smtpPassword: document.querySelector("#smtpPassword")?.value || "",
+    smtpSenderEmail: document.querySelector("#smtpSenderEmail")?.value.trim() || "",
+    smtpSenderName: document.querySelector("#smtpSenderName")?.value.trim() || "",
+    smtpUseTls: document.querySelector("#smtpUseTls")?.value === "1"
+  };
+}
+
+function formatSmtpTestError(err) {
+  if (err?.code === "smtp_not_configured") {
+    const missingFields = Array.isArray(err?.payload?.missingFields) ? err.payload.missingFields : [];
+    if (!missingFields.length) {
+      return "SMTP ist nicht vollständig konfiguriert.";
+    }
+    const labels = {
+      smtpHost: "SMTP Host",
+      smtpSenderEmail: "Absender E-Mail"
+    };
+    return `Fehlende Felder: ${missingFields.map((field) => labels[field] || field).join(", ")}`;
+  }
+  return err?.message || "Unbekannter Fehler";
+}
+
 async function sendOtpTestMail() {
   const btn = document.querySelector("#otpTestBtn");
   const result = document.querySelector("#otpTestResult");
@@ -12211,7 +12246,10 @@ async function sendOtpTestMail() {
   if (btn) btn.disabled = true;
   if (result) result.textContent = "⏳ …";
   try {
-    const res = await apiRequest(API_BASE + "/api/settings/otp-test", { method: "POST", body: { email } });
+    const res = await apiRequest(API_BASE + "/api/settings/otp-test", {
+      method: "POST",
+      body: { ...getCurrentSmtpSettingsFromForm(), email }
+    });
     if (result) {
       result.style.color = "#16a34a";
       result.textContent = `✅ OTP-Code gesendet an ${res.recipient} (Code: 123456)`;
@@ -12219,7 +12257,7 @@ async function sendOtpTestMail() {
   } catch (err) {
     if (result) {
       result.style.color = "#dc2626";
-      result.textContent = `❌ Fehler: ${err.message}`;
+      result.textContent = `❌ Fehler: ${formatSmtpTestError(err)}`;
     }
   } finally {
     if (btn) btn.disabled = false;
@@ -12232,7 +12270,10 @@ async function sendSmtpTestMail() {
   if (btn) btn.disabled = true;
   if (result) result.textContent = "⏳ …";
   try {
-    const res = await apiRequest(API_BASE + "/api/settings/smtp-test", { method: "POST", body: {} });
+    const res = await apiRequest(API_BASE + "/api/settings/smtp-test", {
+      method: "POST",
+      body: getCurrentSmtpSettingsFromForm()
+    });
     if (result) {
       result.style.color = "#16a34a";
       result.textContent = `✅ Mail gesendet an ${res.recipient}`;
@@ -12240,7 +12281,7 @@ async function sendSmtpTestMail() {
   } catch (err) {
     if (result) {
       result.style.color = "#dc2626";
-      result.textContent = `❌ Fehler: ${err.message}`;
+      result.textContent = `❌ Fehler: ${formatSmtpTestError(err)}`;
     }
   } finally {
     if (btn) btn.disabled = false;
