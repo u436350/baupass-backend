@@ -8220,14 +8220,20 @@ function refreshAll() {
   const loggedIn = Boolean(token && state.currentUser);
   syncSupportLoginUi();
   if (elements.authOverlay) {
+    const activeElement = document.activeElement;
+    if (loggedIn && activeElement && elements.authOverlay.contains(activeElement) && typeof activeElement.blur === "function") {
+      activeElement.blur();
+    }
     elements.authOverlay.style.display = loggedIn ? "none" : "grid";
     elements.authOverlay.setAttribute("aria-hidden", loggedIn ? "true" : "false");
+    elements.authOverlay.toggleAttribute("inert", loggedIn);
   }
   if (elements.mainShell) {
     elements.mainShell.style.display = loggedIn ? "grid" : "none";
     elements.mainShell.classList.toggle("locked", !loggedIn);
     elements.mainShell.hidden = !loggedIn;
     elements.mainShell.setAttribute("aria-hidden", loggedIn ? "false" : "true");
+    elements.mainShell.toggleAttribute("inert", !loggedIn);
   }
   if (elements.body) {
     elements.body.classList.toggle("auth-locked", !loggedIn);
@@ -12208,7 +12214,7 @@ async function handleSettingsSubmit(event) {
 }
 
 function getCurrentSmtpSettingsFromForm() {
-  return {
+  const settings = {
     platformName: document.querySelector("#platformName")?.value.trim() || "",
     operatorName: document.querySelector("#operatorName")?.value.trim() || "",
     invoicePrimaryColor: document.querySelector("#invoicePrimaryColor")?.value || "#0f4c5c",
@@ -12216,11 +12222,15 @@ function getCurrentSmtpSettingsFromForm() {
     smtpHost: document.querySelector("#smtpHost")?.value.trim() || "",
     smtpPort: Number(document.querySelector("#smtpPort")?.value || 587),
     smtpUsername: document.querySelector("#smtpUsername")?.value.trim() || "",
-    smtpPassword: document.querySelector("#smtpPassword")?.value || "",
     smtpSenderEmail: document.querySelector("#smtpSenderEmail")?.value.trim() || "",
     smtpSenderName: document.querySelector("#smtpSenderName")?.value.trim() || "",
     smtpUseTls: document.querySelector("#smtpUseTls")?.value === "1"
   };
+  const smtpPassword = document.querySelector("#smtpPassword")?.value || "";
+  if (smtpPassword.trim()) {
+    settings.smtpPassword = smtpPassword;
+  }
+  return settings;
 }
 
 function formatSmtpTestError(err) {

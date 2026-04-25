@@ -2213,14 +2213,15 @@ def _build_email_html(platform_name: str, primary_color: str, accent_color: str,
 
 def _resolve_smtp_settings(saved_settings, override_payload=None):
     payload = override_payload or {}
+    smtp_password_override = payload.get("smtpPassword") if "smtpPassword" in payload else None
     smtp_settings = {
         "smtp_host": str(payload.get("smtpHost") if "smtpHost" in payload else (saved_settings["smtp_host"] if saved_settings else "") or "").strip(),
         "smtp_port": int(payload.get("smtpPort") or (saved_settings["smtp_port"] if saved_settings else 587) or 587),
         "smtp_username": str(payload.get("smtpUsername") if "smtpUsername" in payload else (saved_settings["smtp_username"] if saved_settings else "") or "").strip(),
-        "smtp_password": str(payload.get("smtpPassword") if "smtpPassword" in payload else (saved_settings["smtp_password"] if saved_settings else "") or ""),
+        "smtp_password": str((smtp_password_override if str(smtp_password_override or "").strip() else (saved_settings["smtp_password"] if saved_settings else "")) or ""),
         "smtp_sender_email": str(payload.get("smtpSenderEmail") if "smtpSenderEmail" in payload else (saved_settings["smtp_sender_email"] if saved_settings else "") or "").strip(),
         "smtp_sender_name": str(payload.get("smtpSenderName") if "smtpSenderName" in payload else (saved_settings["smtp_sender_name"] if saved_settings else "") or "").strip(),
-        "smtp_use_tls": 1 if bool(payload.get("smtpUseTls")) else (int(saved_settings["smtp_use_tls"] or 0) if saved_settings else 0),
+        "smtp_use_tls": (1 if bool(payload.get("smtpUseTls")) else 0) if "smtpUseTls" in payload else (int(saved_settings["smtp_use_tls"] or 0) if saved_settings else 0),
         "platform_name": str(payload.get("platformName") if "platformName" in payload else (saved_settings["platform_name"] if saved_settings else "BauPass Control") or "BauPass Control").strip(),
         "operator_name": str(payload.get("operatorName") if "operatorName" in payload else (saved_settings["operator_name"] if saved_settings else "BauPass Control") or "BauPass Control").strip(),
         "invoice_primary_color": str(payload.get("invoicePrimaryColor") if "invoicePrimaryColor" in payload else (saved_settings["invoice_primary_color"] if saved_settings else "#0f4c5c") or "#0f4c5c").strip(),
