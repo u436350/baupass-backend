@@ -207,10 +207,10 @@
 
       <div id="systemAlertBanner" class="system-alert-banner" style="display:none;">
         <div>
-          <strong>Kritische Versandlage</strong>
-          <p id="systemAlertText" class="helper-text">Aktuell liegen kritische Rechnungs-Fehlversände vor.</p>
+          <strong data-ui-i18n="sysAlertHeading">Kritische Versandlage</strong>
+          <p id="systemAlertText" class="helper-text" data-ui-i18n="sysAlertDefaultText">Aktuell liegen kritische Rechnungs-Fehlversände vor.</p>
         </div>
-        <button id="systemAlertActionBtn" type="button" class="ghost-button">Zu Rechnungen</button>
+        <button id="systemAlertActionBtn" type="button" class="ghost-button" data-ui-i18n="sysAlertActionBtn">Zu Rechnungen</button>
       </div>
 
       <!-- Begrüssungs-Overlay -->
@@ -372,9 +372,9 @@
               </label>
               <label>
                 <span data-ui-i18n="labelBadgePin">Badge-PIN für App-Login</span>
-                <input id="badgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4 bis 8 Ziffern" required />
+                <input id="badgePin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4 bis 8 Ziffern" data-ui-i18n="badgePinPlaceholder" data-ui-i18n-attr="placeholder" required />
               </label>
-              <p id="badgePinHint" class="helper-text">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
+              <p id="badgePinHint" class="helper-text" data-ui-i18n="badgePinHint">Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.</p>
               <input id="photoData" type="hidden" />
               <input id="photoFileInput" type="file" accept="image/*" capture="user" hidden />
 
@@ -382,27 +382,27 @@
                 <div class="camera-preview-wrap">
                   <video id="cameraPreview" playsinline autoplay muted></video>
                   <div class="camera-guide" aria-hidden="true"></div>
-                  <div id="cameraPlaceholder" class="camera-placeholder">Kamera noch nicht gestartet</div>
+                  <div id="cameraPlaceholder" class="camera-placeholder" data-ui-i18n="cameraNotStarted">Kamera noch nicht gestartet</div>
                 </div>
                 <div class="camera-actions">
                   <button type="button" id="startCameraButton" class="ghost-button" data-ui-i18n="btnStartCamera">Kamera starten</button>
                   <button type="button" id="capturePhotoButton" class="ghost-button" data-ui-i18n="btnCapturePhoto">Foto aufnehmen</button>
                   <button type="button" id="uploadPhotoButton" class="ghost-button" data-ui-i18n="btnUploadPhoto">Foto hochladen</button>
                 </div>
-                <p id="photoDebugText" class="helper-text">Kamera noch nicht gestartet.</p>
+                <p id="photoDebugText" class="helper-text" data-ui-i18n="cameraNotStarted">Kamera noch nicht gestartet.</p>
                 <label class="camera-option">
                   <input id="whiteBgBoost" type="checkbox" checked disabled />
-                  <span id="photoWhiteBgLabel">Hintergrund komplett weiß (aktiv)</span>
+                  <span id="photoWhiteBgLabel" data-ui-i18n="photoWhiteBgLabel">Hintergrund komplett weiß (aktiv)</span>
                 </label>
                 <canvas id="photoCanvas" width="480" height="360" hidden></canvas>
                 <div class="photo-preview-block" style="margin: 12px 0; text-align: center;">
                   <img id="capturedPhoto" src="" alt="Foto-Vorschau" style="max-width: 220px; max-height: 280px; border-radius: 10px; border: 1px solid #ccc; background: #fff; display: none;" />
                 </div>
                 <div class="photo-adjust-controls">
-                  <p id="photoAdjustHelp" class="helper-text">Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.</p>
-                  <p id="photoRequiredHint" class="helper-text helper-text-warning">Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.</p>
+                  <p id="photoAdjustHelp" class="helper-text" data-ui-i18n="photoAdjustHelp">Foto nach Aufnahme verschieben, damit es rechts im Ausweis sauber passt.</p>
+                  <p id="photoRequiredHint" class="helper-text helper-text-warning" data-ui-i18n="photoRequiredHint">Pflicht: Ohne Foto kann der Ausweis nicht gespeichert werden.</p>
                   <label class="photo-zoom-row">
-                    <span id="photoZoomCropLabel">Zoom / Zuschneiden</span>
+                    <span id="photoZoomCropLabel" data-ui-i18n="photoZoomCropLabel">Zoom / Zuschneiden</span>
                     <input id="photoZoom" type="range" min="1" max="1.8" step="0.02" value="1.18" disabled />
                     <span id="photoZoomValue">1.18x</span>
                   </label>
@@ -431,9 +431,9 @@
               <button id="workerCsvButton" type="button" class="ghost-button" data-ui-i18n="btnWorkerCsv">Mitarbeiterliste als PDF herunterladen</button>
             </div>
             <div class="worker-list-toolbar">
-              <input id="workerSearchInput" type="search" placeholder="Suchen: Name, Badge-ID, Baustelle …" autocomplete="off" />
+              <input id="workerSearchInput" type="search" placeholder="Suchen: Name, Badge-ID, Baustelle …" data-ui-i18n="workerSearchPlaceholder" data-ui-i18n-attr="placeholder" autocomplete="off" />
               <label class="bulk-select-all-label">
-                <input id="bulkSelectAll" type="checkbox" /> <span id="bulkSelectAllText">Alle auswählen</span>
+                <input id="bulkSelectAll" type="checkbox" /> <span id="bulkSelectAllText" data-ui-i18n="bulkSelectAll">Alle auswählen</span>
               </label>
             </div>
               <div id="bulkActionBar" class="bulk-action-bar hidden">
@@ -495,8 +495,8 @@
           <article id="photoOverrideApprovalPanel" class="panel hidden">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Sicherheit</p>
-                <h3>Ausstehende Foto-Override-Freigaben</h3>
+                <p class="eyebrow" data-ui-i18n="sectionSecurityEyebrow">Sicherheit</p>
+                <h3 data-ui-i18n="photoOverrideH3">Ausstehende Foto-Override-Freigaben</h3>
               </div>
             </div>
             <div id="photoOverrideApprovalList" class="card-list"></div>
@@ -505,7 +505,7 @@
         </div>
 
         <div class="photo-zoom-row">
-          <label id="photoSharpenLabel" for="photoSharpen">Schärfe:</label>
+          <label id="photoSharpenLabel" for="photoSharpen" data-ui-i18n="photoSharpenLabel">Schärfe:</label>
           <input id="photoSharpen" type="range" min="0" max="2" step="0.01" value="0.28" disabled>
           <span id="photoSharpenValue">Normal</span>
         </div>
@@ -521,7 +521,7 @@
               </div>
               <div class="badge-action-row" style="display:none;" id="badgeActionRow">
                 <button id="printBadgeButton" type="button" class="ghost-button" data-ui-i18n="btnPrintBadge">Ausweis drucken</button>
-                <button id="appLinkBadgeButton" type="button" class="primary-button">📱 App auf Smartphone</button>
+                <button id="appLinkBadgeButton" type="button" class="primary-button" data-ui-i18n="btnAppLink">📱 App auf Smartphone</button>
               </div>
             </div>
             <div id="badgePreview" class="badge-shell empty-state" data-ui-i18n="badgeEmptyState">
@@ -630,10 +630,10 @@
             <div id="dayCloseBanner" class="day-close-banner hidden"></div>
             <form id="dayCloseAcknowledgeForm" class="form-grid compact-grid hidden">
               <label class="full-width">
-                Kommentar zur Tagesabschluss-Quittierung
-                <input id="dayCloseComment" type="text" placeholder="z. B. Schichtleiter informiert, Austritt wird nachgetragen" />
+                <span data-ui-i18n="dayCloseCommentLabel">Kommentar zur Tagesabschluss-Quittierung</span>
+                <input id="dayCloseComment" type="text" placeholder="z. B. Schichtleiter informiert, Austritt wird nachgetragen" data-ui-i18n="dayCloseCommentPlaceholder" data-ui-i18n-attr="placeholder" />
               </label>
-              <button id="dayCloseAcknowledgeButton" type="submit" class="ghost-button full-width">Tagesabschluss quittieren</button>
+              <button id="dayCloseAcknowledgeButton" type="submit" class="ghost-button full-width" data-ui-i18n="btnDayCloseAcknowledge">Tagesabschluss quittieren</button>
             </form>
             <div id="accessSummaryGrid" class="summary-grid"></div>
 
@@ -680,7 +680,7 @@
             <div class="divider"></div>
             
             <div class="button-row invoice-toolbar">
-              <input id="invoiceFilterCompany" class="invoice-filter-input" type="text" placeholder="Nach Firma filtern..." />
+              <input id="invoiceFilterCompany" class="invoice-filter-input" type="text" placeholder="Nach Firma filtern..." data-ui-i18n="filterByCompanyPlaceholder" data-ui-i18n-attr="placeholder" />
               <select id="invoiceFilterStatus" class="invoice-filter-select">
                 <option value="" data-ui-i18n="optAllStatus">Alle Status</option>
                 <option value="draft" data-ui-i18n="optDraft">Entwurf</option>
@@ -723,7 +723,7 @@
                 <option value="maxed" data-ui-i18n="optRetryMaxed">Max Retries erreicht</option>
                 <option value="today_failed" data-ui-i18n="optRetryTodayFailed">Heute fehlgeschlagen</option>
               </select>
-              <input id="invoiceRetryFilterCompany" class="invoice-filter-input" type="text" placeholder="Firma in Warteschlange filtern..." />
+              <input id="invoiceRetryFilterCompany" class="invoice-filter-input" type="text" placeholder="Firma in Warteschlange filtern..." data-ui-i18n="filterQueueByCompanyPlaceholder" data-ui-i18n-attr="placeholder" />
               <label class="invoice-top-issues-toggle">
                 <input id="invoiceRetryTopIssuesOnly" type="checkbox" />
                 <span data-ui-i18n="invoiceRetryTopIssuesOnly">Nur meine Top-Probleme</span>
@@ -749,7 +749,7 @@
                 <option value="invoice.retry_send_bulk" data-ui-i18n="optApprovalBulkRetry">Bulk-Retry</option>
                 <option value="invoice.dead_letter_resolve" data-ui-i18n="optApprovalDeadLetterResolve">Dead-Letter-Resolve</option>
               </select>
-              <input id="invoiceApprovalMaxAgeMinutes" class="invoice-filter-input" type="number" min="0" step="5" placeholder="Max Alter in Minuten (0 = alle)" />
+              <input id="invoiceApprovalMaxAgeMinutes" class="invoice-filter-input" type="number" min="0" step="5" placeholder="Max Alter in Minuten (0 = alle)" data-ui-i18n="maxAgeFilterPlaceholder" data-ui-i18n-attr="placeholder" />
             </div>
             <div id="invoiceApprovalList" class="list"></div>
 
@@ -757,8 +757,8 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Dead-Letter</p>
-                <h3>Manuell zu klärende Rechnungen</h3>
+                <p class="eyebrow" data-ui-i18n="deadLetterEyebrow">Dead-Letter</p>
+                <h3 data-ui-i18n="deadLetterH3">Manuell zu klärende Rechnungen</h3>
               </div>
             </div>
             <div id="invoiceDeadLetterList" class="list"></div>
@@ -820,10 +820,10 @@
               <label>
                 <span data-ui-i18n="labelDeviceType">Typ / Protokoll</span>
                 <select id="deviceType">
-                  <option value="osdp">OSDP (RS-485)</option>
-                  <option value="tcp">TCP/IP Smart-Box</option>
-                  <option value="wiegand">Wiegand-Reader</option>
-                  <option value="other">Sonstiges</option>
+                  <option value="osdp" data-ui-i18n="optDeviceOsdp">OSDP (RS-485)</option>
+                  <option value="tcp" data-ui-i18n="optDeviceTcp">TCP/IP Smart-Box</option>
+                  <option value="wiegand" data-ui-i18n="optDeviceWiegand">Wiegand-Reader</option>
+                  <option value="other" data-ui-i18n="docTypeSonstiges">Sonstiges</option>
                 </select>
               </label>
               <button type="submit" class="primary-button full-width" data-ui-i18n="btnDeviceRegister">Gerät registrieren und API-Schlüssel erzeugen</button>
@@ -845,7 +845,7 @@
               <div class="button-row">
                 <button id="docInboxRefreshBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxRefresh">Aktualisieren</button>
                 <button id="docInboxSyncBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxSync">System-Eingang abrufen</button>
-                <button id="docInboxRematchBtn" type="button" class="ghost-button">Neu zuordnen</button>
+                <button id="docInboxRematchBtn" type="button" class="ghost-button" data-ui-i18n="btnDocInboxRematch">Neu zuordnen</button>
               </div>
             </div>
             <div class="meta-box">
@@ -893,7 +893,7 @@
               </div>
             </div>
             <div id="systemStatusPanel" class="card-item">
-              <p>Status wird geladen...</p>
+              <p data-ui-i18n="statusLoading">Status wird geladen...</p>
             </div>
             <div class="button-row">
               <button id="refreshSystemStatusButton" type="button" class="ghost-button" data-ui-i18n="btnRefreshStatus">Status neu laden</button>
@@ -915,8 +915,8 @@
               <div class="form-section">
                 <div class="form-section-icon">🏗️</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">Plattform</p>
-                  <h4>Identität &amp; Betreiber</h4>
+                  <p class="eyebrow" data-ui-i18n="formSectionPlatformEyebrow">Plattform</p>
+                  <h4 data-ui-i18n="formSectionPlatformH4">Identität &amp; Betreiber</h4>
                 </div>
               </div>
               <label>
@@ -932,12 +932,12 @@
               <div class="form-section">
                 <div class="form-section-icon">🎨</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">Rechnungsdesign</p>
-                  <h4>Farben &amp; Branding</h4>
+                  <p class="eyebrow" data-ui-i18n="formSectionBrandingEyebrow">Rechnungsdesign</p>
+                  <h4 data-ui-i18n="formSectionBrandingH4">Farben &amp; Branding</h4>
                 </div>
               </div>
               <label>
-                Vermietungsmodell
+                <span data-ui-i18n="rentalModelLabel">Vermietungsmodell</span>
                 <select id="rentalModel">
                   <option value="tageskarte" data-ui-i18n="optPlanDayPassRecommended">Besucherkarte (empfohlen)</option>
                   <option value="monatlich" data-ui-i18n="optPlanMonthlySite">Monatlich pro Baustelle</option>
@@ -957,18 +957,18 @@
                 Firmenlogo für Rechnungen
                 <input id="invoiceLogoFile" type="file" accept="image/*" />
               </label>
-              <button id="loadCustomBrandButton" type="button" class="ghost-button full-width">BauKometra Branding laden</button>
-              <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width">Alternative laden</button>
+              <button id="loadCustomBrandButton" type="button" class="ghost-button full-width" data-ui-i18n="btnLoadDefaultBrand">BauKometra Branding laden</button>
+              <button id="loadCustomBrandAltButton" type="button" class="ghost-button full-width" data-ui-i18n="btnLoadAltBrand">Alternative laden</button>
               <input id="invoiceLogoData" type="hidden" />
               <img id="invoiceLogoPreview" class="invoice-logo-preview hidden" alt="Logo Vorschau" />
-              <p class="helper-text full-width">Das Rechnungslogo wird auch als System-Icon und Mitarbeiter-App-Icon verwendet.</p>
+              <p class="helper-text full-width" data-ui-i18n="invoiceLogoHint">Das Rechnungslogo wird auch als System-Icon und Mitarbeiter-App-Icon verwendet.</p>
 
               <!-- ── SMTP ── -->
               <div class="form-section">
                 <div class="form-section-icon">✉️</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">E-Mail</p>
-                  <h4>SMTP Versand</h4>
+                  <p class="eyebrow" data-ui-i18n="formSectionEmailEyebrow">E-Mail</p>
+                  <h4 data-ui-i18n="formSectionSmtpH4">SMTP Versand</h4>
                 </div>
               </div>
               <label>
@@ -1048,8 +1048,8 @@
               <div class="form-section">
                 <div class="form-section-icon">🔒</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">Sicherheit</p>
-                  <h4>Zugang &amp; Isolation</h4>
+                  <p class="eyebrow" data-ui-i18n="sectionSecurityEyebrow">Sicherheit</p>
+                  <h4 data-ui-i18n="formSectionSecurityH4">Zugang &amp; Isolation</h4>
                 </div>
               </div>
               <label class="full-width">
@@ -1068,23 +1068,23 @@
               <div class="form-section">
                 <div class="form-section-icon">📱</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">App-Features</p>
+                  <p class="eyebrow" data-ui-i18n="formSectionAppFeaturesEyebrow">App-Features</p>
                   <h4 data-ui-i18n="adminWorkerAppSectionTitle">Mitarbeiter-App</h4>
                 </div>
               </div>
               <label class="full-width">
-                Mobile-Ausweis-App (digitaler Ausweis + QR)
+                <span data-ui-i18n="workerAppEnabledLabel">Mobile-Ausweis-App (digitaler Ausweis + QR)</span>
                 <select id="workerAppEnabled">
-                  <option value="1">Aktiv &ndash; Ausweis, QR und Badge-Login sind freigegeben</option>
-                  <option value="0">Gesperrt &ndash; Mobile-App ist deaktiviert</option>
+                  <option value="1" data-ui-i18n="optWorkerAppActive">Aktiv &ndash; Ausweis, QR und Badge-Login sind freigegeben</option>
+                  <option value="0" data-ui-i18n="optWorkerAppLocked">Gesperrt &ndash; Mobile-App ist deaktiviert</option>
                 </select>
               </label>
               <p class="helper-text full-width" data-ui-i18n="adminWorkerAppSectionCopy">Steuert die komplette Mitarbeiter-App: Login, digitaler Ausweis und QR-Nutzung auf dem Handy.</p>
               <label class="full-width">
-                Ausweis mit PIN-Sperre sichern (nach 2min Inaktivität)
+                <span data-ui-i18n="workerPassLockLabel">Ausweis mit PIN-Sperre sichern (nach 2min Inaktivität)</span>
                 <select id="workerPassLockEnabled">
-                  <option value="1">Aktiv &ndash; PIN-Lock schützt vor Telefon-Weitergabe</option>
-                  <option value="0">Deaktiviert &ndash; Ausweis jederzeit frei zugänglich</option>
+                  <option value="1" data-ui-i18n="optPinLockActive">Aktiv &ndash; PIN-Lock schützt vor Telefon-Weitergabe</option>
+                  <option value="0" data-ui-i18n="optPinLockDisabled">Deaktiviert &ndash; Ausweis jederzeit frei zugänglich</option>
                 </select>
               </label>
               <p class="helper-text full-width" data-ui-i18n="adminWorkerAppPinLockHint">Nach 2 Minuten ohne Interaktion muss der Mitarbeiter seine Badge-PIN erneut eingeben, um den Ausweis zu sehen.</p>
@@ -1174,11 +1174,11 @@
                 <input id="companyAdminPassword" type="password" placeholder="z.B. Sicher!2025" autocomplete="new-password" data-ui-i18n="companyAdminPasswordPlaceholder" data-ui-i18n-attr="placeholder" />
               </label>
               <label>
-                <span>Drehkreuz-Startpasswort</span>
+                <span data-ui-i18n="turnstilePasswordLabel">Drehkreuz-Startpasswort</span>
                 <input id="companyTurnstilePassword" type="password" placeholder="z.B. Gate!2025" autocomplete="new-password" />
               </label>
               <label>
-                <span>Anzahl Drehkreuze</span>
+                <span data-ui-i18n="turnstileCountLabel">Anzahl Drehkreuze</span>
                 <input id="companyTurnstileCount" type="number" min="1" max="20" step="1" value="1" />
               </label>
               <button type="submit" class="ghost-button full-width" data-ui-i18n="btnCreateCompany">Baufirma anlegen</button>
@@ -1222,7 +1222,7 @@
                 <h3 data-ui-i18n="companiesListH3">Baufirmen und Pläne</h3>
               </div>
               <div class="button-row">
-                <button id="exportCompanyDocEmailsBtn" type="button" class="ghost-button">Dokument-Mails exportieren</button>
+                <button id="exportCompanyDocEmailsBtn" type="button" class="ghost-button" data-ui-i18n="btnExportCompanyDocEmails">Dokument-Mails exportieren</button>
               </div>
             </div>
             <div id="companyList" class="card-list"></div>
@@ -1231,8 +1231,8 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Compliance</p>
-                <h3>Dokumentenstatus</h3>
+                <p class="eyebrow" data-ui-i18n="complianceEyebrow">Compliance</p>
+                <h3 data-ui-i18n="complianceH3">Dokumentenstatus</h3>
               </div>
             </div>
             <div id="compliancePanel" class="card-list"></div>
@@ -1241,8 +1241,8 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Audit</p>
-                <h3>Letzte Systemereignisse</h3>
+                <p class="eyebrow" data-ui-i18n="recentAuditEyebrow">Audit</p>
+                <h3 data-ui-i18n="recentAuditH3">Letzte Systemereignisse</h3>
               </div>
             </div>
             <div id="auditLogPanel" class="card-list"></div>
@@ -1300,8 +1300,8 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Vorschau</p>
-                <h3>Rechnung vor Versand prüfen</h3>
+                <p class="eyebrow" data-ui-i18n="invoicePreviewEyebrow">Vorschau</p>
+                <h3 data-ui-i18n="invoicePreviewH3">Rechnung vor Versand prüfen</h3>
               </div>
               <button id="invoicePreviewButton" type="button" class="ghost-button" data-ui-i18n="btnUpdatePreview">Vorschau aktualisieren</button>
             </div>
@@ -1326,8 +1326,8 @@
                 <span data-ui-i18n="labelAuditRole">Rolle</span>
                 <select id="auditActorRole">
                   <option value="" data-ui-i18n="optAllDir">Alle</option>
-                  <option value="superadmin">Super-Admin</option>
-                  <option value="company-admin">Firmen-Admin</option>
+                  <option value="superadmin" data-ui-i18n="optRoleSuperAdmin">Super-Admin</option>
+                  <option value="company-admin" data-ui-i18n="optRoleCompanyAdmin">Firmen-Admin</option>
                   <option value="turnstile" data-ui-i18n="optCheckin">Drehkreuz</option>
                 </select>
               </label>
@@ -1354,7 +1354,7 @@
     <div class="access-feedback-card">
       <img class="website-logo-sync website-logo website-logo-feedback hidden" alt="Firmenlogo" />
       <img id="accessFeedbackPhoto" class="access-feedback-photo" alt="Mitarbeiterfoto" />
-      <h3 id="accessFeedbackTitle">Zutritt gebucht</h3>
+      <h3 id="accessFeedbackTitle" data-ui-i18n="accessFeedbackCheckin">Zutritt gebucht</h3>
       <p id="accessFeedbackMeta"></p>
     </div>
   </div>
