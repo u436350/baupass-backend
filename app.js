@@ -12203,6 +12203,29 @@ async function handleSettingsSubmit(event) {
   }
 }
 
+async function sendOtpTestMail() {
+  const btn = document.querySelector("#otpTestBtn");
+  const result = document.querySelector("#otpTestResult");
+  const email = window.prompt("OTP-Test: An welche E-Mail-Adresse soll der Code gesendet werden?");
+  if (!email || !email.includes("@")) return;
+  if (btn) btn.disabled = true;
+  if (result) result.textContent = "⏳ …";
+  try {
+    const res = await apiRequest(API_BASE + "/api/settings/otp-test", { method: "POST", body: { email } });
+    if (result) {
+      result.style.color = "#16a34a";
+      result.textContent = `✅ OTP-Code gesendet an ${res.recipient} (Code: 123456)`;
+    }
+  } catch (err) {
+    if (result) {
+      result.style.color = "#dc2626";
+      result.textContent = `❌ Fehler: ${err.message}`;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function sendSmtpTestMail() {
   const btn = document.querySelector("#smtpTestBtn");
   const result = document.querySelector("#smtpTestResult");

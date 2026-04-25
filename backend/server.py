@@ -13,7 +13,7 @@ import re
 import threading
 import time
 import math
-from contextlib import closing
+from contextlib import closing, contextmanager
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -2140,6 +2140,22 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
         return False, str(exc)
 
 
+@contextmanager
+def _smtp_connect(host, port, use_tls):
+    """Context manager: connects to SMTP, auto-selects SSL (port 465) vs STARTTLS."""
+    port = int(port or 587)
+    use_ssl = port == 465
+    use_tls_flag = int(use_tls or 0) == 1
+    if use_ssl:
+        with smtplib.SMTP_SSL(host, port, timeout=15) as smtp:
+            yield smtp
+    else:
+        with smtplib.SMTP(host, port, timeout=15) as smtp:
+            if use_tls_flag:
+                smtp.starttls()
+            yield smtp
+
+
 def _build_email_html(platform_name: str, primary_color: str, accent_color: str, title: str, body_html: str, footer_name: str) -> str:
     """Return a branded HTML email string."""
     # Inline SVG logo (simplified icon part only for email compatibility)
@@ -2273,9 +2289,7 @@ def _send_otp_email_to_user(db, user_row, code):
     msg.add_alternative(html_content, subtype="html")
 
     try:
-        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
-            if int(settings["smtp_use_tls"] or 0) == 1:
-                smtp.starttls()
+        with _smtp_connect(smtp_host, settings["smtp_port"] or 587, settings["smtp_use_tls"] or 0) as smtp:
             smtp_username = (settings["smtp_username"] or "").strip()
             if smtp_username:
                 smtp.login(smtp_username, settings["smtp_password"] or "")
@@ -3857,9 +3871,7 @@ def smtp_test():
             f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_sender}\nHost: {smtp_host}\n\n{operator_name}"
         )
         msg.add_alternative(html_content, subtype="html")
-        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as s:
-            if int(settings["smtp_use_tls"] or 0) == 1:
-                s.starttls()
+        with _smtp_connect(smtp_host, settings["smtp_port"] or 587, settings["smtp_use_tls"] or 0) as s:
             smtp_username = (settings["smtp_username"] or "").strip()
             if smtp_username:
                 s.login(smtp_username, settings["smtp_password"] or "")
@@ -9823,6 +9835,31 @@ def delete_worker_document(worker_id, doc_id):
     db.execute("DELETE FROM worker_documents WHERE id = ?", (doc_id,))
     db.commit()
     return jsonify({"ok": True})
+
+
+@app.post("/api/settings/otp-test")
+@require_auth
+@require_roles("superadmin")
+def otp_test_send():
+    """Send a test OTP email to a specific email address to verify OTP delivery works."""
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    target_email = (payload.get("email") or "").strip()
+    if not target_email or "@" not in target_email:
+        return jsonify({"ok": False, "error": "invalid_email"}), 400
+    test_code = "123456"
+    # Use a fake user_row with the target email
+    class _FakeUser:
+        def keys(self):
+            return ["email", "username"]
+        def __getitem__(self, k):
+            return target_email if k == "email" else "test-otp"
+        def get(self, k, default=""):
+            return target_email if k == "email" else ("test-otp" if k == "username" else default)
+    sent = _send_otp_email_to_user(db, _FakeUser(), test_code)
+    if sent:
+        return jsonify({"ok": True, "recipient": target_email})
+    return jsonify({"ok": False, "error": "send_failed_check_logs"}), 500
 
 
 # IMAP-Settings GET/PATCH (in allgemeine Settings integriert)
