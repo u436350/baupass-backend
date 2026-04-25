@@ -5791,7 +5791,11 @@ function normalizeSystemTheme(value) {
 }
 
 function getStoredSystemTheme() {
-  return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
+  try {
+    return normalizeSystemTheme(window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY));
+  } catch {
+    return SYSTEM_THEME_WHITE;
+  }
 }
 
 function getSystemThemeTexts() {
@@ -5868,9 +5872,17 @@ function applySystemTheme(mode, { persist = true } = {}) {
   document.body.classList.add(selectedMode === SYSTEM_THEME_BLACK ? "theme-black" : "theme-white");
   document.body.style.setProperty("--window-color", selectedMode === SYSTEM_THEME_BLACK ? "#000000" : "#ffffff");
   if (persist) {
-    window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
+    try {
+      window.localStorage.setItem(SYSTEM_THEME_STORAGE_KEY, selectedMode);
+    } catch {
+      // ignore storage errors (private mode / blocked storage)
+    }
   }
-  window.localStorage.removeItem("baupass-system-theme-color");
+  try {
+    window.localStorage.removeItem("baupass-system-theme-color");
+  } catch {
+    // ignore storage errors (private mode / blocked storage)
+  }
 
   const button = document.querySelector("#systemThemeToggleButton");
   if (button) {
@@ -7049,6 +7061,7 @@ function showSupportReadOnlyAlert() {
 function syncSupportLoginUi() {
   const context = state.supportLoginContext || loadSupportLoginContext();
   state.supportLoginContext = context;
+  updateLoginOtpVisibility();
   if (context?.companyId) {
     persistSupportLoginContext(context);
     try {
