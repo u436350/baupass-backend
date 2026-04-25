@@ -425,6 +425,10 @@ const UI_TRANSLATIONS = {
     alertOtpRequired: "Fuer dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.",
     alertOtpInvalid: "OTP-Code ist ungueltig oder abgelaufen. Bitte neuen Code eingeben.",
     alertTooManyAttempts: "Zu viele Fehlversuche. Bitte 10 Minuten warten und erneut versuchen.",
+    loginSecurityTitle: "Sicherheitswarnung",
+    loginSecurityHint: "Es wurden 3 fehlgeschlagene Login-Versuche erkannt.",
+    loginSecurityCallPrefix: "Bitte Admin sofort anrufen unter:",
+    loginSecurityFooter: "Nach Ruecksprache kann das Passwort zurueckgesetzt werden.",
     alertForbiddenTenantHost: "Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.",
     alertSupportCompanyMismatch: "Dieser Login passt nicht zur ausgewaehlten Firma. Bitte den Firmen-Admin der markierten Firma verwenden.",
     alertLoginCompanyLocked: "Diese Firma ist gesperrt. Bitte zuerst offene Rechnungen begleichen oder die Sperre im Superadmin aufheben.",
@@ -1090,6 +1094,10 @@ const UI_TRANSLATIONS = {
     alertOtpRequired: "2FA is active for this account. Please enter the OTP code.",
     alertOtpInvalid: "OTP code is invalid or expired. Please enter a new code.",
     alertTooManyAttempts: "Too many failed attempts. Please wait 10 minutes and try again.",
+    loginSecurityTitle: "Security Alert",
+    loginSecurityHint: "3 failed sign-in attempts were detected.",
+    loginSecurityCallPrefix: "Please call admin immediately at:",
+    loginSecurityFooter: "After verification, the password can be reset.",
     alertForbiddenTenantHost: "This access is only allowed via the approved company domain.",
     alertSupportCompanyMismatch: "This login does not match the selected company. Please use the company admin of the marked company.",
     alertLoginCompanyLocked: "This company is locked. Please settle outstanding invoices or lift the lock in superadmin.",
@@ -6007,8 +6015,11 @@ let invoiceApprovalRefreshTimer = null;
 let turnstileTapInFlight = false;
 let turnstileTapLiveResetTimer = null;
 let lastLoginFocusAt = 0;
+let loginLockOverlayTimer = null;
 let companyBrandingPreviewOverride = "";
 let superadminUiPreviewCompanyId = "";
+const LOGIN_HARD_LOCK_MS = 10 * 60 * 1000;
+const LOGIN_SUPPORT_PHONE_FALLBACK = "+49 170 0000000";
 
 const PLAN_LABELS = {
   tageskarte: "Besucherkarte",
@@ -6063,6 +6074,10 @@ const state = {
   accessFilter: { from: "", to: "", direction: "", gate: "" },
   porterLive: { workerId: null, lastEvent: null },
   twofa: { enabled: false, secret: "", otpauthUri: "" },
+  loginSecurity: {
+    failCount: 0,
+    blockedUntil: 0,
+  },
   invoiceJustPaidId: "",
   invoiceSeenIds: {},
   invoiceNewIds: {},
@@ -13548,10 +13563,115 @@ function renderCollectionsList() {
   };
 }
 
+function getSupportPhoneForLockScreen() {
+  const fromStorage = String(window.localStorage.getItem("baupass-support-phone") || "").trim();
+  return fromStorage || LOGIN_SUPPORT_PHONE_FALLBACK;
+}
+
+function clearLoginSecurityLockScreen() {
+  const overlay = document.getElementById("loginSecurityLockOverlay");
+  if (overlay) {
+    overlay.remove();
+  }
+  if (loginLockOverlayTimer) {
+    window.clearInterval(loginLockOverlayTimer);
+    loginLockOverlayTimer = null;
+  }
+}
+
+function updateLoginLockScreenCountdown() {
+  const countdown = document.getElementById("loginSecurityCountdown");
+  if (!countdown) {
+    return;
+  }
+  const remainingMs = Math.max(0, Number(state.loginSecurity?.blockedUntil || 0) - Date.now());
+  const remainingMinutes = Math.ceil(remainingMs / 60000);
+  if (remainingMs <= 0) {
+    countdown.textContent = "";
+    clearLoginSecurityLockScreen();
+    return;
+  }
+  countdown.textContent = `${remainingMinutes} min`;
+}
+
+function showLoginSecurityLockScreen() {
+  clearLoginSecurityLockScreen();
+  const supportPhone = getSupportPhoneForLockScreen();
+  const safePhone = escapeHtml(supportPhone);
+  const telPhone = encodeURIComponent(supportPhone.replace(/\s+/g, ""));
+
+  const overlay = document.createElement("div");
+  overlay.id = "loginSecurityLockOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "99999";
+  overlay.style.display = "grid";
+  overlay.style.placeItems = "center";
+  overlay.style.background = "radial-gradient(circle at 20% 20%, #ff7878 0%, #b30000 45%, #5a0000 100%)";
+  overlay.style.color = "#fff";
+
+  overlay.innerHTML = `
+    <div style="text-align:center;max-width:720px;padding:24px;">
+      <div style="font-size:1rem;letter-spacing:0.18em;text-transform:uppercase;opacity:0.92;">AI Security Screen</div>
+      <h2 style="margin:10px 0 8px;font-size:clamp(1.8rem,4vw,3rem);line-height:1.1;">${escapeHtml(uiT("loginSecurityTitle"))}</h2>
+      <p style="margin:0 0 12px;font-size:1.1rem;line-height:1.5;">${escapeHtml(uiT("loginSecurityHint"))}</p>
+      <p style="margin:0 0 8px;font-size:1rem;opacity:0.95;">${escapeHtml(uiT("loginSecurityCallPrefix"))}</p>
+      <a href="tel:${telPhone}" style="display:inline-block;margin:4px 0 14px;padding:12px 18px;border-radius:10px;background:#fff;color:#900;text-decoration:none;font-weight:800;font-size:1.2rem;">${safePhone}</a>
+      <p style="margin:0 0 8px;font-size:0.95rem;opacity:0.95;">${escapeHtml(uiT("alertTooManyAttempts"))}</p>
+      <p style="margin:0 0 4px;font-size:0.95rem;opacity:0.95;">${escapeHtml(uiT("loginSecurityFooter"))}</p>
+      <p style="margin:8px 0 0;font-size:0.9rem;opacity:0.8;">Lock aktiv: <span id="loginSecurityCountdown"></span></p>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  updateLoginLockScreenCountdown();
+  loginLockOverlayTimer = window.setInterval(updateLoginLockScreenCountdown, 1000);
+}
+
+function registerLoginFailure(errorCode) {
+  if (errorCode !== "invalid_credentials") {
+    return;
+  }
+  state.loginSecurity.failCount = Number(state.loginSecurity.failCount || 0) + 1;
+  if (state.loginSecurity.failCount >= 3) {
+    state.loginSecurity.blockedUntil = Date.now() + LOGIN_HARD_LOCK_MS;
+    showLoginSecurityLockScreen();
+  }
+}
+
+function resetLoginFailureCounter() {
+  state.loginSecurity.failCount = 0;
+  state.loginSecurity.blockedUntil = 0;
+  clearLoginSecurityLockScreen();
+}
+
+function isLoginBlockedLocally() {
+  return Number(state.loginSecurity.blockedUntil || 0) > Date.now();
+}
+
+async function tryAutofillOtpFromClipboard() {
+  if (!navigator?.clipboard?.readText) {
+    return;
+  }
+  try {
+    const text = String(await navigator.clipboard.readText() || "").trim();
+    if (/^\d{6}$/.test(text) && !elements.loginOtpCode.value.trim()) {
+      elements.loginOtpCode.value = text;
+    }
+  } catch {
+    // Clipboard read is optional and may be blocked by browser permissions.
+  }
+}
+
 async function handleLoginSubmit(event) {
   event.preventDefault();
   const supportContext = state.supportLoginContext || loadSupportLoginContext();
   const loginScope = elements.loginScope?.value || "auto";
+  const useTurnstileLock = loginScope === "turnstile";
+  if (useTurnstileLock && isLoginBlockedLocally()) {
+    showLoginSecurityLockScreen();
+    return;
+  }
   try {
     const payload = await apiRequest(API_BASE + "/api/login", {
       auth: false,
@@ -13573,6 +13693,7 @@ async function handleLoginSubmit(event) {
       throw new Error("invalid_login_response");
     }
 
+    resetLoginFailureCounter();
     token = payload.token;
     persistSessionToken(token);
     state.currentUser = payload.user;
@@ -13596,14 +13717,22 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "otp_required") {
+      resetLoginFailureCounter();
+      await tryAutofillOtpFromClipboard();
+      elements.loginOtpCode?.focus();
       window.alert(uiT("alertOtpRequired"));
       return;
     }
     if (error.message === "otp_invalid") {
+      elements.loginOtpCode?.focus();
       window.alert(uiT("alertOtpInvalid"));
       return;
     }
     if (error.message === "too_many_attempts") {
+      if (useTurnstileLock) {
+        state.loginSecurity.blockedUntil = Date.now() + LOGIN_HARD_LOCK_MS;
+        showLoginSecurityLockScreen();
+      }
       window.alert(uiT("alertTooManyAttempts"));
       return;
     }
@@ -13624,6 +13753,9 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "invalid_credentials") {
+      if (useTurnstileLock) {
+        registerLoginFailure(error.message);
+      }
       window.alert(uiT("alertInvalidCredentials"));
       return;
     }
