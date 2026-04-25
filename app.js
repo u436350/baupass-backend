@@ -359,6 +359,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "PIN muss aus 4 bis 8 Ziffern bestehen.",
     alertPinResetSuccessFor: "PIN fuer {name} wurde erfolgreich zurueckgesetzt.",
     alertPinResetFailed: "PIN konnte nicht zurueckgesetzt werden: {error}",
+    alertPhotoOverrideApproved: "Foto-Override freigegeben. Mitarbeiterdaten wurden gespeichert.",
+    alertPhotoOverrideApproveFailed: "Freigabe fehlgeschlagen: {error}",
+    alertPhotoOverrideRejectReasonRequired: "Ablehnungsgrund ist erforderlich.",
+    alertPhotoOverrideRejected: "Foto-Override abgelehnt.",
+    alertPhotoOverrideRejectFailed: "Ablehnung fehlgeschlagen: {error}",
+    alertDocEmailSaveFailed: "Dokument-E-Mail konnte nicht gespeichert werden: {error}",
+    alertCompanyDeleted: "Firma {name} wurde geloescht.",
+    alertCompanyDeleteFailed: "Firma {name} konnte nicht geloescht werden: {error}",
+    alertCompanyLocked: "Firma {name} wurde gesperrt.",
+    alertCompanyUnlocked: "Sperre fuer {name} wurde aufgehoben.",
+    alertCompanyStatusChangeFailed: "Statuswechsel fuer {name} fehlgeschlagen: {error}",
+    alertBrandingPresetSaveFailed: "Design-Preset konnte nicht gespeichert werden: {error}",
+    alertPasswordMinLength: "Passwort muss mindestens 4 Zeichen haben.",
+    alertTurnstileCreateFailed: "Drehkreuz konnte nicht angelegt werden: {error}",
+    alertTurnstilePasswordUpdated: "Drehkreuz-Passwort wurde aktualisiert.",
+    alertTurnstilePasswordResetFailed: "Passwort-Reset fehlgeschlagen: {error}",
+    alertApiKeyRotationFailed: "API-Key-Rotation fehlgeschlagen: {error}",
+    alertTurnstileToggleFailed: "Drehkreuz konnte nicht umgeschaltet werden: {error}",
+    alertWorkerDeletedCannotEdit: "Geloeschte Mitarbeiter koennen nicht bearbeitet werden.",
+    alertDataCopied: "Daten kopiert.",
+    alertPrintWindowFailed: "Druckfenster konnte nicht geoeffnet werden.",
+    alertAppLinkCopied: "App-Link kopiert.",
+    alertQrNotReadyYet: "QR-Code wird noch erzeugt. Bitte kurz erneut versuchen.",
+    alertAccessBookingFailed: "Zutritt konnte nicht gebucht werden: {error}",
+    alertWorkerSaveFailed: "Mitarbeiter konnte nicht gespeichert werden: {error}",
+    alertPhotoMatchFailed: "Fotovergleich fehlgeschlagen ({score}%). Speichern ist gesperrt. Bitte erneut fotografieren oder Superadmin kontaktieren.",
+    alertOverrideReasonTooShort: "Override-Grund zu kurz. Bitte mindestens 8 Zeichen eingeben.",
+    alertPhotoOverrideRequested: "Foto-Override beantragt (Freigabe-ID: {id}).\nEin zweiter Superadmin muss die Aenderung freigeben, bevor sie gespeichert wird.",
+    alertBadgePinInvalid: "Badge-PIN muss aus 4 bis 8 Ziffern bestehen.",
+    alertDuplicatePhysicalCardId: "Diese physische Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet.",
+    alertPhotoOverrideSuperadminOnly: "Foto-Override ist nur fuer Superadmin erlaubt.",
+    alertPhotoOverrideReasonRequired: "Bitte einen ausreichenden Grund fuer den Foto-Override angeben.",
+    alertInvoiceSavedSendFailed: "Rechnung gespeichert, Versand fehlgeschlagen: {error}",
+    alertInvoiceNumberDuplicate: "Rechnungsnummer {number} ist bereits vergeben. Bitte eine andere Nummer verwenden.",
+    alertInvoiceSendFailed: "Rechnung konnte nicht versendet werden: {error}",
+    alertInvoiceNumberLength: "Rechnungsnummer muss zwischen 3 und 64 Zeichen haben.",
+    alertInvoiceDateInvalid: "Rechnungsdatum oder Faelligkeitsdatum ist ungueltig.",
+    alertInvoiceDueDateBeforeIssue: "Faelligkeitsdatum darf nicht vor dem Rechnungsdatum liegen.",
+    alertInvoiceVatRange: "MwSt. muss zwischen 0 und 100 liegen.",
+    alertApprovalRejectReasonRequired: "Ablehnung ohne Begruendung ist nicht erlaubt.",
+    alertApprovalConfirmed: "Freigabe bestaetigt und Aktion ausgefuehrt.",
+    alertApprovalRejected: "Freigabe wurde abgelehnt.",
+    alertApprovalUpdated: "Freigabe aktualisiert.",
+    alertApprovalActionFailed: "Freigabe-Aktion fehlgeschlagen: {error}",
+    alertInvoiceRetrySentDeadLetter: "Rechnung wurde erfolgreich erneut versendet und aus Dead-Letter entfernt.",
+    alertInvoiceRetrySent: "Rechnung wurde erfolgreich erneut versendet.",
+    alertInvoiceRetryFailed: "Erneuter Versand fehlgeschlagen: {error}",
+    alertDeadLetterResolveApprovalRequested: "Freigabe angefordert ({id}). Ein zweiter Superadmin muss bestaetigen.",
+    alertDeadLetterResolveFailed: "Dead-Letter-Fall konnte nicht erledigt werden: {error}",
+    alertGenericError: "Fehler: {error}",
+    alertCollectionsStatusChangeFailed: "Statuswechsel fehlgeschlagen: {error}",
+    alertActionFailed: "Aktion fehlgeschlagen: {error}",
+    alertInvoiceHistoryLoadFailed: "Historie konnte nicht geladen werden: {error}",
+    alertAccessExportFailed: "Zutrittsjournal-Export fehlgeschlagen: {error}",
+    alertWorkerExportFailed: "Mitarbeiterlisten-Export fehlgeschlagen: {error}",
+    alertSettingsSaveFailed: "Einstellungen konnten nicht gespeichert werden: {error}",
+    alertSystemRepairDone: "System-Reparatur wurde ausgefuehrt.",
+    alertSystemRepairFailed: "System-Reparatur fehlgeschlagen: {error}",
+    alertBrandingLoaded: "BauKometra Branding geladen. Jetzt nur noch auf Admin-Einstellungen speichern klicken.",
+    alertBrandingLoadFailed: "Branding konnte nicht geladen werden: {error}",
+    alertBrandingAltLoaded: "Alternative BauKometra Branding-Variante geladen. Jetzt nur noch auf Admin-Einstellungen speichern klicken.",
+    alertBrandingAltLoadFailed: "Alternative Branding-Variante konnte nicht geladen werden: {error}",
+    alertDayCloseAckFailed: "Tagesabschluss konnte nicht quittiert werden: {error}",
+    alertOtpRequired: "Fuer dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.",
+    alertOtpInvalid: "OTP-Code ist ungueltig oder abgelaufen. Bitte neuen Code eingeben.",
+    alertTooManyAttempts: "Zu viele Fehlversuche. Bitte 10 Minuten warten und erneut versuchen.",
+    alertForbiddenTenantHost: "Dieser Zugang ist nur ueber die freigegebene Firmen-Domain erlaubt.",
+    alertSupportCompanyMismatch: "Dieser Login passt nicht zur ausgewaehlten Firma. Bitte den Firmen-Admin der markierten Firma verwenden.",
+    alertLoginCompanyLocked: "Diese Firma ist gesperrt. Bitte zuerst offene Rechnungen begleichen oder die Sperre im Superadmin aufheben.",
+    alertInvalidCredentials: "Benutzername oder Passwort ist falsch. Bitte Daten pruefen und erneut versuchen.",
+    alertAdminIpNotAllowed: "Admin-Zugriff von dieser IP ist nicht erlaubt.",
+    alertLoginScopeMismatch: "Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswaehlen.",
+    alertLoginHttp405: "Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf {target}. Fuer GitHub Pages muss das Frontend dein Render-Backend nutzen.",
+    alertLoginFailed: "Login fehlgeschlagen: {error}",
+    alertPasswordResetEnterUsername: "Bitte zuerst Benutzername oder E-Mail eintragen.",
+    alertPasswordResetSent: "Wenn ein passender Account gefunden wurde, wurde eine Reset-E-Mail versendet.",
+    alertPasswordResetFailed: "Passwort-Reset konnte nicht gestartet werden: {error}",
+    alertPasswordSetSuccess: "Passwort wurde erfolgreich gesetzt. Du kannst dich jetzt anmelden.",
+    alertPasswordResetLinkFailed: "Reset-Link konnte nicht verwendet werden: {error}",
+    alertPasswordChanged: "Passwort geaendert. Bitte neu anmelden.",
+    alertPasswordChangeFailed: "Passwortwechsel fehlgeschlagen: {error}",
+    alert2faSetupFailed: "2FA Setup fehlgeschlagen: {error}",
+    alert2faEnableFailed: "2FA konnte nicht aktiviert werden: {error}",
+    alertDeviceDeleteFailed: "Fehler beim Loeschen: {error}",
+    alertCompanyCreateFailed: "Firma konnte nicht angelegt werden: {error}",
+    alert2faDisableFailed: "2FA konnte nicht deaktiviert werden: {error}",
+    alertExportFailed: "Export fehlgeschlagen: {error}",
+    alertNoDemoCompany: "Keine aktive Firma fuer Demo-Daten gefunden.",
+    alertDemoModeInvalid: "Ungueltiger Modus. Bitte replace oder append verwenden.",
+    alertDemoLoadFailed: "Demo-Daten konnten nicht geladen werden: {error}",
+    alertImportSuccess: "Import erfolgreich angewendet.",
+    alertImportFailed: "Import fehlgeschlagen: {error}",
+    alertCsvExportFailed: "CSV-Export fehlgeschlagen: {error}",
+    alertIncidentExportFailed: "Incident-Export fehlgeschlagen: {error}",
+    alertSelectInvoiceForRetry: "Bitte mindestens eine Rechnung in der Warteschlange auswaehlen.",
+    alertBulkRetryDone: "Bulk-Retry abgeschlossen. Erfolgreich: {sent}, Fehlgeschlagen: {failed}, Uebersprungen: {skipped}",
+    alertBulkRetryFailed: "Bulk-Retry fehlgeschlagen: {error}",
+    alertNoCriticalCases: "Aktuell gibt es keine kritischen Faelle (Score >= 70).",
+    alertCriticalBulkRetryDone: "Kritischer Bulk-Retry abgeschlossen. Erfolgreich: {sent}, Fehlgeschlagen: {failed}, Uebersprungen: {skipped}",
+    alertCriticalBulkRetryFailed: "Kritischer Bulk-Retry fehlgeschlagen: {error}",
+    alertDesktopInstallFailed: "Desktop-Installation konnte nicht gestartet werden.",
+    alertSubcompanyCreateFailed: "Subunternehmen konnte nicht angelegt werden: {error}",
+    alertDeleteFailed: "Fehler beim Loeschen: {error}",
+    alertStatusChangeFailed: "Fehler beim Status-Aendern: {error}",
+    alertReassignmentDone: "Neu-Zuordnung abgeschlossen. Treffer: {count}",
+    alertReassignmentFailed: "Neu-Zuordnung fehlgeschlagen: {error}",
     detailCloseTitle: "Schliessen",
     detailPhotoAlt: "Mitarbeiterfoto",
     detailCheckinBtn: "Anmelden (Check-in)",
@@ -847,6 +953,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "PIN must contain 4 to 8 digits.",
     alertPinResetSuccessFor: "PIN for {name} was reset successfully.",
     alertPinResetFailed: "PIN could not be reset: {error}",
+    alertPhotoOverrideApproved: "Photo override approved. Worker data has been saved.",
+    alertPhotoOverrideApproveFailed: "Approval failed: {error}",
+    alertPhotoOverrideRejectReasonRequired: "A rejection reason is required.",
+    alertPhotoOverrideRejected: "Photo override rejected.",
+    alertPhotoOverrideRejectFailed: "Rejection failed: {error}",
+    alertDocEmailSaveFailed: "Document email could not be saved: {error}",
+    alertCompanyDeleted: "Company {name} has been deleted.",
+    alertCompanyDeleteFailed: "Company {name} could not be deleted: {error}",
+    alertCompanyLocked: "Company {name} has been locked.",
+    alertCompanyUnlocked: "Lock for {name} has been lifted.",
+    alertCompanyStatusChangeFailed: "Status change for {name} failed: {error}",
+    alertBrandingPresetSaveFailed: "Design preset could not be saved: {error}",
+    alertPasswordMinLength: "Password must be at least 4 characters.",
+    alertTurnstileCreateFailed: "Turnstile could not be created: {error}",
+    alertTurnstilePasswordUpdated: "Turnstile password has been updated.",
+    alertTurnstilePasswordResetFailed: "Password reset failed: {error}",
+    alertApiKeyRotationFailed: "API key rotation failed: {error}",
+    alertTurnstileToggleFailed: "Turnstile could not be toggled: {error}",
+    alertWorkerDeletedCannotEdit: "Deleted workers cannot be edited.",
+    alertDataCopied: "Data copied.",
+    alertPrintWindowFailed: "Print window could not be opened.",
+    alertAppLinkCopied: "App link copied.",
+    alertQrNotReadyYet: "QR code is still being generated. Please try again shortly.",
+    alertAccessBookingFailed: "Access could not be booked: {error}",
+    alertWorkerSaveFailed: "Worker could not be saved: {error}",
+    alertPhotoMatchFailed: "Photo comparison failed ({score}%). Saving is blocked. Please retake the photo or contact a superadmin.",
+    alertOverrideReasonTooShort: "Override reason too short. Please enter at least 8 characters.",
+    alertPhotoOverrideRequested: "Photo override requested (Approval ID: {id}).\nA second superadmin must approve the change before it is saved.",
+    alertBadgePinInvalid: "Badge PIN must contain 4 to 8 digits.",
+    alertDuplicatePhysicalCardId: "This physical card ID is already assigned to another worker.",
+    alertPhotoOverrideSuperadminOnly: "Photo override is only allowed for superadmins.",
+    alertPhotoOverrideReasonRequired: "Please provide a sufficient reason for the photo override.",
+    alertInvoiceSavedSendFailed: "Invoice saved, sending failed: {error}",
+    alertInvoiceNumberDuplicate: "Invoice number {number} is already taken. Please use a different number.",
+    alertInvoiceSendFailed: "Invoice could not be sent: {error}",
+    alertInvoiceNumberLength: "Invoice number must be between 3 and 64 characters.",
+    alertInvoiceDateInvalid: "Invoice date or due date is invalid.",
+    alertInvoiceDueDateBeforeIssue: "Due date cannot be before invoice date.",
+    alertInvoiceVatRange: "VAT must be between 0 and 100.",
+    alertApprovalRejectReasonRequired: "Rejection without a reason is not allowed.",
+    alertApprovalConfirmed: "Approval confirmed and action executed.",
+    alertApprovalRejected: "Approval was rejected.",
+    alertApprovalUpdated: "Approval updated.",
+    alertApprovalActionFailed: "Approval action failed: {error}",
+    alertInvoiceRetrySentDeadLetter: "Invoice was successfully resent and removed from dead-letter queue.",
+    alertInvoiceRetrySent: "Invoice was successfully resent.",
+    alertInvoiceRetryFailed: "Resend failed: {error}",
+    alertDeadLetterResolveApprovalRequested: "Approval requested ({id}). A second superadmin must confirm.",
+    alertDeadLetterResolveFailed: "Dead-letter case could not be resolved: {error}",
+    alertGenericError: "Error: {error}",
+    alertCollectionsStatusChangeFailed: "Status change failed: {error}",
+    alertActionFailed: "Action failed: {error}",
+    alertInvoiceHistoryLoadFailed: "History could not be loaded: {error}",
+    alertAccessExportFailed: "Access log export failed: {error}",
+    alertWorkerExportFailed: "Worker list export failed: {error}",
+    alertSettingsSaveFailed: "Settings could not be saved: {error}",
+    alertSystemRepairDone: "System repair has been executed.",
+    alertSystemRepairFailed: "System repair failed: {error}",
+    alertBrandingLoaded: "BauKometra branding loaded. Just click Save in Admin Settings.",
+    alertBrandingLoadFailed: "Branding could not be loaded: {error}",
+    alertBrandingAltLoaded: "Alternative BauKometra branding loaded. Just click Save in Admin Settings.",
+    alertBrandingAltLoadFailed: "Alternative branding could not be loaded: {error}",
+    alertDayCloseAckFailed: "Day close could not be acknowledged: {error}",
+    alertOtpRequired: "2FA is active for this account. Please enter the OTP code.",
+    alertOtpInvalid: "OTP code is invalid or expired. Please enter a new code.",
+    alertTooManyAttempts: "Too many failed attempts. Please wait 10 minutes and try again.",
+    alertForbiddenTenantHost: "This access is only allowed via the approved company domain.",
+    alertSupportCompanyMismatch: "This login does not match the selected company. Please use the company admin of the marked company.",
+    alertLoginCompanyLocked: "This company is locked. Please settle outstanding invoices or lift the lock in superadmin.",
+    alertInvalidCredentials: "Username or password is incorrect. Please check your details and try again.",
+    alertAdminIpNotAllowed: "Admin access from this IP is not allowed.",
+    alertLoginScopeMismatch: "Access type does not match the account. Please select server admin / company admin correctly.",
+    alertLoginHttp405: "Login failed: 405. The login request is currently landing on {target}. For GitHub Pages, the frontend must use your Render backend.",
+    alertLoginFailed: "Login failed: {error}",
+    alertPasswordResetEnterUsername: "Please enter a username or email first.",
+    alertPasswordResetSent: "If a matching account was found, a reset email has been sent.",
+    alertPasswordResetFailed: "Password reset could not be started: {error}",
+    alertPasswordSetSuccess: "Password has been set successfully. You can now sign in.",
+    alertPasswordResetLinkFailed: "Reset link could not be used: {error}",
+    alertPasswordChanged: "Password changed. Please sign in again.",
+    alertPasswordChangeFailed: "Password change failed: {error}",
+    alert2faSetupFailed: "2FA setup failed: {error}",
+    alert2faEnableFailed: "2FA could not be activated: {error}",
+    alertDeviceDeleteFailed: "Error deleting: {error}",
+    alertCompanyCreateFailed: "Company could not be created: {error}",
+    alert2faDisableFailed: "2FA could not be deactivated: {error}",
+    alertExportFailed: "Export failed: {error}",
+    alertNoDemoCompany: "No active company found for demo data.",
+    alertDemoModeInvalid: "Invalid mode. Please use replace or append.",
+    alertDemoLoadFailed: "Demo data could not be loaded: {error}",
+    alertImportSuccess: "Import applied successfully.",
+    alertImportFailed: "Import failed: {error}",
+    alertCsvExportFailed: "CSV export failed: {error}",
+    alertIncidentExportFailed: "Incident export failed: {error}",
+    alertSelectInvoiceForRetry: "Please select at least one invoice in the queue.",
+    alertBulkRetryDone: "Bulk retry completed. Sent: {sent}, Failed: {failed}, Skipped: {skipped}",
+    alertBulkRetryFailed: "Bulk retry failed: {error}",
+    alertNoCriticalCases: "There are currently no critical cases (score >= 70).",
+    alertCriticalBulkRetryDone: "Critical bulk retry completed. Sent: {sent}, Failed: {failed}, Skipped: {skipped}",
+    alertCriticalBulkRetryFailed: "Critical bulk retry failed: {error}",
+    alertDesktopInstallFailed: "Desktop installation could not be started.",
+    alertSubcompanyCreateFailed: "Subcontractor could not be created: {error}",
+    alertDeleteFailed: "Error deleting: {error}",
+    alertStatusChangeFailed: "Error changing status: {error}",
+    alertReassignmentDone: "Reassignment completed. Matches: {count}",
+    alertReassignmentFailed: "Reassignment failed: {error}",
     detailCloseTitle: "Close",
     detailPhotoAlt: "Worker photo",
     detailCheckinBtn: "Check in",
@@ -1372,6 +1584,119 @@ const UI_TRANSLATIONS = {
     deviceNeverSeen: "Henüz sinyal yok",
     alertInstallUnavailable: "Kurulum bu tarayıcıda şu an mevcut değil. Chrome veya Edge'de tarayıcı menüsünden 'Uygulamayı kur' seçin.",
     alertSessionExpired: "Oturum süresi doldu. Lütfen tekrar giriş yapın.",
+    alertDeleteWorkerFailed: "Calisan silinemedi: {error}",
+    alertRestoreWorkerFailed: "Calisan geri yuklenemedi: {error}",
+    alertAppLinkCreateFailed: "Uygulama baglantisi olusturulamadi: {error}",
+    promptResetPinFor: "{name} icin yeni rozet PIN (4-8 rakam):",
+    alertPinMustDigits: "PIN 4 ila 8 rakamdan olusmalıdır.",
+    alertPinResetSuccessFor: "{name} icin PIN basariyla sifirlandi.",
+    alertPinResetFailed: "PIN sifirlanamazdi: {error}",
+    alertPhotoOverrideApproved: "Fotograf gecersiz kilma onaylandi. Calisan verileri kaydedildi.",
+    alertPhotoOverrideApproveFailed: "Onay basarisiz oldu: {error}",
+    alertPhotoOverrideRejectReasonRequired: "Reddetme nedeni gereklidir.",
+    alertPhotoOverrideRejected: "Fotograf gecersiz kilma reddedildi.",
+    alertPhotoOverrideRejectFailed: "Reddetme basarisiz oldu: {error}",
+    alertDocEmailSaveFailed: "Belge e-postası kaydedilemedi: {error}",
+    alertCompanyDeleted: "{name} firmasi silindi.",
+    alertCompanyDeleteFailed: "{name} firmasi silinemedi: {error}",
+    alertCompanyLocked: "{name} firmasi kilitlendi.",
+    alertCompanyUnlocked: "{name} icin kilit kaldirildi.",
+    alertCompanyStatusChangeFailed: "{name} icin durum degisikligi basarisiz oldu: {error}",
+    alertBrandingPresetSaveFailed: "Tasarim on ayari kaydedilemedi: {error}",
+    alertPasswordMinLength: "Sifre en az 4 karakter olmalidir.",
+    alertTurnstileCreateFailed: "Turnike olusturulamadi: {error}",
+    alertTurnstilePasswordUpdated: "Turnike sifresi guncellendi.",
+    alertTurnstilePasswordResetFailed: "Sifre sifirlama basarisiz oldu: {error}",
+    alertApiKeyRotationFailed: "API anahtar rotasyonu basarisiz oldu: {error}",
+    alertTurnstileToggleFailed: "Turnike degistirilemedi: {error}",
+    alertWorkerDeletedCannotEdit: "Silinen calisanlar duzenlenemez.",
+    alertDataCopied: "Veriler kopyalandi.",
+    alertPrintWindowFailed: "Yazdir penceresi acilamadi.",
+    alertAppLinkCopied: "Uygulama baglantisi kopyalandi.",
+    alertQrNotReadyYet: "QR kodu olusturuluyor. Lutfen kisa sure sonra tekrar deneyin.",
+    alertAccessBookingFailed: "Erisim kaydedilemedi: {error}",
+    alertWorkerSaveFailed: "Calisan kaydedilemedi: {error}",
+    alertPhotoMatchFailed: "Fotograf karsilastirmasi basarisiz ({score}%). Kaydetme engellendi. Lutfen fotografi yeniden cekin veya bir superadmin ile iletisime gecin.",
+    alertOverrideReasonTooShort: "Gecersiz kilma nedeni cok kisa. Lutfen en az 8 karakter girin.",
+    alertPhotoOverrideRequested: "Fotograf gecersiz kilma talebinde bulunuldu (Onay ID: {id}).\nDegisiklik kaydedilmeden once ikinci bir superadmin onaylamalidir.",
+    alertBadgePinInvalid: "Rozet PIN 4 ila 8 rakamdan olusmalıdır.",
+    alertDuplicatePhysicalCardId: "Bu fiziksel kart kimligini baska bir calisana atanmistir.",
+    alertPhotoOverrideSuperadminOnly: "Fotograf gecersiz kilma yalnizca superadminler icin izinlidir.",
+    alertPhotoOverrideReasonRequired: "Lutfen fotograf gecersiz kilma icin yeterli bir neden belirtin.",
+    alertInvoiceSavedSendFailed: "Fatura kaydedildi, gonderim basarisiz oldu: {error}",
+    alertInvoiceNumberDuplicate: "{number} fatura numarasi zaten kullaniliyor. Lutfen baska bir numara kullanin.",
+    alertInvoiceSendFailed: "Fatura gonderilemedi: {error}",
+    alertInvoiceNumberLength: "Fatura numarasi 3 ila 64 karakter arasinda olmalidir.",
+    alertInvoiceDateInvalid: "Fatura tarihi veya vade tarihi gecersiz.",
+    alertInvoiceDueDateBeforeIssue: "Vade tarihi fatura tarihinden once olamaz.",
+    alertInvoiceVatRange: "KDV 0 ile 100 arasinda olmalidir.",
+    alertApprovalRejectReasonRequired: "Gerekcesiz reddetmeye izin verilmiyor.",
+    alertApprovalConfirmed: "Onay dogrulandi ve islem gerceklestirildi.",
+    alertApprovalRejected: "Onay reddedildi.",
+    alertApprovalUpdated: "Onay guncellendi.",
+    alertApprovalActionFailed: "Onay islemi basarisiz oldu: {error}",
+    alertInvoiceRetrySentDeadLetter: "Fatura basariyla yeniden gonderildi ve dead-letter kuyrugundan kaldirildi.",
+    alertInvoiceRetrySent: "Fatura basariyla yeniden gonderildi.",
+    alertInvoiceRetryFailed: "Yeniden gonderim basarisiz oldu: {error}",
+    alertDeadLetterResolveApprovalRequested: "Onay talep edildi ({id}). Ikinci bir superadmin onaylamalidir.",
+    alertDeadLetterResolveFailed: "Dead-letter davasi cozulemedi: {error}",
+    alertGenericError: "Hata: {error}",
+    alertCollectionsStatusChangeFailed: "Durum degisikligi basarisiz oldu: {error}",
+    alertActionFailed: "Islem basarisiz oldu: {error}",
+    alertInvoiceHistoryLoadFailed: "Gecmis yuklenemedi: {error}",
+    alertAccessExportFailed: "Erisim gunlugu disa aktarimi basarisiz oldu: {error}",
+    alertWorkerExportFailed: "Calisan listesi disa aktarimi basarisiz oldu: {error}",
+    alertSettingsSaveFailed: "Ayarlar kaydedilemedi: {error}",
+    alertSystemRepairDone: "Sistem onarimi gerceklestirildi.",
+    alertSystemRepairFailed: "Sistem onarimi basarisiz oldu: {error}",
+    alertBrandingLoaded: "BauKometra markasi yuklendi. Simdi Admin Ayarlari'nda kaydet dugmesine tiklayin.",
+    alertBrandingLoadFailed: "Marka yuklenemedi: {error}",
+    alertBrandingAltLoaded: "Alternatif BauKometra markasi yuklendi. Simdi Admin Ayarlari'nda kaydet dugmesine tiklayin.",
+    alertBrandingAltLoadFailed: "Alternatif marka yuklenemedi: {error}",
+    alertDayCloseAckFailed: "Gun sonu onaylanamadi: {error}",
+    alertOtpRequired: "Bu hesap icin 2FA aktif. Lutfen OTP kodunu girin.",
+    alertOtpInvalid: "OTP kodu gecersiz veya suresi dolmus. Lutfen yeni kod girin.",
+    alertTooManyAttempts: "Cok fazla basarisiz deneme. Lutfen 10 dakika bekleyin ve tekrar deneyin.",
+    alertForbiddenTenantHost: "Bu erisim yalnizca onaylanan sirket domaini uzerinden izinlidir.",
+    alertSupportCompanyMismatch: "Bu giris secilen sirketle eslesmiyor. Lutfen isaretlenen sirketin sirket admini kullanin.",
+    alertLoginCompanyLocked: "Bu sirket kilitli. Lutfen once acik faturalari odeyin veya superadminde kilidi kaldiriniz.",
+    alertInvalidCredentials: "Kullanici adi veya sifre yanlis. Lutfen bilgileri kontrol edin ve tekrar deneyin.",
+    alertAdminIpNotAllowed: "Bu IP'den admin erisimi izin verilmiyor.",
+    alertLoginScopeMismatch: "Erisim turu hesapla uyusmuyor. Lutfen sunucu-admin / sirket-admini dogru secin.",
+    alertLoginHttp405: "Giris basarisiz: 405. Giris istegi su anda {target} adresine dusuyor. GitHub Pages icin on yuz Render backend'inizi kullanmalidir.",
+    alertLoginFailed: "Giris basarisiz oldu: {error}",
+    alertPasswordResetEnterUsername: "Lutfen once kullanici adi veya e-posta girin.",
+    alertPasswordResetSent: "Eslesen bir hesap bulunursa, bir sifirlama e-postasi gonderildi.",
+    alertPasswordResetFailed: "Sifre sifirlama baslatılamadı: {error}",
+    alertPasswordSetSuccess: "Sifre basariyla ayarlandi. Artik giris yapabilirsiniz.",
+    alertPasswordResetLinkFailed: "Sifirlama baglantisi kullanılamadi: {error}",
+    alertPasswordChanged: "Sifre degistirildi. Lutfen yeniden giris yapin.",
+    alertPasswordChangeFailed: "Sifre degisikligi basarisiz oldu: {error}",
+    alert2faSetupFailed: "2FA kurulumu basarisiz oldu: {error}",
+    alert2faEnableFailed: "2FA etkinlestirilemedi: {error}",
+    alertDeviceDeleteFailed: "Silme hatasi: {error}",
+    alertCompanyCreateFailed: "Firma olusturulamadi: {error}",
+    alert2faDisableFailed: "2FA devre disi birakilamadi: {error}",
+    alertExportFailed: "Disa aktarma basarisiz: {error}",
+    alertNoDemoCompany: "Demo verileri icin aktif firma bulunamadi.",
+    alertDemoModeInvalid: "Gecersiz mod. Lutfen replace veya append kullanin.",
+    alertDemoLoadFailed: "Demo verileri yuklenemedi: {error}",
+    alertImportSuccess: "Iceri aktarma basariyla uygulanmadi.",
+    alertImportFailed: "Iceri aktarma basarisiz: {error}",
+    alertCsvExportFailed: "CSV disa aktarma basarisiz: {error}",
+    alertIncidentExportFailed: "Olay disa aktarma basarisiz: {error}",
+    alertSelectInvoiceForRetry: "Lutfen kuyrukta en az bir fatura secin.",
+    alertBulkRetryDone: "Toplu yeniden deneme tamamlandi. Gonderilen: {sent}, Basarisiz: {failed}, Atlanan: {skipped}",
+    alertBulkRetryFailed: "Toplu yeniden deneme basarisiz oldu: {error}",
+    alertNoCriticalCases: "Simdilik kritik durum yok (Skor >= 70).",
+    alertCriticalBulkRetryDone: "Kritik toplu yeniden deneme tamamlandi. Gonderilen: {sent}, Basarisiz: {failed}, Atlanan: {skipped}",
+    alertCriticalBulkRetryFailed: "Kritik toplu yeniden deneme basarisiz oldu: {error}",
+    alertDesktopInstallFailed: "Masa ustu kurulumu baslatılamadi.",
+    alertSubcompanyCreateFailed: "Taeron olusturulamadi: {error}",
+    alertDeleteFailed: "Silme hatasi: {error}",
+    alertStatusChangeFailed: "Durum degistirme hatasi: {error}",
+    alertReassignmentDone: "Yeniden atama tamamlandi. Eslesmeler: {count}",
+    alertReassignmentFailed: "Yeniden atama basarisiz oldu: {error}",
     btnPrintBadge: "Rozet yazdır",
     greetingMorning: "Günaydın",
     greetingDay: "İyi günler",
@@ -1634,6 +1959,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "يجب أن يكون PIN من 4 إلى 8 أرقام.",
     alertPinResetSuccessFor: "تمت إعادة تعيين PIN لـ {name} بنجاح.",
     alertPinResetFailed: "تعذر إعادة تعيين PIN: {error}",
+    alertPhotoOverrideApproved: "تمت الموافقة على تجاوز الصورة. تم حفظ بيانات العامل.",
+    alertPhotoOverrideApproveFailed: "فشل الموافقة: {error}",
+    alertPhotoOverrideRejectReasonRequired: "سبب الرفض مطلوب.",
+    alertPhotoOverrideRejected: "تم رفض تجاوز الصورة.",
+    alertPhotoOverrideRejectFailed: "فشل الرفض: {error}",
+    alertDocEmailSaveFailed: "تعذر حفظ بريد المستندات: {error}",
+    alertCompanyDeleted: "تم حذف الشركة {name}.",
+    alertCompanyDeleteFailed: "تعذر حذف الشركة {name}: {error}",
+    alertCompanyLocked: "تم قفل الشركة {name}.",
+    alertCompanyUnlocked: "تم رفع القفل عن {name}.",
+    alertCompanyStatusChangeFailed: "فشل تغيير حالة {name}: {error}",
+    alertBrandingPresetSaveFailed: "تعذر حفظ إعداد التصميم: {error}",
+    alertPasswordMinLength: "يجب أن تتكون كلمة المرور من 4 أحرف على الأقل.",
+    alertTurnstileCreateFailed: "تعذر إنشاء البوابة: {error}",
+    alertTurnstilePasswordUpdated: "تم تحديث كلمة مرور البوابة.",
+    alertTurnstilePasswordResetFailed: "فشل إعادة تعيين كلمة المرور: {error}",
+    alertApiKeyRotationFailed: "فشل تدوير مفتاح API: {error}",
+    alertTurnstileToggleFailed: "تعذر تبديل البوابة: {error}",
+    alertWorkerDeletedCannotEdit: "لا يمكن تعديل العمال المحذوفين.",
+    alertDataCopied: "تم نسخ البيانات.",
+    alertPrintWindowFailed: "تعذر فتح نافذة الطباعة.",
+    alertAppLinkCopied: "تم نسخ رابط التطبيق.",
+    alertQrNotReadyYet: "رمز QR لا يزال قيد الإنشاء. يرجى المحاولة مرة أخرى بعد لحظة.",
+    alertAccessBookingFailed: "تعذر حجز الدخول: {error}",
+    alertWorkerSaveFailed: "تعذر حفظ بيانات العامل: {error}",
+    alertPhotoMatchFailed: "فشلت مقارنة الصور ({score}٪). تم حظر الحفظ. يرجى التقاط صورة جديدة أو الاتصال بمسؤول النظام.",
+    alertOverrideReasonTooShort: "سبب التجاوز قصير جداً. يرجى إدخال 8 أحرف على الأقل.",
+    alertPhotoOverrideRequested: "تم طلب تجاوز الصورة (معرف الموافقة: {id}).\nيجب على مسؤول نظام ثانٍ الموافقة قبل حفظ التغيير.",
+    alertBadgePinInvalid: "يجب أن يتكون رمز PIN للبطاقة من 4 إلى 8 أرقام.",
+    alertDuplicatePhysicalCardId: "معرف البطاقة الفعلية هذا مخصص لعامل آخر بالفعل.",
+    alertPhotoOverrideSuperadminOnly: "تجاوز الصورة مسموح فقط للمسؤولين العامين.",
+    alertPhotoOverrideReasonRequired: "يرجى تقديم سبب كافٍ لتجاوز الصورة.",
+    alertInvoiceSavedSendFailed: "تم حفظ الفاتورة، فشل الإرسال: {error}",
+    alertInvoiceNumberDuplicate: "رقم الفاتورة {number} مستخدم بالفعل. يرجى استخدام رقم آخر.",
+    alertInvoiceSendFailed: "تعذر إرسال الفاتورة: {error}",
+    alertInvoiceNumberLength: "يجب أن يكون رقم الفاتورة بين 3 و64 حرفاً.",
+    alertInvoiceDateInvalid: "تاريخ الفاتورة أو تاريخ الاستحقاق غير صالح.",
+    alertInvoiceDueDateBeforeIssue: "لا يمكن أن يسبق تاريخ الاستحقاق تاريخ الفاتورة.",
+    alertInvoiceVatRange: "يجب أن تكون نسبة الضريبة بين 0 و100.",
+    alertApprovalRejectReasonRequired: "الرفض بدون سبب غير مسموح به.",
+    alertApprovalConfirmed: "تمت الموافقة وتنفيذ الإجراء.",
+    alertApprovalRejected: "تم رفض الموافقة.",
+    alertApprovalUpdated: "تم تحديث الموافقة.",
+    alertApprovalActionFailed: "فشل إجراء الموافقة: {error}",
+    alertInvoiceRetrySentDeadLetter: "تم إعادة إرسال الفاتورة بنجاح وإزالتها من قائمة الانتظار.",
+    alertInvoiceRetrySent: "تم إعادة إرسال الفاتورة بنجاح.",
+    alertInvoiceRetryFailed: "فشلت إعادة الإرسال: {error}",
+    alertDeadLetterResolveApprovalRequested: "تم طلب الموافقة ({id}). يجب على مسؤول نظام ثانٍ التأكيد.",
+    alertDeadLetterResolveFailed: "تعذر حل حالة القائمة الميتة: {error}",
+    alertGenericError: "خطأ: {error}",
+    alertCollectionsStatusChangeFailed: "فشل تغيير الحالة: {error}",
+    alertActionFailed: "فشل الإجراء: {error}",
+    alertInvoiceHistoryLoadFailed: "تعذر تحميل السجل: {error}",
+    alertAccessExportFailed: "فشل تصدير سجل الدخول: {error}",
+    alertWorkerExportFailed: "فشل تصدير قائمة العمال: {error}",
+    alertSettingsSaveFailed: "تعذر حفظ الإعدادات: {error}",
+    alertSystemRepairDone: "تم تنفيذ إصلاح النظام.",
+    alertSystemRepairFailed: "فشل إصلاح النظام: {error}",
+    alertBrandingLoaded: "تم تحميل علامة BauKometra التجارية. الآن انقر فوق حفظ في إعدادات الإدارة.",
+    alertBrandingLoadFailed: "تعذر تحميل العلامة التجارية: {error}",
+    alertBrandingAltLoaded: "تم تحميل البديل لعلامة BauKometra التجارية. الآن انقر فوق حفظ في إعدادات الإدارة.",
+    alertBrandingAltLoadFailed: "تعذر تحميل العلامة التجارية البديلة: {error}",
+    alertDayCloseAckFailed: "تعذر تأكيد إغلاق اليوم: {error}",
+    alertOtpRequired: "المصادقة الثنائية مفعلة لهذا الحساب. يرجى إدخال رمز OTP.",
+    alertOtpInvalid: "رمز OTP غير صالح أو منتهي الصلاحية. يرجى إدخال رمز جديد.",
+    alertTooManyAttempts: "محاولات فاشلة كثيرة جداً. يرجى الانتظار 10 دقائق والمحاولة مرة أخرى.",
+    alertForbiddenTenantHost: "هذا الوصول مسموح فقط عبر نطاق الشركة المعتمد.",
+    alertSupportCompanyMismatch: "هذا تسجيل الدخول لا يطابق الشركة المحددة. يرجى استخدام مسؤول الشركة للشركة المحددة.",
+    alertLoginCompanyLocked: "هذه الشركة مقفلة. يرجى تسديد الفواتير المعلقة أو رفع القفل في لوحة المسؤول العام.",
+    alertInvalidCredentials: "اسم المستخدم أو كلمة المرور غير صحيحة. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
+    alertAdminIpNotAllowed: "الوصول كمسؤول من هذا العنوان IP غير مسموح.",
+    alertLoginScopeMismatch: "نوع الوصول لا يطابق الحساب. يرجى اختيار مسؤول الخادم / مسؤول الشركة بشكل صحيح.",
+    alertLoginHttp405: "فشل تسجيل الدخول: 405. طلب تسجيل الدخول يصل حالياً إلى {target}. بالنسبة لـ GitHub Pages، يجب أن يستخدم الواجهة الأمامية خلفيتك على Render.",
+    alertLoginFailed: "فشل تسجيل الدخول: {error}",
+    alertPasswordResetEnterUsername: "يرجى إدخال اسم المستخدم أو البريد الإلكتروني أولاً.",
+    alertPasswordResetSent: "إذا تم العثور على حساب مطابق، فقد تم إرسال بريد إلكتروني لإعادة التعيين.",
+    alertPasswordResetFailed: "تعذر بدء إعادة تعيين كلمة المرور: {error}",
+    alertPasswordSetSuccess: "تم تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.",
+    alertPasswordResetLinkFailed: "تعذر استخدام رابط إعادة التعيين: {error}",
+    alertPasswordChanged: "تم تغيير كلمة المرور. يرجى تسجيل الدخول مجدداً.",
+    alertPasswordChangeFailed: "فشل تغيير كلمة المرور: {error}",
+    alert2faSetupFailed: "فشل إعداد المصادقة الثنائية: {error}",
+    alert2faEnableFailed: "تعذر تفعيل المصادقة الثنائية: {error}",
+    alertDeviceDeleteFailed: "خطأ في الحذف: {error}",
+    alertCompanyCreateFailed: "تعذر إنشاء الشركة: {error}",
+    alert2faDisableFailed: "تعذر إلغاء تفعيل المصادقة الثنائية: {error}",
+    alertExportFailed: "فشل التصدير: {error}",
+    alertNoDemoCompany: "لم يتم العثور على شركة نشطة لبيانات العرض التوضيحي.",
+    alertDemoModeInvalid: "وضع غير صالح. يرجى استخدام replace أو append.",
+    alertDemoLoadFailed: "تعذر تحميل بيانات العرض التوضيحي: {error}",
+    alertImportSuccess: "تم تطبيق الاستيراد بنجاح.",
+    alertImportFailed: "فشل الاستيراد: {error}",
+    alertCsvExportFailed: "فشل تصدير CSV: {error}",
+    alertIncidentExportFailed: "فشل تصدير الحوادث: {error}",
+    alertSelectInvoiceForRetry: "يرجى تحديد فاتورة واحدة على الأقل في قائمة الانتظار.",
+    alertBulkRetryDone: "اكتمال إعادة المحاولة الجماعية. تم الإرسال: {sent}، فشل: {failed}، تم التخطي: {skipped}",
+    alertBulkRetryFailed: "فشلت إعادة المحاولة الجماعية: {error}",
+    alertNoCriticalCases: "لا توجد حالات حرجة حالياً (النتيجة >= 70).",
+    alertCriticalBulkRetryDone: "اكتمال إعادة المحاولة الجماعية الحرجة. تم الإرسال: {sent}، فشل: {failed}، تم التخطي: {skipped}",
+    alertCriticalBulkRetryFailed: "فشلت إعادة المحاولة الجماعية الحرجة: {error}",
+    alertDesktopInstallFailed: "تعذر بدء تثبيت سطح المكتب.",
+    alertSubcompanyCreateFailed: "تعذر إنشاء المقاول الفرعي: {error}",
+    alertDeleteFailed: "خطأ في الحذف: {error}",
+    alertStatusChangeFailed: "خطأ في تغيير الحالة: {error}",
+    alertReassignmentDone: "اكتمل إعادة التعيين. المطابقات: {count}",
+    alertReassignmentFailed: "فشل إعادة التعيين: {error}",
     detailCloseTitle: "إغلاق",
     detailPhotoAlt: "صورة العامل",
     detailCheckinBtn: "تسجيل دخول",
@@ -2092,6 +2523,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "Le PIN doit contenir 4 a 8 chiffres.",
     alertPinResetSuccessFor: "Le PIN pour {name} a ete reinitialise.",
     alertPinResetFailed: "Le PIN n'a pas pu etre reinitialise: {error}",
+    alertPhotoOverrideApproved: "Remplacement de photo approuvé. Les données du travailleur ont été sauvegardées.",
+    alertPhotoOverrideApproveFailed: "Approbation échouée : {error}",
+    alertPhotoOverrideRejectReasonRequired: "Une raison de refus est requise.",
+    alertPhotoOverrideRejected: "Remplacement de photo refusé.",
+    alertPhotoOverrideRejectFailed: "Refus échoué : {error}",
+    alertDocEmailSaveFailed: "L'e-mail de document n'a pas pu etre sauvegardé : {error}",
+    alertCompanyDeleted: "La société {name} a été supprimée.",
+    alertCompanyDeleteFailed: "La société {name} n'a pas pu etre supprimée : {error}",
+    alertCompanyLocked: "La société {name} a été verrouillée.",
+    alertCompanyUnlocked: "Le verrouillage de {name} a été levé.",
+    alertCompanyStatusChangeFailed: "Le changement de statut de {name} a échoué : {error}",
+    alertBrandingPresetSaveFailed: "Le preset de design n'a pas pu etre sauvegardé : {error}",
+    alertPasswordMinLength: "Le mot de passe doit contenir au moins 4 caractères.",
+    alertTurnstileCreateFailed: "Le tourniquet n'a pas pu etre créé : {error}",
+    alertTurnstilePasswordUpdated: "Le mot de passe du tourniquet a été mis à jour.",
+    alertTurnstilePasswordResetFailed: "La réinitialisation du mot de passe a échoué : {error}",
+    alertApiKeyRotationFailed: "La rotation de la clé API a échoué : {error}",
+    alertTurnstileToggleFailed: "Le tourniquet n'a pas pu etre basculé : {error}",
+    alertWorkerDeletedCannotEdit: "Les travailleurs supprimés ne peuvent pas etre modifiés.",
+    alertDataCopied: "Données copiées.",
+    alertPrintWindowFailed: "La fenetre d'impression n'a pas pu etre ouverte.",
+    alertAppLinkCopied: "Lien de l'application copié.",
+    alertQrNotReadyYet: "Le code QR est encore en cours de génération. Veuillez réessayer dans un moment.",
+    alertAccessBookingFailed: "L'accès n'a pas pu etre réservé : {error}",
+    alertWorkerSaveFailed: "Le travailleur n'a pas pu etre sauvegardé : {error}",
+    alertPhotoMatchFailed: "La comparaison de photos a échoué ({score}%). La sauvegarde est bloquée. Veuillez reprendre la photo ou contacter un superadmin.",
+    alertOverrideReasonTooShort: "La raison de remplacement est trop courte. Veuillez saisir au moins 8 caractères.",
+    alertPhotoOverrideRequested: "Remplacement de photo demandé (ID d'approbation : {id}).\nUn second superadmin doit approuver le changement avant qu'il soit sauvegardé.",
+    alertBadgePinInvalid: "Le PIN du badge doit contenir de 4 à 8 chiffres.",
+    alertDuplicatePhysicalCardId: "Cet identifiant de carte physique est déjà attribué à un autre travailleur.",
+    alertPhotoOverrideSuperadminOnly: "Le remplacement de photo est uniquement autorisé pour les superadmins.",
+    alertPhotoOverrideReasonRequired: "Veuillez fournir une raison suffisante pour le remplacement de photo.",
+    alertInvoiceSavedSendFailed: "Facture sauvegardée, envoi échoué : {error}",
+    alertInvoiceNumberDuplicate: "Le numéro de facture {number} est déjà utilisé. Veuillez utiliser un autre numéro.",
+    alertInvoiceSendFailed: "La facture n'a pas pu etre envoyée : {error}",
+    alertInvoiceNumberLength: "Le numéro de facture doit contenir entre 3 et 64 caractères.",
+    alertInvoiceDateInvalid: "La date de facture ou la date d'échéance est invalide.",
+    alertInvoiceDueDateBeforeIssue: "La date d'échéance ne peut pas etre antérieure à la date de facture.",
+    alertInvoiceVatRange: "La TVA doit etre comprise entre 0 et 100.",
+    alertApprovalRejectReasonRequired: "Le refus sans raison n'est pas autorisé.",
+    alertApprovalConfirmed: "Approbation confirmée et action exécutée.",
+    alertApprovalRejected: "L'approbation a été refusée.",
+    alertApprovalUpdated: "Approbation mise à jour.",
+    alertApprovalActionFailed: "L'action d'approbation a échoué : {error}",
+    alertInvoiceRetrySentDeadLetter: "La facture a été renvoyée avec succès et retirée de la file d'attente morte.",
+    alertInvoiceRetrySent: "La facture a été renvoyée avec succès.",
+    alertInvoiceRetryFailed: "Le renvoi a échoué : {error}",
+    alertDeadLetterResolveApprovalRequested: "Approbation demandée ({id}). Un second superadmin doit confirmer.",
+    alertDeadLetterResolveFailed: "Le cas de lettre morte n'a pas pu etre résolu : {error}",
+    alertGenericError: "Erreur : {error}",
+    alertCollectionsStatusChangeFailed: "Le changement de statut a échoué : {error}",
+    alertActionFailed: "L'action a échoué : {error}",
+    alertInvoiceHistoryLoadFailed: "L'historique n'a pas pu etre chargé : {error}",
+    alertAccessExportFailed: "L'exportation du journal d'accès a échoué : {error}",
+    alertWorkerExportFailed: "L'exportation de la liste des travailleurs a échoué : {error}",
+    alertSettingsSaveFailed: "Les paramètres n'ont pas pu etre sauvegardés : {error}",
+    alertSystemRepairDone: "La réparation du système a été exécutée.",
+    alertSystemRepairFailed: "La réparation du système a échoué : {error}",
+    alertBrandingLoaded: "Marque BauKometra chargée. Cliquez maintenant sur Enregistrer dans les paramètres admin.",
+    alertBrandingLoadFailed: "La marque n'a pas pu etre chargée : {error}",
+    alertBrandingAltLoaded: "Variante alternative de la marque BauKometra chargée. Cliquez maintenant sur Enregistrer dans les paramètres admin.",
+    alertBrandingAltLoadFailed: "La variante de marque alternative n'a pas pu etre chargée : {error}",
+    alertDayCloseAckFailed: "La cloture journalière n'a pas pu etre accusée : {error}",
+    alertOtpRequired: "La 2FA est active pour ce compte. Veuillez saisir le code OTP.",
+    alertOtpInvalid: "Le code OTP est invalide ou expiré. Veuillez saisir un nouveau code.",
+    alertTooManyAttempts: "Trop de tentatives échouées. Veuillez attendre 10 minutes et réessayer.",
+    alertForbiddenTenantHost: "Cet accès n'est autorisé que via le domaine approuvé de l'entreprise.",
+    alertSupportCompanyMismatch: "Cette connexion ne correspond pas à l'entreprise sélectionnée. Veuillez utiliser l'admin de l'entreprise marquée.",
+    alertLoginCompanyLocked: "Cette entreprise est verrouillée. Veuillez d'abord régler les factures ouvertes ou lever le verrou dans superadmin.",
+    alertInvalidCredentials: "Nom d'utilisateur ou mot de passe incorrect. Veuillez vérifier vos informations et réessayer.",
+    alertAdminIpNotAllowed: "L'accès admin depuis cette adresse IP n'est pas autorisé.",
+    alertLoginScopeMismatch: "Le type d'accès ne correspond pas au compte. Veuillez sélectionner correctement admin serveur / admin entreprise.",
+    alertLoginHttp405: "Connexion échouée : 405. La requete de connexion arrive actuellement sur {target}. Pour GitHub Pages, le frontend doit utiliser votre backend Render.",
+    alertLoginFailed: "Connexion échouée : {error}",
+    alertPasswordResetEnterUsername: "Veuillez d'abord saisir un nom d'utilisateur ou un e-mail.",
+    alertPasswordResetSent: "Si un compte correspondant a été trouvé, un e-mail de réinitialisation a été envoyé.",
+    alertPasswordResetFailed: "La réinitialisation du mot de passe n'a pas pu etre démarrée : {error}",
+    alertPasswordSetSuccess: "Le mot de passe a été défini avec succès. Vous pouvez maintenant vous connecter.",
+    alertPasswordResetLinkFailed: "Le lien de réinitialisation n'a pas pu etre utilisé : {error}",
+    alertPasswordChanged: "Mot de passe modifié. Veuillez vous reconnecter.",
+    alertPasswordChangeFailed: "Le changement de mot de passe a échoué : {error}",
+    alert2faSetupFailed: "La configuration 2FA a échoué : {error}",
+    alert2faEnableFailed: "La 2FA n'a pas pu etre activée : {error}",
+    alertDeviceDeleteFailed: "Erreur lors de la suppression : {error}",
+    alertCompanyCreateFailed: "La société n'a pas pu etre créée : {error}",
+    alert2faDisableFailed: "La 2FA n'a pas pu etre desactivée : {error}",
+    alertExportFailed: "L'exportation a échoué : {error}",
+    alertNoDemoCompany: "Aucune société active trouvée pour les données de démonstration.",
+    alertDemoModeInvalid: "Mode invalide. Veuillez utiliser replace ou append.",
+    alertDemoLoadFailed: "Les données de démonstration n'ont pas pu etre chargées : {error}",
+    alertImportSuccess: "L'importation a été appliquée avec succès.",
+    alertImportFailed: "L'importation a échoué : {error}",
+    alertCsvExportFailed: "L'exportation CSV a échoué : {error}",
+    alertIncidentExportFailed: "L'exportation des incidents a échoué : {error}",
+    alertSelectInvoiceForRetry: "Veuillez sélectionner au moins une facture dans la file d'attente.",
+    alertBulkRetryDone: "Réessai en masse terminé. Envoyés : {sent}, Échoués : {failed}, Ignorés : {skipped}",
+    alertBulkRetryFailed: "Le réessai en masse a échoué : {error}",
+    alertNoCriticalCases: "Il n'y a actuellement aucun cas critique (score >= 70).",
+    alertCriticalBulkRetryDone: "Réessai en masse critique terminé. Envoyés : {sent}, Échoués : {failed}, Ignorés : {skipped}",
+    alertCriticalBulkRetryFailed: "Le réessai en masse critique a échoué : {error}",
+    alertDesktopInstallFailed: "L'installation de bureau n'a pas pu etre démarrée.",
+    alertSubcompanyCreateFailed: "Le sous-traitant n'a pas pu etre créé : {error}",
+    alertDeleteFailed: "Erreur lors de la suppression : {error}",
+    alertStatusChangeFailed: "Erreur lors du changement de statut : {error}",
+    alertReassignmentDone: "Réaffectation terminée. Correspondances : {count}",
+    alertReassignmentFailed: "La réaffectation a échoué : {error}",
     detailCloseTitle: "Fermer",
     detailPhotoAlt: "Photo du travailleur",
     detailCheckinBtn: "Entree (Check-in)",
@@ -2550,6 +3087,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "El PIN debe tener de 4 a 8 digitos.",
     alertPinResetSuccessFor: "El PIN de {name} se restablecio correctamente.",
     alertPinResetFailed: "No se pudo restablecer el PIN: {error}",
+    alertPhotoOverrideApproved: "Reemplazo de foto aprobado. Los datos del trabajador han sido guardados.",
+    alertPhotoOverrideApproveFailed: "Aprobacion fallida: {error}",
+    alertPhotoOverrideRejectReasonRequired: "Se requiere una razon de rechazo.",
+    alertPhotoOverrideRejected: "Reemplazo de foto rechazado.",
+    alertPhotoOverrideRejectFailed: "Rechazo fallido: {error}",
+    alertDocEmailSaveFailed: "El correo de documentos no pudo guardarse: {error}",
+    alertCompanyDeleted: "La empresa {name} ha sido eliminada.",
+    alertCompanyDeleteFailed: "La empresa {name} no pudo eliminarse: {error}",
+    alertCompanyLocked: "La empresa {name} ha sido bloqueada.",
+    alertCompanyUnlocked: "El bloqueo de {name} ha sido levantado.",
+    alertCompanyStatusChangeFailed: "El cambio de estado de {name} fallo: {error}",
+    alertBrandingPresetSaveFailed: "El preset de diseno no pudo guardarse: {error}",
+    alertPasswordMinLength: "La contrasena debe tener al menos 4 caracteres.",
+    alertTurnstileCreateFailed: "El torniquete no pudo crearse: {error}",
+    alertTurnstilePasswordUpdated: "La contrasena del torniquete ha sido actualizada.",
+    alertTurnstilePasswordResetFailed: "El restablecimiento de contrasena fallo: {error}",
+    alertApiKeyRotationFailed: "La rotacion de clave API fallo: {error}",
+    alertTurnstileToggleFailed: "El torniquete no pudo cambiarse: {error}",
+    alertWorkerDeletedCannotEdit: "Los trabajadores eliminados no pueden editarse.",
+    alertDataCopied: "Datos copiados.",
+    alertPrintWindowFailed: "La ventana de impresion no pudo abrirse.",
+    alertAppLinkCopied: "Enlace de la aplicacion copiado.",
+    alertQrNotReadyYet: "El codigo QR todavia se esta generando. Por favor intentelo de nuevo en un momento.",
+    alertAccessBookingFailed: "El acceso no pudo reservarse: {error}",
+    alertWorkerSaveFailed: "El trabajador no pudo guardarse: {error}",
+    alertPhotoMatchFailed: "Comparacion de fotos fallida ({score}%). El guardado esta bloqueado. Por favor vuelva a tomar la foto o contacte a un superadmin.",
+    alertOverrideReasonTooShort: "La razon de reemplazo es demasiado corta. Por favor ingrese al menos 8 caracteres.",
+    alertPhotoOverrideRequested: "Reemplazo de foto solicitado (ID de aprobacion: {id}).\nUn segundo superadmin debe aprobar el cambio antes de que se guarde.",
+    alertBadgePinInvalid: "El PIN de la insignia debe contener de 4 a 8 digitos.",
+    alertDuplicatePhysicalCardId: "Este ID de tarjeta fisica ya esta asignado a otro trabajador.",
+    alertPhotoOverrideSuperadminOnly: "El reemplazo de foto solo esta permitido para superadmins.",
+    alertPhotoOverrideReasonRequired: "Por favor proporcione una razon suficiente para el reemplazo de foto.",
+    alertInvoiceSavedSendFailed: "Factura guardada, envio fallido: {error}",
+    alertInvoiceNumberDuplicate: "El numero de factura {number} ya esta en uso. Por favor use un numero diferente.",
+    alertInvoiceSendFailed: "La factura no pudo enviarse: {error}",
+    alertInvoiceNumberLength: "El numero de factura debe tener entre 3 y 64 caracteres.",
+    alertInvoiceDateInvalid: "La fecha de factura o la fecha de vencimiento es invalida.",
+    alertInvoiceDueDateBeforeIssue: "La fecha de vencimiento no puede ser anterior a la fecha de factura.",
+    alertInvoiceVatRange: "El IVA debe estar entre 0 y 100.",
+    alertApprovalRejectReasonRequired: "El rechazo sin razon no esta permitido.",
+    alertApprovalConfirmed: "Aprobacion confirmada y accion ejecutada.",
+    alertApprovalRejected: "La aprobacion fue rechazada.",
+    alertApprovalUpdated: "Aprobacion actualizada.",
+    alertApprovalActionFailed: "La accion de aprobacion fallo: {error}",
+    alertInvoiceRetrySentDeadLetter: "La factura fue reenviada con exito y eliminada de la cola muerta.",
+    alertInvoiceRetrySent: "La factura fue reenviada con exito.",
+    alertInvoiceRetryFailed: "El reenvio fallo: {error}",
+    alertDeadLetterResolveApprovalRequested: "Aprobacion solicitada ({id}). Un segundo superadmin debe confirmar.",
+    alertDeadLetterResolveFailed: "El caso de letra muerta no pudo resolverse: {error}",
+    alertGenericError: "Error: {error}",
+    alertCollectionsStatusChangeFailed: "El cambio de estado fallo: {error}",
+    alertActionFailed: "La accion fallo: {error}",
+    alertInvoiceHistoryLoadFailed: "El historial no pudo cargarse: {error}",
+    alertAccessExportFailed: "La exportacion del registro de acceso fallo: {error}",
+    alertWorkerExportFailed: "La exportacion de la lista de trabajadores fallo: {error}",
+    alertSettingsSaveFailed: "La configuracion no pudo guardarse: {error}",
+    alertSystemRepairDone: "La reparacion del sistema ha sido ejecutada.",
+    alertSystemRepairFailed: "La reparacion del sistema fallo: {error}",
+    alertBrandingLoaded: "Marca BauKometra cargada. Ahora haga clic en Guardar en la configuracion de admin.",
+    alertBrandingLoadFailed: "La marca no pudo cargarse: {error}",
+    alertBrandingAltLoaded: "Variante alternativa de la marca BauKometra cargada. Ahora haga clic en Guardar en la configuracion de admin.",
+    alertBrandingAltLoadFailed: "La variante de marca alternativa no pudo cargarse: {error}",
+    alertDayCloseAckFailed: "El cierre de dia no pudo confirmarse: {error}",
+    alertOtpRequired: "La 2FA esta activa para esta cuenta. Por favor ingrese el codigo OTP.",
+    alertOtpInvalid: "El codigo OTP es invalido o ha expirado. Por favor ingrese un nuevo codigo.",
+    alertTooManyAttempts: "Demasiados intentos fallidos. Por favor espere 10 minutos e intentelo de nuevo.",
+    alertForbiddenTenantHost: "Este acceso solo esta permitido a traves del dominio de empresa aprobado.",
+    alertSupportCompanyMismatch: "Este inicio de sesion no coincide con la empresa seleccionada. Por favor use el admin de la empresa marcada.",
+    alertLoginCompanyLocked: "Esta empresa esta bloqueada. Por favor liquide las facturas pendientes o levante el bloqueo en superadmin.",
+    alertInvalidCredentials: "Nombre de usuario o contrasena incorrectos. Por favor verifique sus datos e intentelo de nuevo.",
+    alertAdminIpNotAllowed: "El acceso de admin desde esta IP no esta permitido.",
+    alertLoginScopeMismatch: "El tipo de acceso no coincide con la cuenta. Por favor seleccione correctamente admin de servidor / admin de empresa.",
+    alertLoginHttp405: "Inicio de sesion fallido: 405. La solicitud de inicio de sesion esta llegando actualmente a {target}. Para GitHub Pages, el frontend debe usar su backend de Render.",
+    alertLoginFailed: "Inicio de sesion fallido: {error}",
+    alertPasswordResetEnterUsername: "Por favor ingrese primero un nombre de usuario o correo electronico.",
+    alertPasswordResetSent: "Si se encontro una cuenta coincidente, se ha enviado un correo de restablecimiento.",
+    alertPasswordResetFailed: "El restablecimiento de contrasena no pudo iniciarse: {error}",
+    alertPasswordSetSuccess: "La contrasena se ha establecido correctamente. Ahora puede iniciar sesion.",
+    alertPasswordResetLinkFailed: "El enlace de restablecimiento no pudo usarse: {error}",
+    alertPasswordChanged: "Contrasena cambiada. Por favor inicie sesion de nuevo.",
+    alertPasswordChangeFailed: "El cambio de contrasena fallo: {error}",
+    alert2faSetupFailed: "La configuracion de 2FA fallo: {error}",
+    alert2faEnableFailed: "La 2FA no pudo activarse: {error}",
+    alertDeviceDeleteFailed: "Error al eliminar: {error}",
+    alertCompanyCreateFailed: "La empresa no pudo crearse: {error}",
+    alert2faDisableFailed: "La 2FA no pudo desactivarse: {error}",
+    alertExportFailed: "La exportacion fallo: {error}",
+    alertNoDemoCompany: "No se encontro ninguna empresa activa para los datos de demostracion.",
+    alertDemoModeInvalid: "Modo invalido. Por favor use replace o append.",
+    alertDemoLoadFailed: "Los datos de demostracion no pudieron cargarse: {error}",
+    alertImportSuccess: "Importacion aplicada con exito.",
+    alertImportFailed: "La importacion fallo: {error}",
+    alertCsvExportFailed: "La exportacion CSV fallo: {error}",
+    alertIncidentExportFailed: "La exportacion de incidentes fallo: {error}",
+    alertSelectInvoiceForRetry: "Por favor seleccione al menos una factura en la cola.",
+    alertBulkRetryDone: "Reintento masivo completado. Enviados: {sent}, Fallidos: {failed}, Omitidos: {skipped}",
+    alertBulkRetryFailed: "El reintento masivo fallo: {error}",
+    alertNoCriticalCases: "Actualmente no hay casos criticos (puntuacion >= 70).",
+    alertCriticalBulkRetryDone: "Reintento masivo critico completado. Enviados: {sent}, Fallidos: {failed}, Omitidos: {skipped}",
+    alertCriticalBulkRetryFailed: "El reintento masivo critico fallo: {error}",
+    alertDesktopInstallFailed: "La instalacion de escritorio no pudo iniciarse.",
+    alertSubcompanyCreateFailed: "El subcontratista no pudo crearse: {error}",
+    alertDeleteFailed: "Error al eliminar: {error}",
+    alertStatusChangeFailed: "Error al cambiar el estado: {error}",
+    alertReassignmentDone: "Reasignacion completada. Coincidencias: {count}",
+    alertReassignmentFailed: "La reasignacion fallo: {error}",
     detailCloseTitle: "Cerrar",
     detailPhotoAlt: "Foto del trabajador",
     detailCheckinBtn: "Entrada (Check-in)",
@@ -3008,6 +3651,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "Il PIN deve contenere da 4 a 8 cifre.",
     alertPinResetSuccessFor: "PIN di {name} reimpostato con successo.",
     alertPinResetFailed: "Impossibile reimpostare il PIN: {error}",
+    alertPhotoOverrideApproved: "Sostituzione foto approvata. I dati del lavoratore sono stati salvati.",
+    alertPhotoOverrideApproveFailed: "Approvazione fallita: {error}",
+    alertPhotoOverrideRejectReasonRequired: "E necessario un motivo di rifiuto.",
+    alertPhotoOverrideRejected: "Sostituzione foto rifiutata.",
+    alertPhotoOverrideRejectFailed: "Rifiuto fallito: {error}",
+    alertDocEmailSaveFailed: "L'e-mail documento non ha potuto essere salvata: {error}",
+    alertCompanyDeleted: "L'azienda {name} e stata eliminata.",
+    alertCompanyDeleteFailed: "L'azienda {name} non ha potuto essere eliminata: {error}",
+    alertCompanyLocked: "L'azienda {name} e stata bloccata.",
+    alertCompanyUnlocked: "Il blocco di {name} e stato rimosso.",
+    alertCompanyStatusChangeFailed: "Il cambio di stato di {name} e fallito: {error}",
+    alertBrandingPresetSaveFailed: "Il preset di design non ha potuto essere salvato: {error}",
+    alertPasswordMinLength: "La password deve contenere almeno 4 caratteri.",
+    alertTurnstileCreateFailed: "Il tornello non ha potuto essere creato: {error}",
+    alertTurnstilePasswordUpdated: "La password del tornello e stata aggiornata.",
+    alertTurnstilePasswordResetFailed: "Il reset della password e fallito: {error}",
+    alertApiKeyRotationFailed: "La rotazione della chiave API e fallita: {error}",
+    alertTurnstileToggleFailed: "Il tornello non ha potuto essere commutato: {error}",
+    alertWorkerDeletedCannotEdit: "I lavoratori eliminati non possono essere modificati.",
+    alertDataCopied: "Dati copiati.",
+    alertPrintWindowFailed: "La finestra di stampa non ha potuto essere aperta.",
+    alertAppLinkCopied: "Link dell'app copiato.",
+    alertQrNotReadyYet: "Il codice QR e ancora in generazione. Riprovare tra poco.",
+    alertAccessBookingFailed: "L'accesso non ha potuto essere prenotato: {error}",
+    alertWorkerSaveFailed: "Il lavoratore non ha potuto essere salvato: {error}",
+    alertPhotoMatchFailed: "Confronto foto fallito ({score}%). Il salvataggio e bloccato. Riprendere la foto o contattare un superamministratore.",
+    alertOverrideReasonTooShort: "Il motivo della sostituzione e troppo breve. Inserire almeno 8 caratteri.",
+    alertPhotoOverrideRequested: "Sostituzione foto richiesta (ID approvazione: {id}).\nUn secondo superamministratore deve approvare la modifica prima che venga salvata.",
+    alertBadgePinInvalid: "Il PIN del badge deve contenere da 4 a 8 cifre.",
+    alertDuplicatePhysicalCardId: "Questo ID carta fisica e gia assegnato a un altro lavoratore.",
+    alertPhotoOverrideSuperadminOnly: "La sostituzione foto e consentita solo ai superamministratori.",
+    alertPhotoOverrideReasonRequired: "Fornire un motivo sufficiente per la sostituzione della foto.",
+    alertInvoiceSavedSendFailed: "Fattura salvata, invio fallito: {error}",
+    alertInvoiceNumberDuplicate: "Il numero di fattura {number} e gia in uso. Usare un numero diverso.",
+    alertInvoiceSendFailed: "La fattura non ha potuto essere inviata: {error}",
+    alertInvoiceNumberLength: "Il numero di fattura deve contenere tra 3 e 64 caratteri.",
+    alertInvoiceDateInvalid: "La data della fattura o la data di scadenza non e valida.",
+    alertInvoiceDueDateBeforeIssue: "La data di scadenza non puo essere anteriore alla data della fattura.",
+    alertInvoiceVatRange: "L'IVA deve essere compresa tra 0 e 100.",
+    alertApprovalRejectReasonRequired: "Il rifiuto senza motivo non e consentito.",
+    alertApprovalConfirmed: "Approvazione confermata e azione eseguita.",
+    alertApprovalRejected: "L'approvazione e stata rifiutata.",
+    alertApprovalUpdated: "Approvazione aggiornata.",
+    alertApprovalActionFailed: "L'azione di approvazione e fallita: {error}",
+    alertInvoiceRetrySentDeadLetter: "La fattura e stata reinviata con successo e rimossa dalla coda morta.",
+    alertInvoiceRetrySent: "La fattura e stata reinviata con successo.",
+    alertInvoiceRetryFailed: "Il reinvio e fallito: {error}",
+    alertDeadLetterResolveApprovalRequested: "Approvazione richiesta ({id}). Un secondo superamministratore deve confermare.",
+    alertDeadLetterResolveFailed: "Il caso di lettera morta non ha potuto essere risolto: {error}",
+    alertGenericError: "Errore: {error}",
+    alertCollectionsStatusChangeFailed: "Il cambio di stato e fallito: {error}",
+    alertActionFailed: "Azione fallita: {error}",
+    alertInvoiceHistoryLoadFailed: "La cronologia non ha potuto essere caricata: {error}",
+    alertAccessExportFailed: "L'esportazione del registro accessi e fallita: {error}",
+    alertWorkerExportFailed: "L'esportazione dell'elenco lavoratori e fallita: {error}",
+    alertSettingsSaveFailed: "Le impostazioni non hanno potuto essere salvate: {error}",
+    alertSystemRepairDone: "La riparazione del sistema e stata eseguita.",
+    alertSystemRepairFailed: "La riparazione del sistema e fallita: {error}",
+    alertBrandingLoaded: "Marchio BauKometra caricato. Ora fare clic su Salva nelle impostazioni admin.",
+    alertBrandingLoadFailed: "Il marchio non ha potuto essere caricato: {error}",
+    alertBrandingAltLoaded: "Variante alternativa del marchio BauKometra caricata. Ora fare clic su Salva nelle impostazioni admin.",
+    alertBrandingAltLoadFailed: "La variante di marchio alternativa non ha potuto essere caricata: {error}",
+    alertDayCloseAckFailed: "La chiusura giornaliera non ha potuto essere confermata: {error}",
+    alertOtpRequired: "La 2FA e attiva per questo account. Inserire il codice OTP.",
+    alertOtpInvalid: "Il codice OTP non e valido o e scaduto. Inserire un nuovo codice.",
+    alertTooManyAttempts: "Troppi tentativi falliti. Attendere 10 minuti e riprovare.",
+    alertForbiddenTenantHost: "Questo accesso e consentito solo tramite il dominio aziendale approvato.",
+    alertSupportCompanyMismatch: "Questo accesso non corrisponde all'azienda selezionata. Usare l'admin dell'azienda contrassegnata.",
+    alertLoginCompanyLocked: "Questa azienda e bloccata. Saldare prima le fatture in sospeso o rimuovere il blocco nel superamministratore.",
+    alertInvalidCredentials: "Nome utente o password non corretti. Verificare i dati e riprovare.",
+    alertAdminIpNotAllowed: "L'accesso admin da questo IP non e consentito.",
+    alertLoginScopeMismatch: "Il tipo di accesso non corrisponde all'account. Selezionare correttamente admin server / admin azienda.",
+    alertLoginHttp405: "Accesso fallito: 405. La richiesta di accesso sta arrivando attualmente su {target}. Per GitHub Pages, il frontend deve usare il backend Render.",
+    alertLoginFailed: "Accesso fallito: {error}",
+    alertPasswordResetEnterUsername: "Inserire prima un nome utente o un'e-mail.",
+    alertPasswordResetSent: "Se e stato trovato un account corrispondente, e stata inviata un'e-mail di ripristino.",
+    alertPasswordResetFailed: "Il ripristino della password non ha potuto essere avviato: {error}",
+    alertPasswordSetSuccess: "La password e stata impostata con successo. Ora e possibile effettuare l'accesso.",
+    alertPasswordResetLinkFailed: "Il link di ripristino non ha potuto essere utilizzato: {error}",
+    alertPasswordChanged: "Password modificata. Effettuare nuovamente l'accesso.",
+    alertPasswordChangeFailed: "Il cambio password e fallito: {error}",
+    alert2faSetupFailed: "Configurazione 2FA fallita: {error}",
+    alert2faEnableFailed: "La 2FA non ha potuto essere attivata: {error}",
+    alertDeviceDeleteFailed: "Errore nell'eliminazione: {error}",
+    alertCompanyCreateFailed: "L'azienda non ha potuto essere creata: {error}",
+    alert2faDisableFailed: "La 2FA non ha potuto essere disattivata: {error}",
+    alertExportFailed: "L'esportazione e fallita: {error}",
+    alertNoDemoCompany: "Nessuna azienda attiva trovata per i dati demo.",
+    alertDemoModeInvalid: "Modalita non valida. Utilizzare replace o append.",
+    alertDemoLoadFailed: "I dati demo non hanno potuto essere caricati: {error}",
+    alertImportSuccess: "Importazione applicata con successo.",
+    alertImportFailed: "L'importazione e fallita: {error}",
+    alertCsvExportFailed: "L'esportazione CSV e fallita: {error}",
+    alertIncidentExportFailed: "L'esportazione degli incidenti e fallita: {error}",
+    alertSelectInvoiceForRetry: "Selezionare almeno una fattura nella coda.",
+    alertBulkRetryDone: "Ripetizione massiva completata. Inviati: {sent}, Falliti: {failed}, Saltati: {skipped}",
+    alertBulkRetryFailed: "La ripetizione massiva e fallita: {error}",
+    alertNoCriticalCases: "Attualmente non ci sono casi critici (punteggio >= 70).",
+    alertCriticalBulkRetryDone: "Ripetizione massiva critica completata. Inviati: {sent}, Falliti: {failed}, Saltati: {skipped}",
+    alertCriticalBulkRetryFailed: "La ripetizione massiva critica e fallita: {error}",
+    alertDesktopInstallFailed: "L'installazione desktop non ha potuto essere avviata.",
+    alertSubcompanyCreateFailed: "Il subappaltatore non ha potuto essere creato: {error}",
+    alertDeleteFailed: "Errore nell'eliminazione: {error}",
+    alertStatusChangeFailed: "Errore nel cambio di stato: {error}",
+    alertReassignmentDone: "Riassegnazione completata. Corrispondenze: {count}",
+    alertReassignmentFailed: "La riassegnazione e fallita: {error}",
     detailCloseTitle: "Chiudi",
     detailPhotoAlt: "Foto lavoratore",
     detailCheckinBtn: "Entrata (Check-in)",
@@ -3466,6 +4215,112 @@ const UI_TRANSLATIONS = {
     alertPinMustDigits: "PIN musi zawierac od 4 do 8 cyfr.",
     alertPinResetSuccessFor: "PIN dla {name} zostal pomyslnie zresetowany.",
     alertPinResetFailed: "Nie udalo sie zresetowac PIN: {error}",
+    alertPhotoOverrideApproved: "Zastapienie zdjecia zatwierdzone. Dane pracownika zostaly zapisane.",
+    alertPhotoOverrideApproveFailed: "Zatwierdzenie nieudane: {error}",
+    alertPhotoOverrideRejectReasonRequired: "Wymagany jest powod odrzucenia.",
+    alertPhotoOverrideRejected: "Zastapienie zdjecia odrzucone.",
+    alertPhotoOverrideRejectFailed: "Odrzucenie nieudane: {error}",
+    alertDocEmailSaveFailed: "Nie udalo sie zapisac e-maila dokumentow: {error}",
+    alertCompanyDeleted: "Firma {name} zostala usunieta.",
+    alertCompanyDeleteFailed: "Firma {name} nie mogla zostac usunieta: {error}",
+    alertCompanyLocked: "Firma {name} zostala zablokowana.",
+    alertCompanyUnlocked: "Blokada dla {name} zostala usunieta.",
+    alertCompanyStatusChangeFailed: "Zmiana statusu dla {name} nie powiodla sie: {error}",
+    alertBrandingPresetSaveFailed: "Nie udalo sie zapisac presetu projektu: {error}",
+    alertPasswordMinLength: "Haslo musi miec co najmniej 4 znaki.",
+    alertTurnstileCreateFailed: "Nie udalo sie utworzyc kolowrotka: {error}",
+    alertTurnstilePasswordUpdated: "Haslo kolowrotka zostalo zaktualizowane.",
+    alertTurnstilePasswordResetFailed: "Resetowanie hasla nie powiodlo sie: {error}",
+    alertApiKeyRotationFailed: "Rotacja klucza API nie powiodla sie: {error}",
+    alertTurnstileToggleFailed: "Nie udalo sie przelaczye kolowrotka: {error}",
+    alertWorkerDeletedCannotEdit: "Usunieci pracownicy nie moga byc edytowani.",
+    alertDataCopied: "Dane skopiowane.",
+    alertPrintWindowFailed: "Nie udalo sie otworzyc okna drukowania.",
+    alertAppLinkCopied: "Link aplikacji skopiowany.",
+    alertQrNotReadyYet: "Kod QR jest jeszcze generowany. Prosze sprobowac ponownie za chwile.",
+    alertAccessBookingFailed: "Nie udalo sie zarejestrowac dostepu: {error}",
+    alertWorkerSaveFailed: "Nie udalo sie zapisac danych pracownika: {error}",
+    alertPhotoMatchFailed: "Porownanie zdjec nie powiodlo sie ({score}%). Zapisywanie jest zablokowane. Prosze ponownie zrobic zdjecie lub skontaktowac sie z superadminem.",
+    alertOverrideReasonTooShort: "Powod zastapienia jest zbyt krotki. Prosze wprowadzic co najmniej 8 znakow.",
+    alertPhotoOverrideRequested: "Zadanie zastapienia zdjecia (ID zatwierdzenia: {id}).\nDrugi superadmin musi zatwierdzic zmiane przed jej zapisaniem.",
+    alertBadgePinInvalid: "PIN odznaki musi zawierac od 4 do 8 cyfr.",
+    alertDuplicatePhysicalCardId: "Ten identyfikator karty fizycznej jest juz przypisany do innego pracownika.",
+    alertPhotoOverrideSuperadminOnly: "Zastapienie zdjecia jest dozwolone tylko dla superadminow.",
+    alertPhotoOverrideReasonRequired: "Prosze podac wystarczajacy powod zastapienia zdjecia.",
+    alertInvoiceSavedSendFailed: "Faktura zapisana, wysylanie nieudane: {error}",
+    alertInvoiceNumberDuplicate: "Numer faktury {number} jest juz zajety. Prosze uzyc innego numeru.",
+    alertInvoiceSendFailed: "Faktura nie mogla zostac wyslana: {error}",
+    alertInvoiceNumberLength: "Numer faktury musi miec od 3 do 64 znakow.",
+    alertInvoiceDateInvalid: "Data faktury lub termin platnosci jest nieprawidlowy.",
+    alertInvoiceDueDateBeforeIssue: "Termin platnosci nie moze byc wczesniejszy niz data faktury.",
+    alertInvoiceVatRange: "Podatek VAT musi byc pomiedzy 0 a 100.",
+    alertApprovalRejectReasonRequired: "Odrzucenie bez powodu jest niedozwolone.",
+    alertApprovalConfirmed: "Zatwierdzenie potwierdzone i akcja wykonana.",
+    alertApprovalRejected: "Zatwierdzenie zostalo odrzucone.",
+    alertApprovalUpdated: "Zatwierdzenie zaktualizowane.",
+    alertApprovalActionFailed: "Akcja zatwierdzenia nie powiodla sie: {error}",
+    alertInvoiceRetrySentDeadLetter: "Faktura zostala pomyslnie wyslana ponownie i usunieta z kolejki martwych liter.",
+    alertInvoiceRetrySent: "Faktura zostala pomyslnie wyslana ponownie.",
+    alertInvoiceRetryFailed: "Ponowne wysylanie nie powiodlo sie: {error}",
+    alertDeadLetterResolveApprovalRequested: "Zatwierdzenie zadane ({id}). Drugi superadmin musi potwierdzic.",
+    alertDeadLetterResolveFailed: "Sprawa martwej litery nie mogla zostac rozwiazana: {error}",
+    alertGenericError: "Blad: {error}",
+    alertCollectionsStatusChangeFailed: "Zmiana statusu nie powiodla sie: {error}",
+    alertActionFailed: "Akcja nie powiodla sie: {error}",
+    alertInvoiceHistoryLoadFailed: "Historia nie mogla zostac zaladowana: {error}",
+    alertAccessExportFailed: "Eksport dziennika dostepu nie powiodl sie: {error}",
+    alertWorkerExportFailed: "Eksport listy pracownikow nie powiodl sie: {error}",
+    alertSettingsSaveFailed: "Nie udalo sie zapisac ustawien: {error}",
+    alertSystemRepairDone: "Naprawa systemu zostala wykonana.",
+    alertSystemRepairFailed: "Naprawa systemu nie powiodla sie: {error}",
+    alertBrandingLoaded: "Marka BauKometra zaladowana. Teraz kliknij Zapisz w ustawieniach administratora.",
+    alertBrandingLoadFailed: "Nie udalo sie zaladowac marki: {error}",
+    alertBrandingAltLoaded: "Alternatywny wariant marki BauKometra zaladowany. Teraz kliknij Zapisz w ustawieniach administratora.",
+    alertBrandingAltLoadFailed: "Nie udalo sie zaladowac alternatywnego wariantu marki: {error}",
+    alertDayCloseAckFailed: "Zamkniecie dnia nie moglo zostac potwierdzone: {error}",
+    alertOtpRequired: "2FA jest aktywne dla tego konta. Prosze wprowadzic kod OTP.",
+    alertOtpInvalid: "Kod OTP jest nieprawidlowy lub wygasl. Prosze wprowadzic nowy kod.",
+    alertTooManyAttempts: "Zbyt wiele nieudanych prob. Prosze poczekac 10 minut i sprobowac ponownie.",
+    alertForbiddenTenantHost: "Ten dostep jest dozwolony tylko przez zatwierdzony domen firmy.",
+    alertSupportCompanyMismatch: "To logowanie nie pasuje do wybranej firmy. Prosze uzyc admina firmy oznaczonej firmy.",
+    alertLoginCompanyLocked: "Ta firma jest zablokowana. Prosze najpierw uregulowac otwarte faktury lub zniesc blokade w superadminie.",
+    alertInvalidCredentials: "Nazwa uzytkownika lub haslo sa nieprawidlowe. Prosze sprawdzic dane i sprobowac ponownie.",
+    alertAdminIpNotAllowed: "Dostep admina z tego IP jest niedozwolony.",
+    alertLoginScopeMismatch: "Typ dostepu nie pasuje do konta. Prosze poprawnie wybrac admin serwera / admin firmy.",
+    alertLoginHttp405: "Logowanie nieudane: 405. Zadanie logowania trafia aktualnie na {target}. W przypadku GitHub Pages, frontend musi uzywac backendu Render.",
+    alertLoginFailed: "Logowanie nieudane: {error}",
+    alertPasswordResetEnterUsername: "Prosze najpierw wprowadzic nazwe uzytkownika lub e-mail.",
+    alertPasswordResetSent: "Jesli znaleziono pasujace konto, zostal wyslany e-mail resetujacy.",
+    alertPasswordResetFailed: "Nie udalo sie uruchomic resetowania hasla: {error}",
+    alertPasswordSetSuccess: "Haslo zostalo pomyslnie ustawione. Mozesz sie teraz zalogowac.",
+    alertPasswordResetLinkFailed: "Link resetujacy nie mogl zostac uzyty: {error}",
+    alertPasswordChanged: "Haslo zmienione. Prosze zalogowac sie ponownie.",
+    alertPasswordChangeFailed: "Zmiana hasla nie powiodla sie: {error}",
+    alert2faSetupFailed: "Konfiguracja 2FA nie powiodla sie: {error}",
+    alert2faEnableFailed: "Nie udalo sie aktywowac 2FA: {error}",
+    alertDeviceDeleteFailed: "Blad podczas usuwania: {error}",
+    alertCompanyCreateFailed: "Firma nie mogla zostac utworzona: {error}",
+    alert2faDisableFailed: "Nie udalo sie dezaktywowac 2FA: {error}",
+    alertExportFailed: "Eksport nie powiodl sie: {error}",
+    alertNoDemoCompany: "Nie znaleziono aktywnej firmy dla danych demonstracyjnych.",
+    alertDemoModeInvalid: "Nieprawidlowy tryb. Prosze uzyc replace lub append.",
+    alertDemoLoadFailed: "Nie udalo sie zaladowac danych demonstracyjnych: {error}",
+    alertImportSuccess: "Import zostal pomyslnie zastosowany.",
+    alertImportFailed: "Import nie powiodl sie: {error}",
+    alertCsvExportFailed: "Eksport CSV nie powiodl sie: {error}",
+    alertIncidentExportFailed: "Eksport zdarzen nie powiodl sie: {error}",
+    alertSelectInvoiceForRetry: "Prosze wybrac co najmniej jedna fakture z kolejki.",
+    alertBulkRetryDone: "Ponowna proba masowa zakonczona. Wyslane: {sent}, Nieudane: {failed}, Pominiete: {skipped}",
+    alertBulkRetryFailed: "Ponowna proba masowa nie powiodla sie: {error}",
+    alertNoCriticalCases: "Aktualnie nie ma krytycznych przypadkow (wynik >= 70).",
+    alertCriticalBulkRetryDone: "Krytyczna ponowna proba masowa zakonczona. Wyslane: {sent}, Nieudane: {failed}, Pominiete: {skipped}",
+    alertCriticalBulkRetryFailed: "Krytyczna ponowna proba masowa nie powiodla sie: {error}",
+    alertDesktopInstallFailed: "Nie udalo sie uruchomic instalacji desktopowej.",
+    alertSubcompanyCreateFailed: "Nie udalo sie utworzyc podwykonawcy: {error}",
+    alertDeleteFailed: "Blad podczas usuwania: {error}",
+    alertStatusChangeFailed: "Blad przy zmianie statusu: {error}",
+    alertReassignmentDone: "Przypisanie ponowne zakonczone. Dopasowania: {count}",
+    alertReassignmentFailed: "Przypisanie ponowne nie powiodlo sie: {error}",
     detailCloseTitle: "Zamknij",
     detailPhotoAlt: "Zdjecie pracownika",
     detailCheckinBtn: "Wejscie (Check-in)",
@@ -6967,7 +7822,7 @@ async function deleteDevice(id) {
     state.devices = (state.devices || []).filter(d => d.id !== id);
     renderDevices();
   } catch (e) {
-    alert("Fehler beim Löschen: " + (e.message || e));
+    alert(uiT("alertDeviceDeleteFailed").replace("{error}", e.message || e));
   }
 }
 
@@ -6996,7 +7851,7 @@ async function deleteDevice(id) {
       form.reset();
       await loadDevices();
     } catch (err) {
-      alert("Fehler: " + (err.message || err));
+      alert(uiT("alertGenericError").replace("{error}", err.message || err));
     }
   });
 })();
@@ -7815,9 +8670,9 @@ async function renderPhotoOverrideApprovalPanel() {
         await loadAllData();
         await renderPhotoOverrideApprovalPanel();
         refreshAll();
-        window.alert("Foto-Override freigegeben. Mitarbeiterdaten wurden gespeichert.");
+        window.alert(uiT("alertPhotoOverrideApproved"));
       } catch (error) {
-        window.alert("Freigabe fehlgeschlagen: " + error.message);
+        window.alert(uiT("alertPhotoOverrideApproveFailed").replace("{error}", error.message));
       }
     };
   });
@@ -7826,7 +8681,7 @@ async function renderPhotoOverrideApprovalPanel() {
     btn.onclick = async () => {
       const reason = window.prompt("Bitte Ablehnungsgrund eingeben:") || "";
       if (!reason.trim()) {
-        window.alert("Ablehnungsgrund ist erforderlich.");
+        window.alert(uiT("alertPhotoOverrideRejectReasonRequired"));
         return;
       }
       try {
@@ -7835,9 +8690,9 @@ async function renderPhotoOverrideApprovalPanel() {
           body: { decision: "reject", note: reason.trim() },
         });
         await renderPhotoOverrideApprovalPanel();
-        window.alert("Foto-Override abgelehnt.");
+        window.alert(uiT("alertPhotoOverrideRejected"));
       } catch (error) {
-        window.alert("Ablehnung fehlgeschlagen: " + error.message);
+        window.alert(uiT("alertPhotoOverrideRejectFailed").replace("{error}", error.message));
       }
     };
   });
@@ -8085,7 +8940,7 @@ function bindCompanyRowActions() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Dokument-E-Mail konnte nicht gespeichert werden: ${error.message}`);
+        window.alert(uiT("alertDocEmailSaveFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8109,10 +8964,10 @@ function bindCompanyRowActions() {
         await apiRequest(`${API_BASE}/api/companies/${companyId}?force=1`, { method: "DELETE" });
         await loadAllData();
         refreshAll();
-        window.alert(`Firma ${companyName} wurde gelöscht.`);
+        window.alert(uiT("alertCompanyDeleted").replace("{name}", companyName));
       } catch (error) {
         const repairMessage = mapCompanyRepairError(error);
-        window.alert(`Firma ${companyName} konnte nicht gelöscht werden: ${repairMessage}`);
+        window.alert(uiT("alertCompanyDeleteFailed").replace("{name}", companyName).replace("{error}", repairMessage));
       }
       return;
     }
@@ -8150,8 +9005,8 @@ function bindCompanyRowActions() {
         await loadAllData();
         refreshAll();
         window.alert(nextStatus === "gesperrt"
-          ? `Firma ${companyName} wurde gesperrt.`
-          : `Sperre fuer ${companyName} wurde aufgehoben.`);
+          ? uiT("alertCompanyLocked").replace("{name}", companyName)
+          : uiT("alertCompanyUnlocked").replace("{name}", companyName));
       } catch (error) {
         const repairMessage = mapCompanyRepairError(error);
         state.companyRepairStatus[companyId] = {
@@ -8159,7 +9014,7 @@ function bindCompanyRowActions() {
           message: repairMessage
         };
         renderCompanyList();
-        window.alert(`Statuswechsel für ${companyName} fehlgeschlagen: ${repairMessage}`);
+        window.alert(uiT("alertCompanyStatusChangeFailed").replace("{name}", companyName).replace("{error}", repairMessage));
       } finally {
         delete state.companyLockBusy[companyId];
         renderCompanyList();
@@ -8227,7 +9082,7 @@ function bindCompanyRowActions() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Design-Preset konnte nicht gespeichert werden: ${error.message}`);
+        window.alert(uiT("alertBrandingPresetSaveFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8241,7 +9096,7 @@ function bindCompanyRowActions() {
       const password = window.prompt(`Drehkreuz-Passwort für ${company.name} festlegen (min. 4 Zeichen):`, "");
       if (password === null) return;
       if (password.trim().length < 4) {
-        window.alert("Passwort muss mindestens 4 Zeichen haben.");
+        window.alert(uiT("alertPasswordMinLength"));
         return;
       }
 
@@ -8265,7 +9120,7 @@ function bindCompanyRowActions() {
           }
         );
       } catch (error) {
-        window.alert(`Drehkreuz konnte nicht angelegt werden: ${error.message}`);
+        window.alert(uiT("alertTurnstileCreateFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8277,7 +9132,7 @@ function bindCompanyRowActions() {
       const password = window.prompt("Neues Drehkreuz-Passwort festlegen (min. 4 Zeichen):", "");
       if (password === null) return;
       if (password.trim().length < 4) {
-        window.alert("Passwort muss mindestens 4 Zeichen haben.");
+        window.alert(uiT("alertPasswordMinLength"));
         return;
       }
       try {
@@ -8285,9 +9140,9 @@ function bindCompanyRowActions() {
           method: "POST",
           body: { password: password.trim() }
         });
-        window.alert("Drehkreuz-Passwort wurde aktualisiert.");
+        window.alert(uiT("alertTurnstilePasswordUpdated"));
       } catch (error) {
-        window.alert(`Passwort-Reset fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertTurnstilePasswordResetFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8314,7 +9169,7 @@ function bindCompanyRowActions() {
           }
         );
       } catch (error) {
-        window.alert(`API-Key-Rotation fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertApiKeyRotationFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8328,7 +9183,7 @@ function bindCompanyRowActions() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Drehkreuz konnte nicht umgeschaltet werden: ${error.message}`);
+        window.alert(uiT("alertTurnstileToggleFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -8664,7 +9519,7 @@ async function triggerWorkerAccess(worker, direction) {
     refreshAll();
     showAccessFeedback(worker.id, direction, "Dashboard", new Date().toISOString());
   } catch (error) {
-    window.alert("Zutritt konnte nicht gebucht werden: " + error.message);
+    window.alert(uiT("alertAccessBookingFailed").replace("{error}", error.message));
   }
 }
 
@@ -8677,7 +9532,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         return;
       }
       if (worker.deletedAt) {
-        window.alert("Gelöschte Mitarbeiter können nicht bearbeitet werden.");
+        window.alert(uiT("alertWorkerDeletedCannotEdit"));
         return;
       }
 
@@ -8714,7 +9569,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht gelöscht werden: ${error.message}`);
+        window.alert(uiT("alertDeleteWorkerFailed").replace("{error}", error.message));
       }
     });
   });
@@ -8726,7 +9581,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Mitarbeiter konnte nicht wiederhergestellt werden: ${error.message}`);
+        window.alert(uiT("alertRestoreWorkerFailed").replace("{error}", error.message));
       }
     });
   });
@@ -8739,7 +9594,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
         const worker = state.workers.find((entry) => entry.id === button.dataset.workerAppLink) || null;
         showWorkerAppQrDialog(worker, absoluteLink, payload);
       } catch (error) {
-        window.alert(`App-Link konnte nicht erzeugt werden: ${error.message}`);
+        window.alert(uiT("alertAppLinkCreateFailed").replace("{error}", error.message));
       }
     });
   });
@@ -8788,7 +9643,7 @@ function showSecretDialog(title, lines, options = {}) {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(copyValue);
-        window.alert("Daten kopiert.");
+        window.alert(uiT("alertDataCopied"));
       } else {
         window.prompt("Daten zum Kopieren:", copyValue);
       }
@@ -8807,7 +9662,7 @@ function showSecretDialog(title, lines, options = {}) {
 function printWorkerAppQr(workerName, qrSrc) {
   const w = window.open("", "_blank", "width=720,height=840");
   if (!w) {
-    window.alert("Druckfenster konnte nicht geöffnet werden.");
+    window.alert(uiT("alertPrintWindowFailed"));
     return;
   }
 
@@ -8880,7 +9735,7 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(absoluteLink);
-        window.alert("App-Link kopiert.");
+        window.alert(uiT("alertAppLinkCopied"));
       } else {
         window.prompt("App-Link für den Mitarbeiter:", absoluteLink);
       }
@@ -8892,7 +9747,7 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
   dialog.querySelector("[data-worker-app-print]")?.addEventListener("click", () => {
     const qrImage = dialog.querySelector(`#${qrId}`);
     if (!qrImage?.src) {
-      window.alert("QR-Code wird noch erzeugt. Bitte kurz erneut versuchen.");
+      window.alert(uiT("alertQrNotReadyYet"));
       return;
     }
     printWorkerAppQr(workerName, qrImage.src);
@@ -9493,7 +10348,7 @@ async function handleDayCloseAcknowledge(event) {
     refreshAll();
     window.alert(runtimeText("dayCloseAckSuccess"));
   } catch (error) {
-    window.alert(`Tagesabschluss konnte nicht quittiert werden: ${error.message}`);
+    window.alert(uiT("alertDayCloseAckFailed").replace("{error}", error.message));
   } finally {
     elements.dayCloseAcknowledgeButton.disabled = false;
   }
@@ -9838,9 +10693,7 @@ async function handleWorkerSubmit(event) {
           const role = String(getCurrentUser()?.role || "").toLowerCase();
           const canOverride = role === "superadmin";
           if (!canOverride) {
-            window.alert(
-              `Fotovergleich fehlgeschlagen (${scorePct}%). Speichern ist gesperrt. Bitte erneut fotografieren oder Superadmin kontaktieren.`
-            );
+            window.alert(uiT("alertPhotoMatchFailed").replace("{score}", scorePct));
             return;
           }
           const proceed = window.confirm(
@@ -9851,7 +10704,7 @@ async function handleWorkerSubmit(event) {
           }
           const overrideReason = window.prompt("Bitte Grund für den Foto-Override eingeben (mindestens 8 Zeichen):", "") || "";
           if (overrideReason.trim().length < 8) {
-            window.alert("Override-Grund zu kurz. Bitte mindestens 8 Zeichen eingeben.");
+            window.alert(uiT("alertOverrideReasonTooShort"));
             return;
           }
           payload.photoMatchOverride = true;
@@ -9864,10 +10717,7 @@ async function handleWorkerSubmit(event) {
     if (state.editingWorkerId) {
       const result = await apiRequest(API_BASE + `/api/workers/${state.editingWorkerId}`, { method: "PUT", body: payload });
       if (result?.approvalRequested) {
-        window.alert(
-          "Foto-Override beantragt (Freigabe-ID: " + (result.approvalId || "?") + ").\n" +
-          "Ein zweiter Superadmin muss die Änderung freigeben, bevor sie gespeichert wird."
-        );
+        window.alert(uiT("alertPhotoOverrideRequested").replace("{id}", result.approvalId || "?"));
         clearWorkerEditor();
         stopCamera();
         await loadAllData();
@@ -9889,7 +10739,7 @@ async function handleWorkerSubmit(event) {
     setView("badge");
   } catch (error) {
     if (error.message === "invalid_badge_pin") {
-      window.alert("Badge-PIN muss aus 4 bis 8 Ziffern bestehen.");
+      window.alert(uiT("alertBadgePinInvalid"));
       return;
     }
     if (error.message === "badge_pin_required") {
@@ -9897,15 +10747,15 @@ async function handleWorkerSubmit(event) {
       return;
     }
     if (error.message === "duplicate_physical_card_id") {
-      window.alert("Diese physische Karten-ID ist bereits einem anderen Mitarbeiter zugeordnet.");
+      window.alert(uiT("alertDuplicatePhysicalCardId"));
       return;
     }
     if (error.message === "photo_override_forbidden") {
-      window.alert("Foto-Override ist nur für Superadmin erlaubt.");
+      window.alert(uiT("alertPhotoOverrideSuperadminOnly"));
       return;
     }
     if (error.message === "photo_override_reason_required") {
-      window.alert("Bitte einen ausreichenden Grund für den Foto-Override angeben.");
+      window.alert(uiT("alertPhotoOverrideReasonRequired"));
       return;
     }
     if (error.message === "visit_purpose_required") {
@@ -9924,7 +10774,7 @@ async function handleWorkerSubmit(event) {
       window.alert(runtimeText("visitorEndMissing"));
       return;
     }
-    window.alert(`Mitarbeiter konnte nicht gespeichert werden: ${error.message}`);
+    window.alert(uiT("alertWorkerSaveFailed").replace("{error}", error.message));
   }
 }
 
@@ -10009,7 +10859,7 @@ async function bookAccess(workerId, direction, gate, note) {
       });
       return { ok: false, reason: denyMessage, message: denyMessage };
     }
-    window.alert(`Zutritt konnte nicht gebucht werden: ${denyMessage}`);
+    window.alert(uiT("alertAccessBookingFailed").replace("{error}", denyMessage));
     return { ok: false, reason: denyMessage, message: denyMessage };
   }
 }
@@ -10148,7 +10998,7 @@ async function exportAccessCsv() {
     link.click();
     URL.revokeObjectURL(url);
   } catch (error) {
-    window.alert(`Zutrittsjournal-Export fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alertAccessExportFailed").replace("{error}", error.message));
   }
 }
 
@@ -10224,7 +11074,7 @@ function exportWorkersPdf() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      window.alert(`Mitarbeiterlisten-Export fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertWorkerExportFailed").replace("{error}", error.message));
     }
   });
 }
@@ -10379,7 +11229,7 @@ async function handleSettingsSubmit(event) {
     document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
     refreshAll();
   } catch (error) {
-    window.alert(`Einstellungen konnten nicht gespeichert werden: ${error.message}`);
+    window.alert(uiT("alertSettingsSaveFailed").replace("{error}", error.message));
   }
 }
 
@@ -10433,9 +11283,9 @@ async function handleSystemRepair() {
   try {
     await apiRequest(`${API_BASE}/api/system/repair`, { method: "POST", body: {} });
     await refreshSystemStatus();
-    window.alert("System-Reparatur wurde ausgefuehrt.");
+    window.alert(uiT("alertSystemRepairDone"));
   } catch (error) {
-    window.alert(`System-Reparatur fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alertSystemRepairFailed").replace("{error}", error.message));
   }
 }
 
@@ -10481,9 +11331,9 @@ async function loadCustomBrandingPreset() {
     elements.invoiceLogoPreview.classList.remove("hidden");
     applyWebsiteLogo(logoDataUrl);
 
-    window.alert("BauKometra Branding geladen. Jetzt nur noch auf Admin-Einstellungen speichern klicken.");
+    window.alert(uiT("alertBrandingLoaded"));
   } catch (error) {
-    window.alert(`Branding konnte nicht geladen werden: ${error.message}`);
+    window.alert(uiT("alertBrandingLoadFailed").replace("{error}", error.message));
   }
 }
 
@@ -10507,9 +11357,9 @@ async function loadCustomBrandingPresetAlt() {
     elements.invoiceLogoPreview.classList.remove("hidden");
     applyWebsiteLogo(logoDataUrl);
 
-    window.alert("Alternative BauKometra Branding-Variante geladen. Jetzt nur noch auf Admin-Einstellungen speichern klicken.");
+    window.alert(uiT("alertBrandingAltLoaded"));
   } catch (error) {
-    window.alert(`Alternative Branding-Variante konnte nicht geladen werden: ${error.message}`);
+    window.alert(uiT("alertBrandingAltLoadFailed").replace("{error}", error.message));
   }
 }
 
@@ -10566,15 +11416,15 @@ async function handleInvoiceSend() {
       if (errorText.toLowerCase().includes("smtp ist nicht konfiguriert")) {
         window.alert(runtimeText("invoiceSavedEmailNotConfigured"));
       } else {
-        window.alert(`Rechnung gespeichert, Versand fehlgeschlagen: ${payload.error}`);
+        window.alert(uiT("alertInvoiceSavedSendFailed").replace("{error}", payload.error));
       }
     }
   } catch (error) {
     if (String(error.message || "") === "duplicate_invoice_number") {
-      window.alert(`Rechnungsnummer ${invoice.invoiceNumber} ist bereits vergeben. Bitte eine andere Nummer verwenden.`);
+      window.alert(uiT("alertInvoiceNumberDuplicate").replace("{number}", invoice.invoiceNumber));
       return;
     }
-    window.alert(`Rechnung konnte nicht versendet werden: ${error.message}`);
+    window.alert(uiT("alertInvoiceSendFailed").replace("{error}", error.message));
   }
 }
 
@@ -10608,7 +11458,7 @@ function buildInvoiceDraft(options = {}) {
 
   if (invoiceNumber.length < 3 || invoiceNumber.length > 64) {
     if (!silent) {
-      window.alert("Rechnungsnummer muss zwischen 3 und 64 Zeichen haben.");
+      window.alert(uiT("alertInvoiceNumberLength"));
     }
     return null;
   }
@@ -10620,7 +11470,7 @@ function buildInvoiceDraft(options = {}) {
   });
   if (duplicateInvoice) {
     if (!silent) {
-      window.alert(`Rechnungsnummer ${invoiceNumber} ist bereits vergeben. Bitte eine andere Nummer verwenden.`);
+      window.alert(uiT("alertInvoiceNumberDuplicate").replace("{number}", invoiceNumber));
     }
     return null;
   }
@@ -10636,14 +11486,14 @@ function buildInvoiceDraft(options = {}) {
   const dueDateObj = new Date(`${invoiceDueDate}T00:00:00`);
   if (Number.isNaN(invoiceDateObj.getTime()) || Number.isNaN(dueDateObj.getTime())) {
     if (!silent) {
-      window.alert("Rechnungsdatum oder Fälligkeitsdatum ist ungültig.");
+      window.alert(uiT("alertInvoiceDateInvalid"));
     }
     return null;
   }
 
   if (dueDateObj < invoiceDateObj) {
     if (!silent) {
-      window.alert("Fälligkeitsdatum darf nicht vor dem Rechnungsdatum liegen.");
+      window.alert(uiT("alertInvoiceDueDateBeforeIssue"));
     }
     return null;
   }
@@ -10659,7 +11509,7 @@ function buildInvoiceDraft(options = {}) {
   const vatRate = Number(document.querySelector("#invoiceVatRate").value || "0");
   if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) {
     if (!silent) {
-      window.alert("MwSt. muss zwischen 0 und 100 liegen.");
+      window.alert(uiT("alertInvoiceVatRange"));
     }
     return null;
   }
@@ -11031,7 +11881,7 @@ async function handleCompanySubmit(event) {
       );
     }
   } catch (error) {
-    window.alert(`Firma konnte nicht angelegt werden: ${error.message}`);
+    window.alert(uiT("alertCompanyCreateFailed").replace("{error}", error.message));
   }
 }
 
@@ -11195,7 +12045,7 @@ function renderInvoiceApprovalQueue() {
     if (decision === "reject") {
       note = String(window.prompt("Ablehnungsgrund (Pflicht):", "") || "").trim();
       if (!note) {
-        window.alert("Ablehnung ohne Begründung ist nicht erlaubt.");
+        window.alert(uiT("alertApprovalRejectReasonRequired"));
         return;
       }
     }
@@ -11206,18 +12056,18 @@ function renderInvoiceApprovalQueue() {
         body: { decision, note },
       });
       if (payload?.status === "approved") {
-        window.alert("Freigabe bestätigt und Aktion ausgeführt.");
+        window.alert(uiT("alertApprovalConfirmed"));
       } else if (payload?.status === "rejected") {
-        window.alert("Freigabe wurde abgelehnt.");
+        window.alert(uiT("alertApprovalRejected"));
       } else {
-        window.alert("Freigabe aktualisiert.");
+        window.alert(uiT("alertApprovalUpdated"));
       }
       state.invoiceRetrySelectedIds = [];
       await loadAndRenderInvoices();
       await loadAllData();
       refreshAll();
     } catch (error) {
-      window.alert(`Freigabe-Aktion fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertApprovalActionFailed").replace("{error}", error.message));
     }
   };
 }
@@ -11267,15 +12117,15 @@ function renderInvoiceDeadLetters() {
           body: {}
         });
         if (payload?.sent) {
-          window.alert("Rechnung wurde erfolgreich erneut versendet und aus Dead-Letter entfernt.");
+          window.alert(uiT("alertInvoiceRetrySentDeadLetter"));
         } else {
-          window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+          window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", payload?.error || "Unbekannter Fehler"));
         }
         await loadAndRenderInvoices();
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -11292,12 +12142,12 @@ function renderInvoiceDeadLetters() {
           body: {}
         });
         if (payload?.approvalRequested) {
-          window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+          window.alert(uiT("alertDeadLetterResolveApprovalRequested").replace("{id}", payload.approvalId));
         }
         await loadAndRenderInvoices();
         refreshAll();
       } catch (error) {
-        window.alert(`Dead-Letter-Fall konnte nicht erledigt werden: ${error.message}`);
+        window.alert(uiT("alertDeadLetterResolveFailed").replace("{error}", error.message));
       }
     }
   };
@@ -11619,7 +12469,7 @@ function renderInvoiceManagementList() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Fehler: ${error.message}`);
+        window.alert(uiT("alertGenericError").replace("{error}", error.message));
       }
     });
   });
@@ -11636,15 +12486,15 @@ function renderInvoiceManagementList() {
           body: {}
         });
         if (payload?.sent) {
-          window.alert("Rechnung wurde erfolgreich erneut versendet.");
+          window.alert(uiT("alertInvoiceRetrySent"));
         } else {
-          window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+          window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", payload?.error || "Unbekannter Fehler"));
         }
         await loadAndRenderInvoices();
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", error.message));
       }
     });
   });
@@ -11668,7 +12518,7 @@ function renderInvoiceManagementList() {
       try {
         await loadInvoiceAttemptHistory(invoiceId, { force: true });
       } catch (error) {
-        window.alert(`Historie konnte nicht geladen werden: ${error.message}`);
+        window.alert(uiT("alertInvoiceHistoryLoadFailed").replace("{error}", error.message));
       }
       renderInvoiceManagementList();
     });
@@ -11863,15 +12713,15 @@ function renderInvoiceRetryQueue(container, sourceInvoices) {
         body: {}
       });
       if (payload?.sent) {
-        window.alert("Rechnung wurde erfolgreich erneut versendet.");
+        window.alert(uiT("alertInvoiceRetrySent"));
       } else {
-        window.alert(`Erneuter Versand fehlgeschlagen: ${payload?.error || "Unbekannter Fehler"}`);
+        window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", payload?.error || "Unbekannter Fehler"));
       }
       await loadAndRenderInvoices();
       await loadAllData();
       refreshAll();
     } catch (error) {
-      window.alert(`Erneuter Versand fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertInvoiceRetryFailed").replace("{error}", error.message));
     }
   };
 }
@@ -12093,7 +12943,7 @@ function renderCollectionsList() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Aktion fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertActionFailed").replace("{error}", error.message));
       }
       return;
     }
@@ -12123,7 +12973,7 @@ function renderCollectionsList() {
         await loadAllData();
         refreshAll();
       } catch (error) {
-        window.alert(`Statuswechsel fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertCollectionsStatusChangeFailed").replace("{error}", error.message));
       }
     }
   };
@@ -12177,19 +13027,19 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "otp_required") {
-      window.alert("Für dieses Konto ist 2FA aktiv. Bitte OTP-Code eingeben.");
+      window.alert(uiT("alertOtpRequired"));
       return;
     }
     if (error.message === "otp_invalid") {
-      window.alert("OTP-Code ist ungültig oder abgelaufen. Bitte neuen Code eingeben.");
+      window.alert(uiT("alertOtpInvalid"));
       return;
     }
     if (error.message === "too_many_attempts") {
-      window.alert("Zu viele Fehlversuche. Bitte 10 Minuten warten und erneut versuchen.");
+      window.alert(uiT("alertTooManyAttempts"));
       return;
     }
     if (error.message === "forbidden_tenant_host") {
-      window.alert("Dieser Zugang ist nur über die freigegebene Firmen-Domain erlaubt.");
+      window.alert(uiT("alertForbiddenTenantHost"));
       return;
     }
     if (error.message === "support_session_read_only") {
@@ -12197,42 +13047,42 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "support_company_mismatch") {
-      window.alert("Dieser Login passt nicht zur ausgewählten Firma. Bitte den Firmen-Admin der markierten Firma verwenden.");
+      window.alert(uiT("alertSupportCompanyMismatch"));
       return;
     }
     if (error.message === "company_locked") {
-      window.alert("Diese Firma ist gesperrt. Bitte zuerst offene Rechnungen begleichen oder die Sperre im Superadmin aufheben.");
+      window.alert(uiT("alertLoginCompanyLocked"));
       return;
     }
     if (error.message === "invalid_credentials") {
-      window.alert("Benutzername oder Passwort ist falsch. Bitte Daten prüfen und erneut versuchen.");
+      window.alert(uiT("alertInvalidCredentials"));
       return;
     }
     if (error.message === "admin_ip_not_allowed") {
-      window.alert("Admin-Zugriff von dieser IP ist nicht erlaubt.");
+      window.alert(uiT("alertAdminIpNotAllowed"));
       return;
     }
     if (error.message === "login_scope_mismatch") {
-      window.alert("Zugangstyp passt nicht zum Konto. Bitte Server-Admin/Firmen-Admin korrekt auswählen.");
+      window.alert(uiT("alertLoginScopeMismatch"));
       return;
     }
     if (error.message === "http_405") {
       const targetInfo = API_BASE || window.location.origin;
-      window.alert(`Login fehlgeschlagen: 405. Der Login-Request landet aktuell auf ${targetInfo}. Für GitHub Pages muss das Frontend dein Render-Backend nutzen.`);
+      window.alert(uiT("alertLoginHttp405").replace("{target}", targetInfo));
       return;
     }
     if (error.message === "invalid_login_response") {
       window.alert(runtimeText("loginResponseIncomplete"));
       return;
     }
-    window.alert(`Login fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alertLoginFailed").replace("{error}", error.message));
   }
 }
 
 async function requestPasswordResetFromLogin() {
   const username = String(elements.loginUsername?.value || "").trim();
   if (!username) {
-    window.alert("Bitte zuerst Benutzername oder E-Mail eintragen.");
+    window.alert(uiT("alertPasswordResetEnterUsername"));
     return;
   }
   try {
@@ -12241,9 +13091,9 @@ async function requestPasswordResetFromLogin() {
       method: "POST",
       body: { username }
     });
-    window.alert("Wenn ein passender Account gefunden wurde, wurde eine Reset-E-Mail versendet.");
+    window.alert(uiT("alertPasswordResetSent"));
   } catch (error) {
-    window.alert(`Passwort-Reset konnte nicht gestartet werden: ${error.message}`);
+    window.alert(uiT("alertPasswordResetFailed").replace("{error}", error.message));
   }
 }
 
@@ -12265,9 +13115,9 @@ async function maybeHandlePasswordResetToken() {
     });
     url.searchParams.delete("resetToken");
     window.history.replaceState({}, document.title, url.toString());
-    window.alert("Passwort wurde erfolgreich gesetzt. Du kannst dich jetzt anmelden.");
+    window.alert(uiT("alertPasswordSetSuccess"));
   } catch (error) {
-    window.alert(`Reset-Link konnte nicht verwendet werden: ${error.message}`);
+    window.alert(uiT("alertPasswordResetLinkFailed").replace("{error}", error.message));
   }
 }
 
@@ -12305,10 +13155,10 @@ async function handlePasswordChange(event) {
       method: "POST",
       body: { currentPassword, newPassword }
     });
-    window.alert("Passwort geaendert. Bitte neu anmelden.");
+    window.alert(uiT("alertPasswordChanged"));
     await handleLogout();
   } catch (error) {
-    window.alert(`Passwortwechsel fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alertPasswordChangeFailed").replace("{error}", error.message));
   }
 }
 
@@ -12320,7 +13170,7 @@ async function setupTwofa() {
     state.twofa.enabled = Boolean(payload.enabled);
     refreshAll();
   } catch (error) {
-    window.alert(`2FA Setup fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alert2faSetupFailed").replace("{error}", error.message));
   }
 }
 
@@ -12334,7 +13184,7 @@ async function enableTwofa() {
     state.twofa.enabled = true;
     refreshAll();
   } catch (error) {
-    window.alert(`2FA konnte nicht aktiviert werden: ${error.message}`);
+    window.alert(uiT("alert2faEnableFailed").replace("{error}", error.message));
   }
 }
 
@@ -12348,7 +13198,7 @@ async function disableTwofa() {
     state.twofa.enabled = false;
     refreshAll();
   } catch (error) {
-    window.alert(`2FA konnte nicht deaktiviert werden: ${error.message}`);
+    window.alert(uiT("alert2faDisableFailed").replace("{error}", error.message));
   }
 }
 
@@ -13291,7 +14141,7 @@ async function exportState(options = {}) {
       elements.photoDebugText.style.color = "#0b7a3b";
     }
   } catch (error) {
-    window.alert(`Export fehlgeschlagen: ${error.message}`);
+    window.alert(uiT("alertExportFailed").replace("{error}", error.message));
   }
 }
 
@@ -13309,7 +14159,7 @@ async function loadDemoData() {
   }
 
   if (!companyId) {
-    window.alert("Keine aktive Firma für Demo-Daten gefunden.");
+    window.alert(uiT("alertNoDemoCompany"));
     return;
   }
 
@@ -13324,7 +14174,7 @@ async function loadDemoData() {
   }
   const mode = String(modeRaw || "replace").trim().toLowerCase();
   if (!["replace", "append"].includes(mode)) {
-    window.alert("Ungültiger Modus. Bitte replace oder append verwenden.");
+    window.alert(uiT("alertDemoModeInvalid"));
     return;
   }
 
@@ -13357,7 +14207,7 @@ async function loadDemoData() {
       `Demo-Daten fuer ${companyName} wurden geladen (Modus: ${result.mode}, Mitarbeiter: ${result.workersCreated}, Logs: ${result.accessLogsCreated}, Rechnungen: ${result.invoicesCreated}).`
     );
   } catch (error) {
-    window.alert(`Demo-Daten konnten nicht geladen werden: ${error.message}`);
+    window.alert(uiT("alertDemoLoadFailed").replace("{error}", error.message));
   }
 }
 
@@ -13581,9 +14431,9 @@ async function handleTopbarImport() {
 
       await loadAllData();
       refreshAll();
-      window.alert("Import erfolgreich angewendet.");
+      window.alert(uiT("alertImportSuccess"));
     } catch (error) {
-      window.alert(`Import fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertImportFailed").replace("{error}", error.message));
     }
   };
 
@@ -13905,7 +14755,7 @@ if (invoiceRetryExportBtn) {
         `invoice-retry-queue-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     } catch (error) {
-      window.alert(`CSV-Export fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertCsvExportFailed").replace("{error}", error.message));
     }
   });
 }
@@ -13923,7 +14773,7 @@ if (invoiceIncidentExportBtn) {
         `invoice-incidents-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     } catch (error) {
-      window.alert(`Incident-Export fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertIncidentExportFailed").replace("{error}", error.message));
     }
   });
 }
@@ -13933,7 +14783,7 @@ if (invoiceRetryBulkSendBtn) {
   invoiceRetryBulkSendBtn.addEventListener("click", async () => {
     const selectedIds = Array.isArray(state.invoiceRetrySelectedIds) ? state.invoiceRetrySelectedIds : [];
     if (!selectedIds.length) {
-      window.alert("Bitte mindestens eine Rechnung in der Warteschlange auswählen.");
+      window.alert(uiT("alertSelectInvoiceForRetry"));
       return;
     }
     if (!window.confirm(`${selectedIds.length} ausgewählte Rechnung(en) jetzt erneut senden?`)) {
@@ -13945,17 +14795,17 @@ if (invoiceRetryBulkSendBtn) {
         body: { invoiceIds: selectedIds }
       });
       if (payload?.approvalRequested) {
-        window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+        window.alert(uiT("alertDeadLetterResolveApprovalRequested").replace("{id}", payload.approvalId));
       } else {
         const summary = payload?.summary || {};
-        window.alert(`Bulk-Retry abgeschlossen. Erfolgreich: ${summary.sent || 0}, Fehlgeschlagen: ${summary.failed || 0}, Übersprungen: ${summary.skipped || 0}`);
+        window.alert(uiT("alertBulkRetryDone").replace("{sent}", summary.sent || 0).replace("{failed}", summary.failed || 0).replace("{skipped}", summary.skipped || 0));
       }
       state.invoiceRetrySelectedIds = [];
       await loadAndRenderInvoices();
       await loadAllData();
       refreshAll();
     } catch (error) {
-      window.alert(`Bulk-Retry fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertBulkRetryFailed").replace("{error}", error.message));
     }
   });
 }
@@ -13966,7 +14816,7 @@ if (invoiceRetryCriticalSendBtn) {
     const criticalIds = getCriticalRetryInvoiceIds(state.invoices, 50);
 
     if (!criticalIds.length) {
-      window.alert("Aktuell gibt es keine kritischen Fälle (Score >= 70).");
+      window.alert(uiT("alertNoCriticalCases"));
       return;
     }
 
@@ -13980,17 +14830,17 @@ if (invoiceRetryCriticalSendBtn) {
         body: { invoiceIds: criticalIds }
       });
       if (payload?.approvalRequested) {
-        window.alert(`Freigabe angefordert (${payload.approvalId}). Ein zweiter Superadmin muss bestätigen.`);
+        window.alert(uiT("alertDeadLetterResolveApprovalRequested").replace("{id}", payload.approvalId));
       } else {
         const summary = payload?.summary || {};
-        window.alert(`Kritischer Bulk-Retry abgeschlossen. Erfolgreich: ${summary.sent || 0}, Fehlgeschlagen: ${summary.failed || 0}, Übersprungen: ${summary.skipped || 0}`);
+        window.alert(uiT("alertCriticalBulkRetryDone").replace("{sent}", summary.sent || 0).replace("{failed}", summary.failed || 0).replace("{skipped}", summary.skipped || 0));
       }
       state.invoiceRetrySelectedIds = [];
       await loadAndRenderInvoices();
       await loadAllData();
       refreshAll();
     } catch (error) {
-      window.alert(`Kritischer Bulk-Retry fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertCriticalBulkRetryFailed").replace("{error}", error.message));
     }
   });
 }
@@ -14027,7 +14877,7 @@ if (exportCompanyDocEmailsBtn) {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      window.alert(`Export fehlgeschlagen: ${error.message}`);
+      window.alert(uiT("alertExportFailed").replace("{error}", error.message));
     }
   });
 }
@@ -14088,7 +14938,7 @@ if (companyForm) {
 if (elements.desktopInstallButton) {
   elements.desktopInstallButton.addEventListener("click", () => {
     triggerDesktopInstall().catch(() => {
-      window.alert("Desktop-Installation konnte nicht gestartet werden.");
+      window.alert(uiT("alertDesktopInstallFailed"));
     });
   });
 }
@@ -14199,7 +15049,7 @@ if (addSubcompanyButton) {
       if (error.message === "session_expired") {
         return;
       }
-      window.alert(`Subunternehmen konnte nicht angelegt werden: ${error.message}`);
+      window.alert(uiT("alertSubcompanyCreateFailed").replace("{error}", error.message));
     }
   });
 }
@@ -14244,7 +15094,7 @@ wireDesktopInstallPrompt();
         if (elements.bulkSelectAll) elements.bulkSelectAll.checked = false;
         refreshAll();
       } catch (error) {
-        window.alert(`Fehler beim Löschen: ${error.message}`);
+        window.alert(uiT("alertDeleteFailed").replace("{error}", error.message));
       }
     });
   }
@@ -14352,7 +15202,7 @@ async function bulkSetStatus(status) {
     if (elements.bulkSelectAll) elements.bulkSelectAll.checked = false;
     refreshAll();
   } catch (error) {
-    window.alert(`Fehler beim Status-Ändern: ${error.message}`);
+    window.alert(uiT("alertStatusChangeFailed").replace("{error}", error.message));
   }
 }
 
@@ -15034,9 +15884,9 @@ function renderWorkerDocuments(docs, workerId, containerEl) {
       try {
         const res = await apiRequest(API_BASE + "/api/documents/inbox/rematch-company-links", { method: "POST", body: {} });
         await loadDocumentInbox();
-        window.alert(`Neu-Zuordnung abgeschlossen. Treffer: ${Number(res?.matchedCount || 0)}`);
+        window.alert(uiT("alertReassignmentDone").replace("{count}", Number(res?.matchedCount || 0)));
       } catch (error) {
-        window.alert(`Neu-Zuordnung fehlgeschlagen: ${error.message}`);
+        window.alert(uiT("alertReassignmentFailed").replace("{error}", error.message));
       } finally {
         rematchBtn.disabled = false;
       }
