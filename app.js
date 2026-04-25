@@ -5183,6 +5183,118 @@ function refreshAll() {
 const GREETING_SHOWN_KEY = "baupass-greeting-date";
 const GREET_DISPLAY_MS = 4200;
 
+function getGreetingMeta(lang) {
+  const normalized = normalizeUiLang(lang);
+  const map = {
+    de: {
+      ttsLang: "de-DE",
+      morning: "Guten Morgen",
+      noon: "Guten Mittag",
+      day: "Guten Tag",
+      evening: "Guten Abend",
+      night: "Gute Nacht",
+      subMorning: "Ein produktiver Tag liegt vor Ihnen.",
+      subNoon: "Zeit fuer eine kurze Pause!",
+      subDay: "Schoen, dass Sie da sind.",
+      subEvening: "Danke fuer Ihren Einsatz heute.",
+      subNight: "Bitte denken Sie an die Uebergabe.",
+    },
+    en: {
+      ttsLang: "en-GB",
+      morning: "Good morning",
+      noon: "Good afternoon",
+      day: "Good afternoon",
+      evening: "Good evening",
+      night: "Good night",
+      subMorning: "A productive day is ahead of you.",
+      subNoon: "Time for a short break!",
+      subDay: "Great to have you here.",
+      subEvening: "Thank you for your effort today.",
+      subNight: "Please remember the handover.",
+    },
+    tr: {
+      ttsLang: "tr-TR",
+      morning: "Gunaydin",
+      noon: "Iyi oglenler",
+      day: "Iyi gunler",
+      evening: "Iyi aksamlar",
+      night: "Iyi geceler",
+      subMorning: "Verimli bir gun sizi bekliyor.",
+      subNoon: "Kisa bir mola zamani!",
+      subDay: "Burada olmaniza sevindik.",
+      subEvening: "Bugunku emeginiz icin tesekkurler.",
+      subNight: "Lutfen deviri unutmayin.",
+    },
+    ar: {
+      ttsLang: "ar-SA",
+      morning: "صباح الخير",
+      noon: "نهارك سعيد",
+      day: "مرحباً",
+      evening: "مساء الخير",
+      night: "تصبح على خير",
+      subMorning: "يوم منتج ينتظرك.",
+      subNoon: "وقت استراحة قصيرة!",
+      subDay: "سعداء بوجودك.",
+      subEvening: "شكراً على جهودك اليوم.",
+      subNight: "يرجى تذكر تسليم المهام.",
+    },
+    fr: {
+      ttsLang: "fr-FR",
+      morning: "Bonjour",
+      noon: "Bon apres-midi",
+      day: "Bonjour",
+      evening: "Bonsoir",
+      night: "Bonne nuit",
+      subMorning: "Une journee productive vous attend.",
+      subNoon: "Temps pour une courte pause !",
+      subDay: "Ravis de vous voir.",
+      subEvening: "Merci pour votre engagement aujourd'hui.",
+      subNight: "Pensez a la passation, s'il vous plait.",
+    },
+    es: {
+      ttsLang: "es-ES",
+      morning: "Buenos dias",
+      noon: "Buenas tardes",
+      day: "Buenas tardes",
+      evening: "Buenas tardes",
+      night: "Buenas noches",
+      subMorning: "Le espera un dia productivo.",
+      subNoon: "Hora de una pausa corta!",
+      subDay: "Nos alegra verle aqui.",
+      subEvening: "Gracias por su esfuerzo de hoy.",
+      subNight: "Recuerde el relevo, por favor.",
+    },
+    it: {
+      ttsLang: "it-IT",
+      morning: "Buongiorno",
+      noon: "Buon pomeriggio",
+      day: "Buon pomeriggio",
+      evening: "Buonasera",
+      night: "Buonanotte",
+      subMorning: "Ti aspetta una giornata produttiva.",
+      subNoon: "Tempo per una breve pausa!",
+      subDay: "Felici di averti qui.",
+      subEvening: "Grazie per il tuo impegno di oggi.",
+      subNight: "Ricorda il passaggio consegne.",
+    },
+    pl: {
+      ttsLang: "pl-PL",
+      morning: "Dzien dobry",
+      noon: "Dobrego poludnia",
+      day: "Milego dnia",
+      evening: "Dobry wieczor",
+      night: "Dobranoc",
+      subMorning: "Przed Toba produktywny dzien.",
+      subNoon: "Czas na krotka przerwe!",
+      subDay: "Milo Cie widziec.",
+      subEvening: "Dziekujemy za Twoj dzisiejszy wysilek.",
+      subNight: "Pamietaj o przekazaniu zmiany.",
+    },
+  };
+
+  return map[normalized] || map.de;
+}
+
 function showLoginGreeting() {
   const user = state.currentUser;
   const el = document.getElementById("loginGreetingToast");
@@ -5194,13 +5306,15 @@ function showLoginGreeting() {
   if (lastShown === today) return;
   localStorage.setItem(GREETING_SHOWN_KEY, today);
 
+  const lang = getStoredUiLang();
+  const greetingMeta = getGreetingMeta(lang);
   const h = new Date().getHours();
   let salutation, icon, sub;
-  if      (h >= 5  && h < 12) { salutation = "Guten Morgen";   icon = "☀️";  sub = "Ein produktiver Tag liegt vor Ihnen."; }
-  else if (h >= 12 && h < 14) { salutation = "Guten Mittag";   icon = "🌤️"; sub = "Zeit für eine kurze Pause!"; }
-  else if (h >= 14 && h < 18) { salutation = "Guten Tag";      icon = "🌤️"; sub = "Schön, dass Sie da sind."; }
-  else if (h >= 18 && h < 22) { salutation = "Guten Abend";    icon = "🌆";  sub = "Danke für Ihren Einsatz heute."; }
-  else                         { salutation = "Gute Nacht";     icon = "🌙";  sub = "Bitte denken Sie an die Übergabe."; }
+  if      (h >= 5  && h < 12) { salutation = greetingMeta.morning; icon = "☀️";  sub = greetingMeta.subMorning; }
+  else if (h >= 12 && h < 14) { salutation = greetingMeta.noon;    icon = "🌤️"; sub = greetingMeta.subNoon; }
+  else if (h >= 14 && h < 18) { salutation = greetingMeta.day;     icon = "🌤️"; sub = greetingMeta.subDay; }
+  else if (h >= 18 && h < 22) { salutation = greetingMeta.evening; icon = "🌆";  sub = greetingMeta.subEvening; }
+  else                         { salutation = greetingMeta.night;   icon = "🌙";  sub = greetingMeta.subNight; }
 
   const firstName = (user.name || user.username || "").split(" ")[0];
   const fullSalutation = firstName ? `${salutation}, ${firstName}!` : `${salutation}!`;
@@ -5222,14 +5336,16 @@ function showLoginGreeting() {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(`${salutation}${firstName ? ", " + firstName : ""}!`);
-      utter.lang    = "de-DE";
+      utter.lang    = greetingMeta.ttsLang;
       utter.volume  = 0.6;   // 60 % – weder zu laut noch zu leise
       utter.rate    = 0.95;
       utter.pitch   = 1.05;
-      // Deutsche Stimme bevorzugen wenn verfügbar
+      // Stimme passend zur UI-Sprache bevorzugen, wenn verfuegbar.
       const voices = window.speechSynthesis.getVoices();
-      const deVoice = voices.find((v) => v.lang.startsWith("de") && v.localService);
-      if (deVoice) utter.voice = deVoice;
+      const voicePrefix = String(greetingMeta.ttsLang).split("-")[0].toLowerCase();
+      const preferredVoice = voices.find((v) => v.lang.toLowerCase().startsWith(voicePrefix) && v.localService)
+        || voices.find((v) => v.lang.toLowerCase().startsWith(voicePrefix));
+      if (preferredVoice) utter.voice = preferredVoice;
       window.speechSynthesis.speak(utter);
     }
   } catch {
