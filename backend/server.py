@@ -1288,6 +1288,7 @@ def init_db():
             name TEXT NOT NULL,
             role TEXT NOT NULL,
             company_id TEXT,
+            twofa_secret TEXT,
             twofa_enabled INTEGER NOT NULL DEFAULT 0,
             api_key_hash TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(company_id) REFERENCES companies(id)
@@ -1576,6 +1577,11 @@ def init_db():
         for row in rows:
             if not row[1]:
                 cur.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash("1234"), row[0]))
+
+    if "twofa_secret" not in columns:
+        cur.execute("ALTER TABLE users ADD COLUMN twofa_secret TEXT")
+    if "twofa_enabled" not in columns:
+        cur.execute("ALTER TABLE users ADD COLUMN twofa_enabled INTEGER NOT NULL DEFAULT 0")
 
     company_columns = [row[1] for row in cur.execute("PRAGMA table_info(companies)").fetchall()]
     if "deleted_at" not in company_columns:
