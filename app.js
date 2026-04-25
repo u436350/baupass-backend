@@ -8401,18 +8401,31 @@ function loadTtsVoiceList() {
   if (!panel) return;
 
   if (!window.speechSynthesis) {
-    panel.innerHTML = `<p style="color:#dc2626">Sprachausgabe (Web Speech API) wird von diesem Browser nicht unterstützt.</p>`;
+    panel.innerHTML = `
+      <p style="color:#dc2626;font-size:0.88rem">⚠️ Sprachausgabe (Web Speech API) wird von diesem Browser nicht unterstützt.</p>
+      <p style="color:#555;font-size:0.83rem;margin-top:6px">Bitte verwende <strong>Google Chrome</strong> oder <strong>Microsoft Edge</strong> für Sprachausgabe.</p>`;
     return;
   }
 
   function renderVoices() {
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) {
-      panel.innerHTML = `<p style="color:#888;font-size:0.88rem">Keine Stimmen gefunden. Bitte erneut versuchen.</p>`;
+      panel.innerHTML = `
+        <div style="background:#fff8e1;border:1px solid #f59e0b;border-radius:6px;padding:12px;font-size:0.85rem">
+          <p style="margin:0 0 8px;font-weight:600;color:#92400e">⚠️ Keine Sprachstimmen gefunden</p>
+          <p style="margin:0 0 6px;color:#555">Mögliche Ursachen und Lösungen:</p>
+          <ul style="margin:0 0 10px;padding-left:18px;color:#555;line-height:1.7">
+            <li><strong>Windows:</strong> Einstellungen → Zeit &amp; Sprache → Sprache → Sprache hinzufügen (z.B. Arabisch, Türkisch)</li>
+            <li><strong>Chrome:</strong> Öffne <code>chrome://settings/languages</code> und füge Sprachen hinzu</li>
+            <li><strong>Firefox:</strong> Unterstützt Web Speech API eingeschränkt – besser Chrome/Edge nutzen</li>
+            <li><strong>Server/Linux:</strong> <code>apt install speech-dispatcher espeak-ng</code></li>
+          </ul>
+          <p style="margin:0;color:#555">Die Begrüßung spielt trotzdem einen <strong>Jingle</strong> ab, wenn keine Stimme verfügbar ist.</p>
+          <button type="button" class="ghost-button" style="margin-top:10px" onclick="loadTtsVoiceList()">🔄 Erneut versuchen</button>
+        </div>`;
       return;
     }
 
-    // Gruppiere nach Sprache
     const byLang = {};
     for (const v of voices) {
       const lang = v.lang || "unbekannt";
@@ -8425,7 +8438,6 @@ function loadTtsVoiceList() {
 
     let html = `<p style="font-size:0.82rem;color:#555;margin:0 0 10px">${voices.length} Stimmen verfügbar</p>`;
     html += `<div style="max-height:400px;overflow-y:auto;font-size:0.83rem">`;
-
     for (const lang of langKeys) {
       const prefix = lang.split("-")[0].toLowerCase();
       const isHighlighted = highlighted.includes(prefix);
@@ -8444,10 +8456,11 @@ function loadTtsVoiceList() {
       html += `</div></div>`;
     }
     html += `</div>`;
-    html += `<p style="font-size:0.78rem;color:#888;margin-top:8px">🖥️ = lokale Stimme &nbsp; ☁️ = Cloud-Stimme &nbsp; Fett = in BauPass genutzte Sprachen</p>`;
+    html += `<p style="font-size:0.78rem;color:#888;margin-top:8px">🖥️ = lokale Stimme &nbsp; ☁️ = Cloud-Stimme &nbsp; <strong>Fett</strong> = in BauPass genutzte Sprachen</p>`;
     panel.innerHTML = html;
   }
 
+  panel.innerHTML = `<p style="color:#888;font-size:0.88rem">Lade Stimmen…</p>`;
   const voices = window.speechSynthesis.getVoices();
   if (voices.length > 0) {
     renderVoices();
@@ -8456,8 +8469,7 @@ function loadTtsVoiceList() {
       window.speechSynthesis.removeEventListener("voiceschanged", once);
       renderVoices();
     });
-    panel.innerHTML = `<p style="color:#888;font-size:0.88rem">Lade Stimmen…</p>`;
-    setTimeout(renderVoices, 800);
+    setTimeout(renderVoices, 1200);
   }
 }
 
@@ -8478,6 +8490,33 @@ function testTtsVoice(voiceIndex) {
   utter.rate   = 0.92;
   utter.pitch  = 1.15;
   window.speechSynthesis.speak(utter);
+}
+
+function playGreetingJingle() {
+  // Freundlicher 3-Ton Jingle über Web Audio API – kein TTS nötig
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 (Dur-Dreiklang)
+    let startTime = ctx.currentTime + 0.05;
+    for (const freq of notes) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.18, startTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.45);
+      osc.start(startTime);
+      osc.stop(startTime + 0.5);
+      startTime += 0.22;
+    }
+    // Kontext nach Ende schließen
+    setTimeout(() => { try { ctx.close(); } catch {} }, 2000);
+  } catch {
+    // AudioContext nicht verfügbar – ignorieren
+  }
 }
 
 function showLoginGreeting() {
@@ -8555,22 +8594,28 @@ function showLoginGreeting() {
 
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
-        // Stimmen bereits geladen
         speakWithVoice();
       } else {
-        // Stimmen noch nicht bereit – auf Event warten
         window.speechSynthesis.addEventListener("voiceschanged", function onVoicesReady() {
           window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
           speakWithVoice();
         });
-        // Fallback: nach 500ms trotzdem sprechen (ohne Stimme = Browser-Standard)
+        // Fallback: nach 1s prüfen ob Stimmen jetzt da sind, sonst Jingle
         setTimeout(() => {
-          if (!window.speechSynthesis.speaking) speakWithVoice();
-        }, 500);
+          if (!window.speechSynthesis.speaking) {
+            if (window.speechSynthesis.getVoices().length > 0) {
+              speakWithVoice();
+            } else {
+              // Keine Stimmen verfügbar → kurzen Jingle über AudioContext abspielen
+              playGreetingJingle();
+            }
+          }
+        }, 1000);
       }
     }
   } catch {
-    // Kein TTS verfügbar – still ignorieren
+    // Kein TTS verfügbar – Jingle als Fallback
+    try { playGreetingJingle(); } catch { /* ignore */ }
   }
 
   // Nach GREET_DISPLAY_MS ausblenden
