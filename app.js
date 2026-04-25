@@ -8476,6 +8476,7 @@ function testTtsVoice(voiceIndex) {
   utter.lang   = voice.lang;
   utter.volume = 0.8;
   utter.rate   = 0.92;
+  utter.pitch  = 1.15;
   window.speechSynthesis.speak(utter);
 }
 
@@ -8527,11 +8528,23 @@ function showLoginGreeting() {
         utter.lang   = ttsLang;
         utter.volume = 0.7;
         utter.rate   = 0.92;
-        utter.pitch  = 1.05;
+        utter.pitch  = 1.15;  // etwas höher = weiblicher Klang
         const voices = window.speechSynthesis.getVoices();
         const prefix = ttsLang.split("-")[0].toLowerCase();
-        // Bevorzuge native Systemstimme in der richtigen Sprache
+
+        // Weibliche Stimme bevorzugen – anhand typischer Namen erkennen
+        const femaleKeywords = /female|frau|woman|féminin|feminine|zira|sabina|anna|lekha|helena|susan|karen|victoria|moira|samantha|ava|alice|amelie|céline|celine|hazel|heera|nora|laura|lucia|mia|paulina|kendra|joana|microsoft.*zira|google.*female/i;
+
+        function isFemale(v) {
+          return femaleKeywords.test(v.name);
+        }
+
+        // Priorität: weiblich + exakte Sprache + lokal > weiblich + Sprachpräfix + lokal > weiblich + exakt > weiblich + Präfix > beliebig lokal > beliebig
         const preferred =
+          voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
+          voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
+          voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
+          voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix)) ||
           voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
           voices.find((v) => v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
           voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
