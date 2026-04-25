@@ -782,6 +782,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Code aus App:",
     tfaCodePlaceholder: "6-stelliger Code",
     tfaEnableHint: "Gib den 6-stelligen Code aus deiner Authenticator-App ein und klicke 'Aktivieren'.",
+    tfaEmailLabel: "E-Mail-Adresse für OTP-Codes",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "Gib deine E-Mail-Adresse ein und klicke auf Aktivieren. Bei jedem Login wird ein Code an deine E-Mail gesendet.",
+    alertTfaActivated: "2FA wurde aktiviert.",
+    alertTfaEmailRequired: "Bitte E-Mail-Adresse eingeben, bevor 2FA aktiviert wird.",
+    alertOtpSent: "Ein Sicherheitscode wurde an Ihre E-Mail gesendet. Bitte prüfen Sie Ihr Postfach.",
+    loginOtpSentNotice: "Code per E-Mail gesendet – Postfach prüfen",
+    loginOtpBackBtn: "← Zurück",
   },
   en: {
     authEyebrow: "Login Page",
@@ -1422,6 +1430,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Code from app:",
     tfaCodePlaceholder: "6-digit code",
     tfaEnableHint: "Enter the 6-digit code from your authenticator app and click 'Enable'.",
+    tfaEmailLabel: "Email address for OTP codes",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "Enter your email address and click Activate. A code will be sent to your email at each login.",
+    alertTfaActivated: "2FA has been activated.",
+    alertTfaEmailRequired: "Please enter an email address before activating 2FA.",
+    alertOtpSent: "A security code has been sent to your email. Please check your inbox.",
+    loginOtpSentNotice: "Code sent by email – check your inbox",
+    loginOtpBackBtn: "← Back",
   },
   tr: {
     authEyebrow: "Giriş Sayfası",
@@ -2031,6 +2047,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Uygulamadan kod:",
     tfaCodePlaceholder: "6 haneli kod",
     tfaEnableHint: "Kimlik doğrulama uygulamanızdan 6 haneli kodu girin ve 'Etkinleştir' düğmesine tıklayın.",
+    tfaEmailLabel: "OTP kodları için e-posta adresi",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "E-posta adresinizi girin ve Etkinleştir'e tıklayın. Her girişte e-postasınıza bir kod gönderilecektir.",
+    alertTfaActivated: "2FA etkinleştirildi.",
+    alertTfaEmailRequired: "2FA'yı etkinleştirmeden önce lütfen bir e-posta adresi girin.",
+    alertOtpSent: "Güvenlik kodu e-postasınıza gönderildi. Lütfen gelen kutunuzu kontrol edin.",
+    loginOtpSentNotice: "Kod e-posta ile gönderildi – gelen kutunuzu kontrol edin",
+    loginOtpBackBtn: "← Geri",
   },
   ar: {
     authEyebrow: "صفحة تسجيل الدخول",
@@ -2666,6 +2690,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "الرمز من التطبيق:",
     tfaCodePlaceholder: "رمز 6 أرقام",
     tfaEnableHint: "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة وانقر 'تفعيل'.",
+    tfaEmailLabel: "عنوان البريد الإلكتروني لرموز OTP",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "أدخل عنوان بريدك واضغط على تفعيل. سيتم إرسال رمز إلى بريدك عند كل تسجيل دخول.",
+    alertTfaActivated: "تم تفعيل التحقق الثنائي.",
+    alertTfaEmailRequired: "يرجى إدخال عنوان بريد إلكتروني قبل تفعيل التحقق الثنائي.",
+    alertOtpSent: "تم إرسال رمز الأمان إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد.",
+    loginOtpSentNotice: "تم إرسال الرمز عبر البريد – تحقق من صندوق الوارد",
+    loginOtpBackBtn: "← رجوع",
   },
   fr: {
     authEyebrow: "Page de connexion",
@@ -3301,6 +3333,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Code depuis l'app :",
     tfaCodePlaceholder: "Code à 6 chiffres",
     tfaEnableHint: "Entrez le code à 6 chiffres de votre application d'authentification et cliquez sur 'Activer'.",
+    tfaEmailLabel: "Adresse e-mail pour les codes OTP",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "Entrez votre adresse e-mail et cliquez sur Activer. Un code sera envoyé à votre e-mail à chaque connexion.",
+    alertTfaActivated: "La 2FA a été activée.",
+    alertTfaEmailRequired: "Veuillez saisir une adresse e-mail avant d'activer la 2FA.",
+    alertOtpSent: "Un code de sécurité a été envoyé à votre e-mail. Vérifiez votre boîte de réception.",
+    loginOtpSentNotice: "Code envoyé par e-mail – vérifiez votre boîte",
+    loginOtpBackBtn: "← Retour",
   },
   es: {
     authEyebrow: "Página de acceso",
@@ -4571,6 +4611,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Codice dall'app:",
     tfaCodePlaceholder: "Codice a 6 cifre",
     tfaEnableHint: "Inserisci il codice a 6 cifre dalla tua app di autenticazione e clicca 'Abilita'.",
+    tfaEmailLabel: "Indirizzo email per i codici OTP",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "Inserisci il tuo indirizzo email e fai clic su Attiva. Un codice verrà inviato alla tua email ad ogni accesso.",
+    alertTfaActivated: "Il 2FA è stato attivato.",
+    alertTfaEmailRequired: "Inserisci un indirizzo email prima di attivare il 2FA.",
+    alertOtpSent: "Un codice di sicurezza è stato inviato alla tua email. Controlla la tua casella di posta.",
+    loginOtpSentNotice: "Codice inviato per email – controlla la casella",
+    loginOtpBackBtn: "← Indietro",
   },
   pl: {
     authEyebrow: "Strona logowania",
@@ -5206,6 +5254,14 @@ const UI_TRANSLATIONS = {
     tfaCodeLabel: "Kod z aplikacji:",
     tfaCodePlaceholder: "6-cyfrowy kod",
     tfaEnableHint: "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej i kliknij 'Włącz'.",
+    tfaEmailLabel: "Adres e-mail dla kodów OTP",
+    tfaEmailPlaceholder: "admin@example.com",
+    tfaActivateOneClickHint: "Wprowadź swój adres e-mail i kliknij Aktywuj. Przy każdym logowaniu kod zostanie wysłany na Twój e-mail.",
+    alertTfaActivated: "2FA zostało aktywowane.",
+    alertTfaEmailRequired: "Proszę wprowadzić adres e-mail przed aktywacją 2FA.",
+    alertOtpSent: "Kod bezpieczeństwa został wysłany na Twój e-mail. Sprawdź swoją skrzynkę odbiorzą.",
+    loginOtpSentNotice: "Kod wysłany e-mailem – sprawdź skrzynkę",
+    loginOtpBackBtn: "← Powrót",
   },
 };
 
@@ -6090,6 +6146,7 @@ const state = {
   accessFilter: { from: "", to: "", direction: "", gate: "" },
   porterLive: { workerId: null, lastEvent: null },
   twofa: { enabled: false, secret: "", otpauthUri: "" },
+  loginOtpPending: false,
   loginSecurity: {
     failCount: 0,
     blockedUntil: 0,
@@ -7067,9 +7124,11 @@ function updateLoginOtpVisibility() {
     return;
   }
   const scope = String(elements.loginScope?.value || "auto").trim().toLowerCase();
-  const hideOtpForTurnstile = scope === "turnstile";
-  otpLabel.style.display = hideOtpForTurnstile ? "none" : "";
-  if (hideOtpForTurnstile && elements.loginOtpCode) {
+  const hideForTurnstile = scope === "turnstile";
+  // Show OTP field only after credentials were verified and OTP was sent (2-step)
+  const showOtp = !hideForTurnstile && state.loginOtpPending;
+  otpLabel.style.display = showOtp ? "" : "none";
+  if (!showOtp && elements.loginOtpCode) {
     elements.loginOtpCode.value = "";
   }
 }
@@ -7862,6 +7921,7 @@ function clearSession() {
   token = "";
   persistSessionToken("");
   state.currentUser = null;
+  state.loginOtpPending = false;
 }
 
 function handleExpiredControlSession() {
@@ -13676,7 +13736,8 @@ function showLoginSecurityLockScreen() {
 }
 
 function registerLoginFailure(errorCode) {
-  if (errorCode !== "invalid_credentials") {
+  // Count failures for wrong credentials AND wrong OTP, for ALL login scopes
+  if (!["invalid_credentials", "otp_invalid"].includes(errorCode)) {
     return;
   }
   state.loginSecurity.failCount = Number(state.loginSecurity.failCount || 0) + 1;
@@ -13712,13 +13773,16 @@ async function tryAutofillOtpFromClipboard() {
 
 async function handleLoginSubmit(event) {
   event.preventDefault();
-  const supportContext = state.supportLoginContext || loadSupportLoginContext();
-  const loginScope = elements.loginScope?.value || "auto";
-  const useTurnstileLock = loginScope === "turnstile";
-  if (useTurnstileLock && isLoginBlockedLocally()) {
+
+  // Lockout check applies to ALL login scopes
+  if (isLoginBlockedLocally()) {
     showLoginSecurityLockScreen();
     return;
   }
+
+  const supportContext = state.supportLoginContext || loadSupportLoginContext();
+  const loginScope = elements.loginScope?.value || "auto";
+
   try {
     const payload = await apiRequest(API_BASE + "/api/login", {
       auth: false,
@@ -13726,7 +13790,8 @@ async function handleLoginSubmit(event) {
       body: {
         username: elements.loginUsername.value.trim(),
         password: elements.loginPassword.value,
-        otpCode: elements.loginOtpCode.value.trim(),
+        // Only send OTP in step 2
+        otpCode: state.loginOtpPending ? elements.loginOtpCode.value.trim() : "",
         loginScope,
         supportCompanyId: loginScope === "company-admin" ? (supportContext?.companyId || "") : "",
         supportActorName: loginScope === "company-admin" ? (supportContext?.actorName || "") : ""
@@ -13741,6 +13806,7 @@ async function handleLoginSubmit(event) {
     }
 
     resetLoginFailureCounter();
+    state.loginOtpPending = false;
     token = payload.token;
     console.log("[Login] Token received:", token ? `${token.slice(0, 20)}...` : "NONE");
     persistSessionToken(token);
@@ -13749,6 +13815,7 @@ async function handleLoginSubmit(event) {
     clearSupportLoginContext();
     state.supportLoginContext = null;
     elements.loginForm.reset();
+    updateLoginOtpVisibility();
     startHeartbeat();
     startBackendStatusMonitor();
     setView(getDefaultViewForRole(payload.user?.role));
@@ -13765,24 +13832,36 @@ async function handleLoginSubmit(event) {
       window.alert(runtimeText("backendUnreachableReload"));
       return;
     }
-    if (error.message === "otp_required") {
+    if (error.message === "otp_sent") {
+      // Credentials verified – OTP was emailed. Show OTP field.
       resetLoginFailureCounter();
+      state.loginOtpPending = true;
+      updateLoginOtpVisibility();
+      await tryAutofillOtpFromClipboard();
+      elements.loginOtpCode?.focus();
+      window.alert(uiT("alertOtpSent"));
+      return;
+    }
+    if (error.message === "otp_required") {
+      // Fallback: no email on user, show OTP field for TOTP entry
+      state.loginOtpPending = true;
+      updateLoginOtpVisibility();
       await tryAutofillOtpFromClipboard();
       elements.loginOtpCode?.focus();
       window.alert(uiT("alertOtpRequired"));
       return;
     }
     if (error.message === "otp_invalid") {
-      elements.loginOtpCode?.focus();
-      window.alert(uiT("alertOtpInvalid"));
+      registerLoginFailure(error.message);
+      if (!isLoginBlockedLocally()) {
+        elements.loginOtpCode?.focus();
+        window.alert(uiT("alertOtpInvalid"));
+      }
       return;
     }
     if (error.message === "too_many_attempts") {
-      if (useTurnstileLock) {
-        state.loginSecurity.blockedUntil = Date.now() + LOGIN_HARD_LOCK_MS;
-        showLoginSecurityLockScreen();
-      }
-      window.alert(uiT("alertTooManyAttempts"));
+      state.loginSecurity.blockedUntil = Date.now() + LOGIN_HARD_LOCK_MS;
+      showLoginSecurityLockScreen();
       return;
     }
     if (error.message === "forbidden_tenant_host") {
@@ -13802,10 +13881,10 @@ async function handleLoginSubmit(event) {
       return;
     }
     if (error.message === "invalid_credentials") {
-      if (useTurnstileLock) {
-        registerLoginFailure(error.message);
+      registerLoginFailure(error.message);
+      if (!isLoginBlockedLocally()) {
+        window.alert(uiT("alertInvalidCredentials"));
       }
-      window.alert(uiT("alertInvalidCredentials"));
       return;
     }
     if (error.message === "admin_ip_not_allowed") {
@@ -13920,14 +13999,15 @@ function renderTwofaPanel() {
     return;
   }
 
-  // Sync enabled state from currentUser on initial load
   const enabled = Boolean(state.twofa.enabled || state.currentUser?.twofa_enabled);
+  const currentEmail = state.currentUser?.email || "";
 
   if (enabled) {
     panel.innerHTML = `
       <div style="margin-bottom:10px">
         <span class="status-pill status-ok">${escapeHtml(uiT("tfaStatusActive"))}</span>
       </div>
+      <p style="margin:0 0 8px;font-size:0.88rem;color:#555">${escapeHtml(currentEmail || "–")}</p>
       <div class="button-row">
         <button type="button" class="danger-button" onclick="disableTwofa()">${escapeHtml(uiT("tfaBtnDisable"))}</button>
       </div>
@@ -13935,78 +14015,75 @@ function renderTwofaPanel() {
     return;
   }
 
-  const hasSecret = Boolean(state.twofa.secret);
-
-  if (hasSecret) {
-    const qrSrc = state.twofa.otpauthUri
-      ? `${API_BASE}/api/qr.png?data=${encodeURIComponent(state.twofa.otpauthUri)}&size=200`
-      : "";
-    const qrImg = qrSrc
-      ? `<img src="${qrSrc}" alt="2FA QR-Code" style="display:block;width:200px;height:200px;margin:8px 0;border:1px solid #ddd;border-radius:4px">`
-      : "";
-    panel.innerHTML = `
-      <div style="margin-bottom:10px">
-        <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
-      </div>
-      <p style="margin:8px 0 4px;font-size:0.9rem">${escapeHtml(uiT("tfaQrHint"))}</p>
-      ${qrImg}
-      <p style="margin:4px 0 2px;font-size:0.8rem;color:#555">${escapeHtml(uiT("tfaSecretLabel"))}</p>
-      <code style="display:block;user-select:all;word-break:break-all;font-size:0.85rem;background:#f4f4f4;padding:6px 8px;border-radius:4px;margin-bottom:8px">${escapeHtml(state.twofa.secret)}</code>
-      <p style="margin:0 0 10px;font-size:0.85rem;color:#666">${escapeHtml(uiT("tfaEnableHint"))}</p>
-      <div class="button-row">
-        <button type="button" class="primary-button" onclick="enableTwofa()">${escapeHtml(uiT("tfaBtnEnable"))}</button>
-      </div>
-    `;
-  } else {
-    panel.innerHTML = `
-      <div style="margin-bottom:10px">
-        <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
-      </div>
-      <div class="button-row">
-        <button type="button" class="primary-button" onclick="setupTwofa()">${escapeHtml(uiT("tfaBtnSetup"))}</button>
-      </div>
-    `;
-  }
+  panel.innerHTML = `
+    <div style="margin-bottom:10px">
+      <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
+    </div>
+    <p style="margin:0 0 6px;font-size:0.88rem">${escapeHtml(uiT("tfaActivateOneClickHint"))}</p>
+    <label style="display:block;margin-bottom:10px;font-size:0.88rem">
+      <span>${escapeHtml(uiT("tfaEmailLabel"))}</span><br>
+      <input id="tfaEmailInput" type="email" placeholder="${escapeHtml(uiT("tfaEmailPlaceholder"))}"
+        value="${escapeHtml(currentEmail)}"
+        style="width:100%;max-width:300px;margin-top:4px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:0.9rem">
+    </label>
+    <div class="button-row">
+      <button type="button" class="primary-button" onclick="activateTwofa()">${escapeHtml(uiT("tfaBtnEnable"))}</button>
+    </div>
+  `;
 }
 
-async function setupTwofa() {
-  try {
-    const payload = await apiRequest(API_BASE + "/api/me/2fa/setup", { method: "POST", body: {} });
-    state.twofa.secret = payload.secret;
-    state.twofa.otpauthUri = payload.otpauthUri;
-    state.twofa.enabled = Boolean(payload.enabled);
-    refreshAll();
-  } catch (error) {
-    window.alert(uiT("alert2faSetupFailed").replace("{error}", error.message));
-  }
-}
-
-async function enableTwofa() {
-  const code = window.prompt(uiT("promptTfaCode")) || "";
-  if (!code) {
+async function activateTwofa() {
+  const emailInput = document.getElementById("tfaEmailInput");
+  const email = (emailInput?.value || "").trim();
+  if (!email) {
+    window.alert(uiT("alertTfaEmailRequired"));
     return;
   }
   try {
-    await apiRequest(API_BASE + "/api/me/2fa/enable", { method: "POST", body: { code } });
+    // Save email first
+    await apiRequest(API_BASE + "/api/me/email", { method: "PUT", body: { email } });
+    // Then activate 2FA
+    await apiRequest(API_BASE + "/api/me/2fa/activate", { method: "POST", body: {} });
     state.twofa.enabled = true;
+    if (state.currentUser) {
+      state.currentUser.twofa_enabled = 1;
+      state.currentUser.email = email;
+    }
+    window.alert(uiT("alertTfaActivated"));
     refreshAll();
   } catch (error) {
-    window.alert(uiT("alert2faEnableFailed").replace("{error}", error.message));
+    if (error.message === "email_required") {
+      window.alert(uiT("alertTfaEmailRequired"));
+    } else {
+      window.alert(uiT("alert2faSetupFailed").replace("{error}", error.message));
+    }
   }
 }
 
 async function disableTwofa() {
-  const code = window.prompt(uiT("promptTfaDisableCode")) || "";
-  if (!code) {
+  if (!window.confirm(uiT("tfaBtnDisable") + "?")) {
     return;
   }
   try {
-    await apiRequest(API_BASE + "/api/me/2fa/disable", { method: "POST", body: { code } });
+    await apiRequest(API_BASE + "/api/me/2fa/disable", { method: "POST", body: {} });
     state.twofa.enabled = false;
+    if (state.currentUser) {
+      state.currentUser.twofa_enabled = 0;
+    }
     refreshAll();
   } catch (error) {
     window.alert(uiT("alert2faDisableFailed").replace("{error}", error.message));
   }
+}
+
+async function setupTwofa() {
+  // Kept for backward compat – redirect to activateTwofa
+  await activateTwofa();
+}
+
+async function enableTwofa() {
+  // Kept for backward compat – redirect to activateTwofa
+  await activateTwofa();
 }
 
 async function startCamera() {
@@ -15379,6 +15456,7 @@ if (elements.authOverlay) {
 
 if (elements.loginScope) {
   elements.loginScope.addEventListener("change", () => {
+    state.loginOtpPending = false;
     updateLoginOtpVisibility();
     if (!token) {
       focusLoginInput({ force: true });

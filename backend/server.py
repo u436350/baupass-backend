@@ -1301,6 +1301,14 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
 
+        CREATE TABLE IF NOT EXISTS otp_codes (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            code TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
         CREATE TABLE IF NOT EXISTS audit_logs (
             id TEXT PRIMARY KEY,
             event_type TEXT NOT NULL,
@@ -1582,6 +1590,8 @@ def init_db():
         cur.execute("ALTER TABLE users ADD COLUMN twofa_secret TEXT")
     if "twofa_enabled" not in columns:
         cur.execute("ALTER TABLE users ADD COLUMN twofa_enabled INTEGER NOT NULL DEFAULT 0")
+    if "email" not in columns:
+        cur.execute("ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''")
 
     company_columns = [row[1] for row in cur.execute("PRAGMA table_info(companies)").fetchall()]
     if "deleted_at" not in company_columns:
@@ -1837,6 +1847,7 @@ def serialize_user(user_row):
         "role": user_row["role"],
         "company_id": user_row["company_id"],
         "twofa_enabled": int(user_row["twofa_enabled"]),
+        "email": user_row["email"] if hasattr(user_row, "keys") and "email" in set(user_row.keys()) else "",
         "support_read_only": support_read_only,
         "support_company_name": support_company_name,
         "support_actor_name": support_actor_name,
@@ -2124,7 +2135,54 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
         return False, str(exc)
 
 
-def run_invoice_dunning_cycle(db):
+def _send_otp_email_to_user(db, user_row, code):
+    """Send a 6-digit OTP code to the user's stored email address via SMTP."""
+    try:
+        user_keys = set(user_row.keys()) if hasattr(user_row, "keys") else set()
+        email = (user_row["email"] if "email" in user_keys else "").strip()
+    except Exception:
+        return False
+    if not email:
+        return False
+
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    if not settings:
+        return False
+
+    smtp_host = (settings["smtp_host"] or "").strip()
+    smtp_sender = (settings["smtp_sender_email"] or "").strip()
+    if not smtp_host or not smtp_sender:
+        return False
+
+    platform_name = (settings["platform_name"] or "BauPass Control").strip()
+    smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
+    username = user_row["username"] if hasattr(user_row, "keys") else str(user_row)
+
+    msg = EmailMessage()
+    msg["Subject"] = f"{platform_name}: Ihr Sicherheitscode"
+    msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
+    msg["To"] = email
+    msg.set_content(
+        f"Guten Tag,\n\n"
+        f"Ihr Anmelde-Sicherheitscode für {platform_name}:\n\n"
+        f"  {code}\n\n"
+        f"Dieser Code ist 10 Minuten gültig.\n\n"
+        f"Benutzerkonto: {username}\n\n"
+        f"Falls Sie sich nicht angemeldet haben, ignorieren Sie diese E-Mail.\n\n"
+        f"Viele Grüße\n{settings['operator_name'] or platform_name}"
+    )
+
+    try:
+        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
+            if int(settings["smtp_use_tls"] or 0) == 1:
+                smtp.starttls()
+            smtp_username = (settings["smtp_username"] or "").strip()
+            if smtp_username:
+                smtp.login(smtp_username, settings["smtp_password"] or "")
+            smtp.send_message(msg)
+        return True
+    except Exception:
+        return False(db):
     """Update overdue status and send staged reminders before automatic suspension."""
     today = utc_now().date()
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
@@ -3167,13 +3225,44 @@ def login():
     twofa_enabled = int(user["twofa_enabled"]) == 1
     turnstile_auto_2fa = user["role"] == "turnstile"
     if twofa_enabled and not turnstile_auto_2fa:
+        user_keys = set(user.keys()) if hasattr(user, "keys") else set()
+        user_email = (user["email"] if "email" in user_keys else "").strip()
+
         if not otp_code:
-            register_login_failure(throttle_key)
-            return login_error("otp_required")
-        totp = pyotp.TOTP(user["twofa_secret"])
-        if not totp.verify(otp_code, valid_window=1):
-            register_login_failure(throttle_key)
-            return login_error("otp_invalid")
+            # Step 1: credentials correct – send OTP via email
+            if user_email:
+                otp = str(secrets.randbelow(900000) + 100000)
+                otp_id = secrets.token_urlsafe(16)
+                expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+                db.execute("DELETE FROM otp_codes WHERE user_id = ?", (user["id"],))
+                db.execute(
+                    "INSERT INTO otp_codes (id, user_id, code, expires_at) VALUES (?,?,?,?)",
+                    (otp_id, user["id"], otp, expires)
+                )
+                db.commit()
+                _send_otp_email_to_user(db, user, otp)
+                # Return "otp_sent" – NOT a login failure
+                return login_error("otp_sent")
+            else:
+                # No email configured: fall back to TOTP prompt
+                register_login_failure(throttle_key)
+                return login_error("otp_required")
+        else:
+            # Step 2: verify submitted OTP
+            now_str = datetime.now(timezone.utc).isoformat()
+            otp_row = db.execute(
+                "SELECT id FROM otp_codes WHERE user_id = ? AND code = ? AND expires_at > ?",
+                (user["id"], otp_code, now_str)
+            ).fetchone()
+            if otp_row:
+                db.execute("DELETE FROM otp_codes WHERE user_id = ?", (user["id"],))
+                db.commit()
+            else:
+                # Fallback: try TOTP (authenticator app)
+                secret = (user["twofa_secret"] or "").strip()
+                if not (secret and pyotp.TOTP(secret).verify(otp_code, valid_window=1)):
+                    register_login_failure(throttle_key)
+                    return login_error("otp_invalid")
 
     if not is_tenant_host_valid(db, row_to_dict(user)):
         register_login_failure(throttle_key)
@@ -3504,38 +3593,18 @@ def get_twofa_status():
     return jsonify({"enabled": int(g.current_user["twofa_enabled"]) == 1})
 
 
-@app.post("/api/me/2fa/setup")
+@app.post("/api/me/2fa/activate")
 @require_auth
 @require_roles("superadmin")
-def setup_twofa():
+def activate_twofa():
     db = get_db()
     row = db.execute("SELECT * FROM users WHERE id = ?", (g.current_user["id"],)).fetchone()
-    secret = row["twofa_secret"] or pyotp.random_base32()
-    if not row["twofa_secret"]:
-        db.execute("UPDATE users SET twofa_secret = ? WHERE id = ?", (secret, g.current_user["id"]))
-        db.commit()
-
-    issuer = "BauPass Control"
-    uri = pyotp.TOTP(secret).provisioning_uri(name=row["username"], issuer_name=issuer)
-    return jsonify({"secret": secret, "otpauthUri": uri, "enabled": int(row["twofa_enabled"]) == 1})
-
-
-@app.post("/api/me/2fa/enable")
-@require_auth
-@require_roles("superadmin")
-def enable_twofa():
-    payload = request.get_json(silent=True) or {}
-    code = (payload.get("code") or "").strip()
-    db = get_db()
-    row = db.execute("SELECT * FROM users WHERE id = ?", (g.current_user["id"],)).fetchone()
-    secret = row["twofa_secret"]
-    if not secret:
-        return jsonify({"error": "twofa_not_setup"}), 400
-
-    if not pyotp.TOTP(secret).verify(code, valid_window=1):
-        return jsonify({"error": "otp_invalid"}), 400
-
-    db.execute("UPDATE users SET twofa_enabled = 1 WHERE id = ?", (g.current_user["id"],))
+    user_keys = set(row.keys()) if hasattr(row, "keys") else set()
+    user_email = (row["email"] if "email" in user_keys else "").strip()
+    if not user_email:
+        return jsonify({"error": "email_required"}), 400
+    secret = pyotp.random_base32()
+    db.execute("UPDATE users SET twofa_secret = ?, twofa_enabled = 1 WHERE id = ?", (secret, g.current_user["id"]))
     db.commit()
     log_audit("security.2fa_enabled", "2FA wurde aktiviert", target_type="user", target_id=g.current_user["id"], actor=g.current_user)
     return jsonify({"ok": True})
@@ -3545,19 +3614,25 @@ def enable_twofa():
 @require_auth
 @require_roles("superadmin")
 def disable_twofa():
-    payload = request.get_json(silent=True) or {}
-    code = (payload.get("code") or "").strip()
     db = get_db()
-    row = db.execute("SELECT * FROM users WHERE id = ?", (g.current_user["id"],)).fetchone()
-    secret = row["twofa_secret"]
-
-    if int(row["twofa_enabled"]) == 1 and not pyotp.TOTP(secret).verify(code, valid_window=1):
-        return jsonify({"error": "otp_invalid"}), 400
-
     db.execute("UPDATE users SET twofa_enabled = 0 WHERE id = ?", (g.current_user["id"],))
     db.commit()
     log_audit("security.2fa_disabled", "2FA wurde deaktiviert", target_type="user", target_id=g.current_user["id"], actor=g.current_user)
     return jsonify({"ok": True})
+
+
+@app.put("/api/me/email")
+@require_auth
+@require_roles("superadmin")
+def update_me_email():
+    payload = request.get_json(silent=True) or {}
+    email = (payload.get("email") or "").strip().lower()
+    if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return jsonify({"error": "invalid_email"}), 400
+    db = get_db()
+    db.execute("UPDATE users SET email = ? WHERE id = ?", (email, g.current_user["id"]))
+    db.commit()
+    return jsonify({"ok": True, "email": email})
 
 
 @app.get("/api/settings")
