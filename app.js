@@ -8432,22 +8432,46 @@ function showLoginGreeting() {
 
   el.classList.remove("hidden", "fade-out");
 
-  // Text-to-Speech (Web Speech API, mittlere Lautstärke)
+  // Text-to-Speech (Web Speech API) – spricht in der jeweiligen UI-Sprache
   try {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(`${salutation}${firstName ? ", " + firstName : ""}!`);
-      utter.lang    = greetingMeta.ttsLang;
-      utter.volume  = 0.6;   // 60 % – weder zu laut noch zu leise
-      utter.rate    = 0.95;
-      utter.pitch   = 1.05;
-      // Stimme passend zur UI-Sprache bevorzugen, wenn verfuegbar.
+      const ttsText = `${salutation}${firstName ? ", " + firstName : ""}!`;
+      const ttsLang = greetingMeta.ttsLang;
+
+      function speakWithVoice() {
+        const utter = new SpeechSynthesisUtterance(ttsText);
+        utter.lang   = ttsLang;
+        utter.volume = 0.7;
+        utter.rate   = 0.92;
+        utter.pitch  = 1.05;
+        const voices = window.speechSynthesis.getVoices();
+        const prefix = ttsLang.split("-")[0].toLowerCase();
+        // Bevorzuge native Systemstimme in der richtigen Sprache
+        const preferred =
+          voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
+          voices.find((v) => v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
+          voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
+          voices.find((v) => v.lang.toLowerCase().startsWith(prefix));
+        if (preferred) utter.voice = preferred;
+        window.speechSynthesis.speak(utter);
+      }
+
       const voices = window.speechSynthesis.getVoices();
-      const voicePrefix = String(greetingMeta.ttsLang).split("-")[0].toLowerCase();
-      const preferredVoice = voices.find((v) => v.lang.toLowerCase().startsWith(voicePrefix) && v.localService)
-        || voices.find((v) => v.lang.toLowerCase().startsWith(voicePrefix));
-      if (preferredVoice) utter.voice = preferredVoice;
-      window.speechSynthesis.speak(utter);
+      if (voices.length > 0) {
+        // Stimmen bereits geladen
+        speakWithVoice();
+      } else {
+        // Stimmen noch nicht bereit – auf Event warten
+        window.speechSynthesis.addEventListener("voiceschanged", function onVoicesReady() {
+          window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
+          speakWithVoice();
+        });
+        // Fallback: nach 500ms trotzdem sprechen (ohne Stimme = Browser-Standard)
+        setTimeout(() => {
+          if (!window.speechSynthesis.speaking) speakWithVoice();
+        }, 500);
+      }
     }
   } catch {
     // Kein TTS verfügbar – still ignorieren
