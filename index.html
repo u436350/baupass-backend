@@ -138,7 +138,7 @@
           </select>
         </label>
         <button type="submit" class="primary-button" data-ui-i18n="loginButton">Anmelden</button>
-        <button id="loginResetPasswordButton" type="button" class="ghost-button">Passwort vergessen</button>
+        <button id="loginResetPasswordButton" type="button" class="ghost-button" data-ui-i18n="loginForgotPassword">Passwort vergessen</button>
       </form>
 
       <div class="auth-hints">
@@ -149,9 +149,9 @@
         </div>
       </div>
       <div class="auth-legal-footer">
-        <button id="showImpressumBtn" type="button" class="ghost-button small-button">Impressum</button>
+        <button id="showImpressumBtn" type="button" class="ghost-button small-button" data-ui-i18n="legalImpressum">Impressum</button>
         <span aria-hidden="true">·</span>
-        <button id="showDatenschutzBtn" type="button" class="ghost-button small-button">Datenschutz</button>
+        <button id="showDatenschutzBtn" type="button" class="ghost-button small-button" data-ui-i18n="legalPrivacy">Datenschutz</button>
       </div>
     </div>
   </div>
@@ -159,8 +159,8 @@
   <!-- Legal-Text Modal -->
   <div id="legalModal" class="legal-modal hidden" role="dialog" aria-modal="true">
     <div class="legal-modal-card">
-      <button class="legal-modal-close" id="legalModalClose" title="Schließen">&times;</button>
-      <h2 id="legalModalTitle">Impressum</h2>
+      <button class="legal-modal-close" id="legalModalClose" title="Schliessen" data-ui-i18n="legalCloseTitle" data-ui-i18n-attr="title">&times;</button>
+      <h2 id="legalModalTitle" data-ui-i18n="legalImpressum">Impressum</h2>
       <div id="legalModalBody" class="legal-modal-body"></div>
     </div>
   </div>
@@ -674,17 +674,17 @@
               </div>
             </div>
             <div class="meta-box">
-              <p><strong>Rechnungs-Management</strong></p>
-              <p>Zeige offene und bezahlte Rechnungen an. Markiere Rechnungen als bezahlt um Firmensperrungen automatisch aufzuheben. Alle Aktivitäten werden im Audit-Log protokolliert.</p>
+              <p><strong data-ui-i18n="invoiceMgmtTitle">Rechnungs-Management</strong></p>
+              <p data-ui-i18n="invoiceMgmtCopy">Zeige offene und bezahlte Rechnungen an. Markiere Rechnungen als bezahlt um Firmensperrungen automatisch aufzuheben. Alle Aktivitäten werden im Audit-Log protokolliert.</p>
             </div>
             <div class="divider"></div>
             
             <div class="button-row invoice-toolbar">
               <input id="invoiceFilterCompany" class="invoice-filter-input" type="text" placeholder="Nach Firma filtern..." />
               <select id="invoiceFilterStatus" class="invoice-filter-select">
-                <option value="">Alle Status</option>
-                <option value="draft">Entwurf</option>
-                <option value="sent">Versendet</option>
+                <option value="" data-ui-i18n="optAllStatus">Alle Status</option>
+                <option value="draft" data-ui-i18n="optDraft">Entwurf</option>
+                <option value="sent" data-ui-i18n="optSent">Versendet</option>
                 <option value="overdue" data-ui-i18n="optOverdue">Überfällig</option>
                 <option value="bezahlt" data-ui-i18n="optPaid">Bezahlt</option>
                 <option value="send_failed" data-ui-i18n="optFailed">Fehler</option>
@@ -700,8 +700,8 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Operations</p>
-                <h3>Versand-SLA und Fehlerlage</h3>
+                <p class="eyebrow" data-ui-i18n="invoiceOpsEyebrow">Operations</p>
+                <h3 data-ui-i18n="invoiceOpsH3">Versand-SLA und Fehlerlage</h3>
               </div>
             </div>
             <div id="invoiceOpsKpiGrid" class="list invoice-kpi-grid"></div>
@@ -711,27 +711,27 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Versand</p>
-                <h3>Warteschlange für fehlgeschlagene Mails</h3>
+                <p class="eyebrow" data-ui-i18n="invoiceSendEyebrow">Versand</p>
+                <h3 data-ui-i18n="invoiceSendH3">Warteschlange für fehlgeschlagene Mails</h3>
               </div>
             </div>
             <div id="invoiceRetryKpiGrid" class="list invoice-kpi-grid"></div>
             <div class="button-row invoice-toolbar">
               <select id="invoiceRetryFilterMode" class="invoice-filter-select invoice-filter-select-wide">
-                <option value="all">Alle Fehlversände</option>
-                <option value="priority">Priorität zuerst</option>
-                <option value="maxed">Max Retries erreicht</option>
-                <option value="today_failed">Heute fehlgeschlagen</option>
+                <option value="all" data-ui-i18n="optRetryAll">Alle Fehlversände</option>
+                <option value="priority" data-ui-i18n="optRetryPriority">Priorität zuerst</option>
+                <option value="maxed" data-ui-i18n="optRetryMaxed">Max Retries erreicht</option>
+                <option value="today_failed" data-ui-i18n="optRetryTodayFailed">Heute fehlgeschlagen</option>
               </select>
               <input id="invoiceRetryFilterCompany" class="invoice-filter-input" type="text" placeholder="Firma in Warteschlange filtern..." />
               <label class="invoice-top-issues-toggle">
                 <input id="invoiceRetryTopIssuesOnly" type="checkbox" />
-                <span>Nur meine Top-Probleme</span>
+                <span data-ui-i18n="invoiceRetryTopIssuesOnly">Nur meine Top-Probleme</span>
               </label>
-              <button type="button" id="invoiceRetryCriticalSendBtn" class="ghost-button">Nur kritische jetzt senden</button>
-              <button type="button" id="invoiceRetryExportBtn" class="ghost-button">Queue CSV</button>
-              <button type="button" id="invoiceIncidentExportBtn" class="ghost-button">Incident CSV</button>
-              <button type="button" id="invoiceRetryBulkSendBtn" class="ghost-button">Ausgewählte erneut senden</button>
+              <button type="button" id="invoiceRetryCriticalSendBtn" class="ghost-button" data-ui-i18n="btnRetryCriticalSend">Nur kritische jetzt senden</button>
+              <button type="button" id="invoiceRetryExportBtn" class="ghost-button" data-ui-i18n="btnRetryExportCsv">Queue CSV</button>
+              <button type="button" id="invoiceIncidentExportBtn" class="ghost-button" data-ui-i18n="btnIncidentExportCsv">Incident CSV</button>
+              <button type="button" id="invoiceRetryBulkSendBtn" class="ghost-button" data-ui-i18n="btnRetryBulkSend">Ausgewählte erneut senden</button>
             </div>
             <div id="invoiceRetryQueue" class="list"></div>
 
@@ -739,15 +739,15 @@
 
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Freigaben</p>
-                <h3>4-Augen-Prüfung für kritische Aktionen</h3>
+                <p class="eyebrow" data-ui-i18n="invoiceApprovalsEyebrow">Freigaben</p>
+                <h3 data-ui-i18n="invoiceApprovalsH3">4-Augen-Prüfung für kritische Aktionen</h3>
               </div>
             </div>
             <div class="button-row invoice-toolbar">
               <select id="invoiceApprovalFilterAction" class="invoice-filter-select invoice-filter-select-wide">
-                <option value="all">Alle Aktionstypen</option>
-                <option value="invoice.retry_send_bulk">Bulk-Retry</option>
-                <option value="invoice.dead_letter_resolve">Dead-Letter-Resolve</option>
+                <option value="all" data-ui-i18n="optApprovalAllActions">Alle Aktionstypen</option>
+                <option value="invoice.retry_send_bulk" data-ui-i18n="optApprovalBulkRetry">Bulk-Retry</option>
+                <option value="invoice.dead_letter_resolve" data-ui-i18n="optApprovalDeadLetterResolve">Dead-Letter-Resolve</option>
               </select>
               <input id="invoiceApprovalMaxAgeMinutes" class="invoice-filter-input" type="number" min="0" step="5" placeholder="Max Alter in Minuten (0 = alle)" />
             </div>
@@ -1093,19 +1093,19 @@
               <div class="form-section">
                 <div class="form-section-icon">⚖️</div>
                 <div class="form-section-label">
-                  <p class="eyebrow">Rechtliches</p>
-                  <h4>Impressum &amp; Datenschutz</h4>
+                  <p class="eyebrow" data-ui-i18n="legalSectionEyebrow">Rechtliches</p>
+                  <h4 data-ui-i18n="legalSectionTitle">Impressum &amp; Datenschutz</h4>
                 </div>
               </div>
               <label class="full-width">
-                <span>Impressum-Text</span>
+                <span data-ui-i18n="labelImpressumText">Impressum-Text</span>
                 <textarea id="impressumText" rows="8" placeholder="Angaben gemäß § 5 TMG&#10;&#10;Firmenname GmbH&#10;Musterstraße 1&#10;12345 Musterstadt&#10;&#10;Vertreten durch: Max Mustermann&#10;E-Mail: info@firma.de"></textarea>
               </label>
               <label class="full-width">
-                <span>Datenschutzerklärung</span>
+                <span data-ui-i18n="labelPrivacyText">Datenschutzerklärung</span>
                 <textarea id="datenschutzText" rows="12" placeholder="Datenschutzerklärung gemäß DSGVO&#10;&#10;Verantwortlicher: ...&#10;&#10;1. Allgemeines&#10;..."></textarea>
               </label>
-              <p class="helper-text full-width">Diese Texte erscheinen auf der Anmeldeseite unter „Impressum" und „Datenschutz".</p>
+              <p class="helper-text full-width" data-ui-i18n="legalTextsHint">Diese Texte erscheinen auf der Anmeldeseite unter „Impressum" und „Datenschutz".</p>
 
               <button type="submit" class="primary-button full-width" data-ui-i18n="btnSaveAdmin">Admin-Einstellungen speichern</button>
             </form>
@@ -1136,7 +1136,7 @@
                 <input id="companyBillingEmail" type="email" placeholder="buchhaltung@firma.de" />
               </label>
               <label>
-                <span>Dokument-E-Mail</span>
+                <span data-ui-i18n="labelCompanyDocumentEmail">Dokument-E-Mail</span>
                 <input id="companyDocumentEmail" type="email" placeholder="dokumente+firma@deinedomain.de" />
               </label>
               <label>
@@ -1147,17 +1147,17 @@
                 <span data-ui-i18n="labelPlan">Tarif</span>
                 <select id="companyPlan">
                   <option value="tageskarte" data-ui-i18n="optPlanDayPassPrice">Besucherkarte (19 EUR/Tag)</option>
-                  <option value="starter">Starter (49 EUR)</option>
-                  <option value="professional">Professional (99 EUR)</option>
-                  <option value="enterprise">Enterprise (199 EUR)</option>
+                  <option value="starter" data-ui-i18n="optPlanStarter">Starter (49 EUR)</option>
+                  <option value="professional" data-ui-i18n="optPlanProfessional">Professional (99 EUR)</option>
+                  <option value="enterprise" data-ui-i18n="optPlanEnterprise">Enterprise (199 EUR)</option>
                 </select>
               </label>
               <label>
-                <span>Branding-Preset</span>
+                <span data-ui-i18n="labelBrandingPreset">Branding-Preset</span>
                 <select id="companyBrandingPreset">
-                  <option value="construction">Bau</option>
-                  <option value="industry">Industrie</option>
-                  <option value="premium">Premium</option>
+                  <option value="construction" data-ui-i18n="optBrandingConstruction">Bau</option>
+                  <option value="industry" data-ui-i18n="optBrandingIndustry">Industrie</option>
+                  <option value="premium" data-ui-i18n="optBrandingPremium">Premium</option>
                 </select>
               </label>
               <label>

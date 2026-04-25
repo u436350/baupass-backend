@@ -3,6 +3,10 @@ services:
     name: baupass-backend
     env: python
     plan: free
+    disks:
+      - name: baupass-data
+        mountPath: /var/data
+        sizeGB: 1
     buildCommand: pip install -r requirements.txt
     startCommand: python backend/run_prod.py
     envVars:
@@ -10,3 +14,5 @@ services:
         value: 3.11.9
       - key: PUBLIC_BASE_URL
         value: https://baupass-backend.onrender.com
+      - key: BAUPASS_DB_PATH
+        value: /var/data/baupass.db

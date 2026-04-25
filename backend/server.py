@@ -110,7 +110,9 @@ def _generate_icon_png(size: int) -> bytes:
     data = buf.getvalue()
     _icon_png_cache[size] = data
     return data
-DB_PATH = BASE_DIR / "backend" / "baupass.db"
+_default_db_path = BASE_DIR / "backend" / "baupass.db"
+DB_PATH = Path((os.getenv("BAUPASS_DB_PATH") or str(_default_db_path)).strip() or str(_default_db_path)).expanduser()
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
