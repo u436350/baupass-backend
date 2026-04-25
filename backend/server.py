@@ -3944,8 +3944,13 @@ def smtp_test():
         app.logger.info(f"[SMTP-TEST] Test-Mail erfolgreich gesendet an {recipient}")
         return jsonify({"ok": True, "recipient": recipient})
     except Exception as exc:
+        diag_result = _run_smtp_diagnostics(smtp_settings)
         app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
-        return jsonify({"ok": False, "error": "smtp_send_failed", "detail": str(exc)}), 500
+        if not diag_result.get("ok"):
+            app.logger.error(
+                f"[SMTP-TEST-DIAG] stage={diag_result.get('stage')} type={diag_result.get('errorType')} error={diag_result.get('error')}"
+            )
+        return jsonify({"ok": False, "error": "smtp_send_failed", "detail": str(exc), "diagnostics": diag_result}), 500
 
 
 @app.post("/api/settings/smtp-diagnose")
@@ -3966,12 +3971,12 @@ def smtp_diagnose():
     if missing_fields:
         return jsonify({"ok": False, "error": "smtp_not_configured", "missingFields": missing_fields}), 400
     result = _run_smtp_diagnostics(smtp_settings)
-    if result.get("ok"):
-        return jsonify(result)
-    app.logger.error(
-        f"[SMTP-DIAG] stage={result.get('stage')} type={result.get('errorType')} error={result.get('error')}"
-    )
-    return jsonify(result), 500
+    status_code = 200
+    if not result.get("ok"):
+        app.logger.error(
+            f"[SMTP-DIAG] stage={result.get('stage')} type={result.get('errorType')} error={result.get('error')}"
+        )
+    return jsonify(result), status_code
 
 
 @app.put("/api/settings")
@@ -9961,7 +9966,17 @@ def otp_test_send():
     sent = _send_otp_email_to_user(db, _FakeUser(), test_code, smtp_settings_override=payload)
     if sent:
         return jsonify({"ok": True, "recipient": target_email})
-    return jsonify({"ok": False, "error": "otp_send_failed", "detail": "SMTP delivery failed. Check server logs for [OTP-MAIL]."}), 500
+    diag_result = _run_smtp_diagnostics(smtp_settings)
+    if not diag_result.get("ok"):
+        app.logger.error(
+            f"[OTP-TEST-DIAG] stage={diag_result.get('stage')} type={diag_result.get('errorType')} error={diag_result.get('error')}"
+        )
+    return jsonify({
+        "ok": False,
+        "error": "otp_send_failed",
+        "detail": "SMTP delivery failed. Check server logs for [OTP-MAIL].",
+        "diagnostics": diag_result,
+    }), 500
 
 
 # IMAP-Settings GET/PATCH (in allgemeine Settings integriert)

@@ -12246,7 +12246,9 @@ function formatSmtpTestError(err) {
     return `Fehlende Felder: ${missingFields.map((field) => labels[field] || field).join(", ")}`;
   }
   if (err?.code === "smtp_send_failed" || err?.code === "otp_send_failed") {
-    return err?.payload?.detail || err?.message || "SMTP-Versand fehlgeschlagen.";
+    const base = err?.payload?.detail || err?.message || "SMTP-Versand fehlgeschlagen.";
+    const diag = formatSmtpDiagnosticsPayload(err?.payload?.diagnostics);
+    return diag ? `${base} | ${diag}` : base;
   }
   return err?.message || "Unbekannter Fehler";
 }
