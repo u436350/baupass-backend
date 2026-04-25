@@ -703,6 +703,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "Mobile-Ausweis-App (digitaler Ausweis + QR)",
     workerPassLockLabel: "Ausweis mit PIN-Sperre sichern (nach 2min Inaktivität)",
     workerSearchPlaceholder: "Suchen: Name, Badge-ID, Baustelle …",
+    confirmDeleteCompanyText: "Firma {name} und alle zugeh\u00f6rigen Datens\u00e4tze l\u00f6schen?\n\nOK = komplette L\u00f6schung (inkl. Mitarbeiter, Subunternehmen und Logs)\nAbbrechen = nicht l\u00f6schen",
+    confirmLockCompany: "Firma {name} jetzt sperren? Firmen-Admin, Drehkreuz und Mitarbeiter-App dieser Firma werden blockiert.",
+    confirmUnlockCompany: "Sperre f\u00fcr {name} jetzt aufheben? Die Firma kann sich danach wieder anmelden.",
+    confirmDeleteWorkerBulk: "{count} Mitarbeiter wirklich l\u00f6schen?",
+    confirmApiKeyRotate: "API-Key f\u00fcr dieses Drehkreuz jetzt neu erzeugen? Der bisherige Key verliert sofort seine G\u00fcltigkeit.",
+    confirmSystemRepair: "System-Reparatur ausf\u00fchren? Abgelaufene Sitzungen und Login-Sperren werden bereinigt.",
+    confirmApprovalDecision: "Freigabe {id} wirklich {decision}?",
+    confirmDeadLetterRetry: "Dead-Letter-Rechnung jetzt erneut senden?",
+    confirmDeadLetterResolve: "Dead-Letter-Fall als erledigt markieren?",
+    confirmInvoicePaid: "Diese Rechnung als bezahlt markieren? Firmensperrung wird ggf. aufgehoben.",
+    confirmInvoiceRetry: "Rechnung jetzt erneut senden?",
+    confirmInvoicePaidSimple: "Rechnung jetzt als bezahlt markieren?",
+    confirmDemoInvoices: "Sollen Demo-Rechnungen mit erzeugt werden?",
+    confirmDemoAccessLogs: "Sollen Demo-Zutrittslogs erzeugt werden?",
+    confirmDemoReplace: "Demo-Daten jetzt f\u00fcr {name} im Modus REPLACE laden? Vorhandene Mitarbeiter, Subunternehmen und Logs werden ersetzt.",
+    confirmDemoAppend: "Demo-Daten jetzt f\u00fcr {name} im Modus APPEND zus\u00e4tzlich laden?",
+    confirmExportAudit: "Audit-Log im Export einschlie\u00dfen?",
+    confirmExportDayClose: "Tagesabschluss-Quittierungen im Export einschlie\u00dfen?",
+    confirmExportDeleted: "Gel\u00f6schte Eintr\u00e4ge im Export einschlie\u00dfen?",
+    confirmExportAll: "Als Superadmin: Gesamtsystem exportieren? (Nein = nur aktuelle Firma)",
+    confirmExportDownload: "System-Export{scope} jetzt herunterladen?",
+    confirmLogout: "Wirklich abmelden?",
+    confirmImportChangesOnly: "Nur \u00c4nderungen importieren? (Empfohlen)",
+    confirmBulkRetrySelected: "{count} ausgew\u00e4hlte Rechnung(en) jetzt erneut senden?",
+    confirmBulkRetryCritical: "{count} kritische Rechnung(en) jetzt erneut senden?",
+    confirmPhotoMatchFailed: "Fotovergleich fehlgeschlagen ({score}%). Nur Superadmin darf mit Risiko speichern. Trotzdem speichern?",
+    promptDocEmail: "Dokument-E-Mail f\u00fcr {name} festlegen",
+    promptTurnstilePassword: "Drehkreuz-Passwort f\u00fcr {name} festlegen (min. 4 Zeichen):",
+    promptTurnstilePasswordNew: "Neues Drehkreuz-Passwort festlegen (min. 4 Zeichen):",
+    promptCopyData: "Daten zum Kopieren:",
+    promptAppLink: "App-Link f\u00fcr den Mitarbeiter:",
+    promptPhotoOverrideReason: "Bitte Grund f\u00fcr den Foto-Override eingeben (mindestens 8 Zeichen):",
+    promptNewPassword: "Neues Passwort eingeben (mindestens 8 Zeichen):",
+    promptTfaCode: "Bitte 6-stelligen Code aus deiner Authenticator-App eingeben:",
+    promptTfaDisableCode: "Bitte aktuellen 2FA-Code zum Deaktivieren eingeben:",
+    promptDemoMode: "Demo-Daten f\u00fcr {name}: Modus eingeben (replace oder append)",
+    promptRejectionReason: "Ablehnungsgrund (Pflicht):",
+    promptRejectApproval: "Bitte Ablehnungsgrund eingeben:",
+    invoiceTitle: "Rechnung",
+    invoiceAltLogo: "Firmenlogo",
+    invoiceLabelNumber: "Rechnungsnummer:",
+    invoiceLabelDate: "Rechnungsdatum:",
+    invoiceLabelDue: "F\u00e4lligkeitsdatum:",
+    invoiceLabelCustomer: "Kunde:",
+    invoiceLabelContact: "Ansprechpartner:",
+    invoiceLabelPeriod: "Leistungszeitraum:",
+    invoiceColService: "Leistung / Mitarbeiter",
+    invoiceColAccess: "Zug\u00e4nge",
+    invoiceColNet: "Nettobetrag",
+    invoiceRowUnknown: "Unbekannt",
+    invoiceRowPlan: "Tarif: {label}",
+    invoiceTotalNet: "Zwischensumme netto",
+    invoiceTotalVat: "MwSt. ({rate} %)",
+    invoiceTotalGross: "Gesamtbetrag",
+    invoiceFooter: "Vielen Dank f\u00fcr die Zusammenarbeit. Diese Rechnung wurde digital erstellt und kann direkt versendet werden.",
+    invoiceHistoryEmpty: "Noch keine versendeten oder gespeicherten Rechnungen.",
+    invoiceHistoryRecipient: "Empf\u00e4nger:",
+    invoiceHistoryTotal: "Gesamt:",
+    invoiceHistoryCreated: "Erstellt:",
+    invoiceHistorySent: "Versendet:",
+    invoiceHistoryError: "Fehler:",
+    tfaStatusActive: "2FA ist aktiv",
+    tfaStatusInactive: "2FA ist nicht aktiv",
+    tfaBtnSetup: "2FA einrichten",
+    tfaBtnEnable: "2FA aktivieren",
+    tfaBtnDisable: "2FA deaktivieren",
+    tfaQrHint: "Geheimnis mit Authenticator-App einrichten:",
+    tfaSecretLabel: "Manueller Code:",
+    tfaCodeLabel: "Code aus App:",
+    tfaCodePlaceholder: "6-stelliger Code",
+    tfaEnableHint: "Gib den 6-stelligen Code aus deiner Authenticator-App ein und klicke 'Aktivieren'.",
   },
   en: {
     authEyebrow: "Login Page",
@@ -1268,6 +1339,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "Mobile badge app (digital badge + QR)",
     workerPassLockLabel: "Secure badge with PIN lock",
     workerSearchPlaceholder: "Search: Name, Badge-ID, Site …",
+    confirmDeleteCompanyText: "Delete company {name} and all associated records?\n\nOK = complete deletion (incl. employees, subcontractors and logs)\nCancel = do not delete",
+    confirmLockCompany: "Lock company {name} now? The company admin, turnstile and employee app of this company will be blocked.",
+    confirmUnlockCompany: "Lift lock for {name} now? The company can log in again afterwards.",
+    confirmDeleteWorkerBulk: "Really delete {count} employees?",
+    confirmApiKeyRotate: "Regenerate the API key for this turnstile now? The existing key will immediately lose its validity.",
+    confirmSystemRepair: "Run system repair? Expired sessions and login lockouts will be cleaned up.",
+    confirmApprovalDecision: "Really {decision} approval {id}?",
+    confirmDeadLetterRetry: "Resend dead-letter invoice now?",
+    confirmDeadLetterResolve: "Mark dead-letter case as resolved?",
+    confirmInvoicePaid: "Mark this invoice as paid? Any company lock will be lifted.",
+    confirmInvoiceRetry: "Resend invoice now?",
+    confirmInvoicePaidSimple: "Mark invoice as paid now?",
+    confirmDemoInvoices: "Should demo invoices also be generated?",
+    confirmDemoAccessLogs: "Should demo access logs be generated?",
+    confirmDemoReplace: "Load demo data now for {name} in REPLACE mode? Existing employees, subcontractors and logs will be replaced.",
+    confirmDemoAppend: "Load demo data additionally for {name} in APPEND mode?",
+    confirmExportAudit: "Include audit log in export?",
+    confirmExportDayClose: "Include day-close acknowledgements in export?",
+    confirmExportDeleted: "Include deleted entries in export?",
+    confirmExportAll: "As superadmin: export entire system? (No = current company only)",
+    confirmExportDownload: "Download system export{scope} now?",
+    confirmLogout: "Really log out?",
+    confirmImportChangesOnly: "Import changes only? (Recommended)",
+    confirmBulkRetrySelected: "Resend {count} selected invoice(s) now?",
+    confirmBulkRetryCritical: "Resend {count} critical invoice(s) now?",
+    confirmPhotoMatchFailed: "Photo comparison failed ({score}%). Only superadmin may save with risk. Save anyway?",
+    promptDocEmail: "Set document email for {name}",
+    promptTurnstilePassword: "Set turnstile password for {name} (min. 4 characters):",
+    promptTurnstilePasswordNew: "Set new turnstile password (min. 4 characters):",
+    promptCopyData: "Data to copy:",
+    promptAppLink: "App link for employee:",
+    promptPhotoOverrideReason: "Please enter reason for photo override (at least 8 characters):",
+    promptNewPassword: "Enter new password (at least 8 characters):",
+    promptTfaCode: "Please enter 6-digit code from your authenticator app:",
+    promptTfaDisableCode: "Please enter current 2FA code to disable:",
+    promptDemoMode: "Demo data for {name}: enter mode (replace or append)",
+    promptRejectionReason: "Rejection reason (required):",
+    promptRejectApproval: "Please enter rejection reason:",
+    invoiceTitle: "Invoice",
+    invoiceAltLogo: "Company logo",
+    invoiceLabelNumber: "Invoice number:",
+    invoiceLabelDate: "Invoice date:",
+    invoiceLabelDue: "Due date:",
+    invoiceLabelCustomer: "Customer:",
+    invoiceLabelContact: "Contact person:",
+    invoiceLabelPeriod: "Service period:",
+    invoiceColService: "Service / Employee",
+    invoiceColAccess: "Accesses",
+    invoiceColNet: "Net amount",
+    invoiceRowUnknown: "Unknown",
+    invoiceRowPlan: "Plan: {label}",
+    invoiceTotalNet: "Subtotal net",
+    invoiceTotalVat: "VAT ({rate} %)",
+    invoiceTotalGross: "Total amount",
+    invoiceFooter: "Thank you for the partnership. This invoice was created digitally and can be sent directly.",
+    invoiceHistoryEmpty: "No invoices sent or saved yet.",
+    invoiceHistoryRecipient: "Recipient:",
+    invoiceHistoryTotal: "Total:",
+    invoiceHistoryCreated: "Created:",
+    invoiceHistorySent: "Sent:",
+    invoiceHistoryError: "Error:",
+    tfaStatusActive: "2FA is active",
+    tfaStatusInactive: "2FA is not active",
+    tfaBtnSetup: "Set up 2FA",
+    tfaBtnEnable: "Enable 2FA",
+    tfaBtnDisable: "Disable 2FA",
+    tfaQrHint: "Set up secret with authenticator app:",
+    tfaSecretLabel: "Manual code:",
+    tfaCodeLabel: "Code from app:",
+    tfaCodePlaceholder: "6-digit code",
+    tfaEnableHint: "Enter the 6-digit code from your authenticator app and click 'Enable'.",
   },
   tr: {
     authEyebrow: "Giriş Sayfası",
@@ -1806,6 +1948,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "Mobil rozet uygulaması (dijital rozet + QR)",
     workerPassLockLabel: "Rozeti PIN kilidiyle güvenli hale getir",
     workerSearchPlaceholder: "Ara: İsim, Badge-ID, Şantiye …",
+    confirmDeleteCompanyText: "{name} firmasını ve tüm ilişkili kayıtları sil?\n\nTamam = tam silme (çalışanlar, alt yükleniciler ve loglar dahil)\nİptal = silme",
+    confirmLockCompany: "{name} firmasını şimdi kilitle? Bu firmanın firma yöneticisi, turnike ve çalışan uygulaması engellenir.",
+    confirmUnlockCompany: "{name} için kilidi kaldır? Firma daha sonra tekrar giriş yapabilir.",
+    confirmDeleteWorkerBulk: "{count} çalışan gerçekten silinsin mi?",
+    confirmApiKeyRotate: "Bu turnike için API anahtarı şimdi yeniden oluşturulsun mu? Mevcut anahtar hemen geçerliliğini yitirir.",
+    confirmSystemRepair: "Sistem tamiri yapılsın mı? Süresi dolan oturumlar ve giriş kilitleri temizlenir.",
+    confirmApprovalDecision: "Onay {id} gerçekten {decision} edilsin mi?",
+    confirmDeadLetterRetry: "Ölü mektup faturası şimdi yeniden gönderilsin mi?",
+    confirmDeadLetterResolve: "Ölü mektup durumu çözüldü olarak işaretlensin mi?",
+    confirmInvoicePaid: "Bu fatura ödendi olarak işaretlensin mi? Firma kilidi kaldırılabilir.",
+    confirmInvoiceRetry: "Fatura şimdi yeniden gönderilsin mi?",
+    confirmInvoicePaidSimple: "Fatura şimdi ödendi olarak işaretlensin mi?",
+    confirmDemoInvoices: "Demo faturaları da oluşturulsun mu?",
+    confirmDemoAccessLogs: "Demo giriş logları oluşturulsun mu?",
+    confirmDemoReplace: "Demo verileri {name} için şimdi REPLACE modunda yüklensin mi? Mevcut çalışanlar, alt yükleniciler ve loglar değiştirilir.",
+    confirmDemoAppend: "Demo verileri {name} için şimdi APPEND modunda ek olarak yüklensin mi?",
+    confirmExportAudit: "Denetim logu dışa aktarmaya eklensin mi?",
+    confirmExportDayClose: "Gün kapanış onayları dışa aktarmaya eklensin mi?",
+    confirmExportDeleted: "Silinen girişler dışa aktarmaya eklensin mi?",
+    confirmExportAll: "Süper admin olarak: tüm sistemi dışa aktar? (Hayır = yalnızca mevcut firma)",
+    confirmExportDownload: "Sistem dışa aktarması{scope} şimdi indirilsin mi?",
+    confirmLogout: "Gerçekten çıkış yapılsın mı?",
+    confirmImportChangesOnly: "Yalnızca değişiklikler içe aktarılsın mı? (Önerilen)",
+    confirmBulkRetrySelected: "{count} seçili fatura şimdi yeniden gönderilsin mi?",
+    confirmBulkRetryCritical: "{count} kritik fatura şimdi yeniden gönderilsin mi?",
+    confirmPhotoMatchFailed: "Fotoğraf karşılaştırması başarısız ({score}%). Yalnızca süper admin riskle kayıt yapabilir. Yine de kaydedilsin mi?",
+    promptDocEmail: "{name} için belge e-postası belirle",
+    promptTurnstilePassword: "{name} için turnike şifresi belirle (en az 4 karakter):",
+    promptTurnstilePasswordNew: "Yeni turnike şifresi belirle (en az 4 karakter):",
+    promptCopyData: "Kopyalanacak veriler:",
+    promptAppLink: "Çalışan için uygulama bağlantısı:",
+    promptPhotoOverrideReason: "Foto geçersiz kılma nedeni girin (en az 8 karakter):",
+    promptNewPassword: "Yeni şifre girin (en az 8 karakter):",
+    promptTfaCode: "Lütfen kimlik doğrulayıcı uygulamanızdan 6 haneli kodu girin:",
+    promptTfaDisableCode: "Devre dışı bırakmak için mevcut 2FA kodunu girin:",
+    promptDemoMode: "{name} için demo verileri: modu girin (replace veya append)",
+    promptRejectionReason: "Red gerekçesi (zorunlu):",
+    promptRejectApproval: "Lütfen red gerekçesini girin:",
+    invoiceTitle: "Fatura",
+    invoiceAltLogo: "Firma logosu",
+    invoiceLabelNumber: "Fatura numarası:",
+    invoiceLabelDate: "Fatura tarihi:",
+    invoiceLabelDue: "Son ödeme tarihi:",
+    invoiceLabelCustomer: "Müşteri:",
+    invoiceLabelContact: "İlgili kişi:",
+    invoiceLabelPeriod: "Hizmet dönemi:",
+    invoiceColService: "Hizmet / Çalışan",
+    invoiceColAccess: "Girişler",
+    invoiceColNet: "Net tutar",
+    invoiceRowUnknown: "Bilinmiyor",
+    invoiceRowPlan: "Plan: {label}",
+    invoiceTotalNet: "Net ara toplam",
+    invoiceTotalVat: "KDV ({rate} %)",
+    invoiceTotalGross: "Toplam tutar",
+    invoiceFooter: "İşbirliğiniz için teşekkür ederiz. Bu fatura dijital olarak oluşturulmuş ve doğrudan gönderilebilir.",
+    invoiceHistoryEmpty: "Henüz gönderilmiş veya kaydedilmiş fatura yok.",
+    invoiceHistoryRecipient: "Alıcı:",
+    invoiceHistoryTotal: "Toplam:",
+    invoiceHistoryCreated: "Oluşturuldu:",
+    invoiceHistorySent: "Gönderildi:",
+    invoiceHistoryError: "Hata:",
+    tfaStatusActive: "2FA etkin",
+    tfaStatusInactive: "2FA etkin değil",
+    tfaBtnSetup: "2FA kur",
+    tfaBtnEnable: "2FA etkinleştir",
+    tfaBtnDisable: "2FA devre dışı bırak",
+    tfaQrHint: "Kimlik doğrulama uygulamasıyla sırrı kur:",
+    tfaSecretLabel: "Manuel kod:",
+    tfaCodeLabel: "Uygulamadan kod:",
+    tfaCodePlaceholder: "6 haneli kod",
+    tfaEnableHint: "Kimlik doğrulama uygulamanızdan 6 haneli kodu girin ve 'Etkinleştir' düğmesine tıklayın.",
   },
   ar: {
     authEyebrow: "صفحة تسجيل الدخول",
@@ -2370,6 +2583,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "تطبيق البطاقة المحمولة (بطاقة رقمية + QR)",
     workerPassLockLabel: "تأمين البطاقة بقفل PIN",
     workerSearchPlaceholder: "بحث: الاسم، Badge-ID، الموقع …",
+    confirmDeleteCompanyText: "حذف الشركة {name} وجميع السجلات المرتبطة؟\n\nموافق = حذف كامل (بما في ذلك الموظفون والمقاولون الفرعيون والسجلات)\nإلغاء = لا تحذف",
+    confirmLockCompany: "قفل الشركة {name} الآن؟ سيتم حظر مسؤول الشركة والدوار وتطبيق الموظف.",
+    confirmUnlockCompany: "رفع قفل {name} الآن؟ يمكن للشركة تسجيل الدخول مجدداً بعد ذلك.",
+    confirmDeleteWorkerBulk: "هل تريد فعلاً حذف {count} موظف؟",
+    confirmApiKeyRotate: "إعادة إنشاء مفتاح API لهذا الدوار الآن؟ سيفقد المفتاح الحالي صلاحيته فوراً.",
+    confirmSystemRepair: "تشغيل إصلاح النظام؟ سيتم تنظيف الجلسات المنتهية وأقفال تسجيل الدخول.",
+    confirmApprovalDecision: "هل تريد فعلاً {decision} الموافقة {id}؟",
+    confirmDeadLetterRetry: "إعادة إرسال فاتورة Dead-Letter الآن؟",
+    confirmDeadLetterResolve: "وضع علامة حل على حالة Dead-Letter؟",
+    confirmInvoicePaid: "وضع علامة مدفوعة على هذه الفاتورة؟ سيتم رفع أي قفل عن الشركة.",
+    confirmInvoiceRetry: "إعادة إرسال الفاتورة الآن؟",
+    confirmInvoicePaidSimple: "وضع علامة مدفوعة على الفاتورة الآن؟",
+    confirmDemoInvoices: "هل يجب أيضاً إنشاء فواتير تجريبية؟",
+    confirmDemoAccessLogs: "هل يجب إنشاء سجلات دخول تجريبية؟",
+    confirmDemoReplace: "تحميل البيانات التجريبية لـ {name} الآن في وضع REPLACE؟ سيتم استبدال الموظفين والمقاولين الفرعيين والسجلات الموجودة.",
+    confirmDemoAppend: "تحميل البيانات التجريبية لـ {name} الآن في وضع APPEND إضافياً؟",
+    confirmExportAudit: "تضمين سجل التدقيق في التصدير؟",
+    confirmExportDayClose: "تضمين إيصالات إغلاق اليوم في التصدير؟",
+    confirmExportDeleted: "تضمين الإدخالات المحذوفة في التصدير؟",
+    confirmExportAll: "كمشرف عام: تصدير النظام بأكمله؟ (لا = الشركة الحالية فقط)",
+    confirmExportDownload: "تنزيل تصدير النظام{scope} الآن؟",
+    confirmLogout: "هل تريد فعلاً تسجيل الخروج؟",
+    confirmImportChangesOnly: "استيراد التغييرات فقط؟ (موصى به)",
+    confirmBulkRetrySelected: "إعادة إرسال {count} فاتورة محددة الآن؟",
+    confirmBulkRetryCritical: "إعادة إرسال {count} فاتورة حرجة الآن؟",
+    confirmPhotoMatchFailed: "فشل مقارنة الصور ({score}%). المشرف العام فقط يمكنه الحفظ مع المخاطر. الحفظ على أي حال؟",
+    promptDocEmail: "تحديد بريد المستندات لـ {name}",
+    promptTurnstilePassword: "تحديد كلمة مرور الدوار لـ {name} (4 أحرف على الأقل):",
+    promptTurnstilePasswordNew: "تحديد كلمة مرور دوار جديدة (4 أحرف على الأقل):",
+    promptCopyData: "البيانات للنسخ:",
+    promptAppLink: "رابط التطبيق للموظف:",
+    promptPhotoOverrideReason: "يرجى إدخال سبب تجاوز الصورة (8 أحرف على الأقل):",
+    promptNewPassword: "أدخل كلمة مرور جديدة (8 أحرف على الأقل):",
+    promptTfaCode: "يرجى إدخال رمز 6 أرقام من تطبيق المصادقة:",
+    promptTfaDisableCode: "يرجى إدخال رمز 2FA الحالي للتعطيل:",
+    promptDemoMode: "بيانات تجريبية لـ {name}: أدخل الوضع (replace أو append)",
+    promptRejectionReason: "سبب الرفض (مطلوب):",
+    promptRejectApproval: "يرجى إدخال سبب الرفض:",
+    invoiceTitle: "فاتورة",
+    invoiceAltLogo: "شعار الشركة",
+    invoiceLabelNumber: "رقم الفاتورة:",
+    invoiceLabelDate: "تاريخ الفاتورة:",
+    invoiceLabelDue: "تاريخ الاستحقاق:",
+    invoiceLabelCustomer: "العميل:",
+    invoiceLabelContact: "جهة الاتصال:",
+    invoiceLabelPeriod: "فترة الخدمة:",
+    invoiceColService: "الخدمة / الموظف",
+    invoiceColAccess: "الدخولات",
+    invoiceColNet: "المبلغ الصافي",
+    invoiceRowUnknown: "غير معروف",
+    invoiceRowPlan: "الخطة: {label}",
+    invoiceTotalNet: "المجموع الجزئي الصافي",
+    invoiceTotalVat: "ضريبة القيمة المضافة ({rate} %)",
+    invoiceTotalGross: "المبلغ الإجمالي",
+    invoiceFooter: "شكراً للتعاون. تم إنشاء هذه الفاتورة رقمياً ويمكن إرسالها مباشرة.",
+    invoiceHistoryEmpty: "لا توجد فواتير مرسلة أو محفوظة بعد.",
+    invoiceHistoryRecipient: "المستلم:",
+    invoiceHistoryTotal: "الإجمالي:",
+    invoiceHistoryCreated: "تم الإنشاء:",
+    invoiceHistorySent: "تم الإرسال:",
+    invoiceHistoryError: "خطأ:",
+    tfaStatusActive: "المصادقة الثنائية مفعلة",
+    tfaStatusInactive: "المصادقة الثنائية غير مفعلة",
+    tfaBtnSetup: "إعداد المصادقة الثنائية",
+    tfaBtnEnable: "تفعيل المصادقة الثنائية",
+    tfaBtnDisable: "تعطيل المصادقة الثنائية",
+    tfaQrHint: "إعداد السر باستخدام تطبيق المصادقة:",
+    tfaSecretLabel: "الرمز اليدوي:",
+    tfaCodeLabel: "الرمز من التطبيق:",
+    tfaCodePlaceholder: "رمز 6 أرقام",
+    tfaEnableHint: "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة وانقر 'تفعيل'.",
   },
   fr: {
     authEyebrow: "Page de connexion",
@@ -2934,6 +3218,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "Application badge mobile (badge numérique + QR)",
     workerPassLockLabel: "Sécuriser le badge avec un verrou PIN",
     workerSearchPlaceholder: "Rechercher : Nom, Badge-ID, Chantier …",
+    confirmDeleteCompanyText: "Supprimer la société {name} et tous les enregistrements associés ?\n\nOK = suppression complète (incl. employés, sous-traitants et journaux)\nAnnuler = ne pas supprimer",
+    confirmLockCompany: "Bloquer la société {name} maintenant ? L'admin, le tourniquet et l'app employé de cette société seront bloqués.",
+    confirmUnlockCompany: "Lever le blocage de {name} maintenant ? La société pourra ensuite se reconnecter.",
+    confirmDeleteWorkerBulk: "Vraiment supprimer {count} employés ?",
+    confirmApiKeyRotate: "Régénérer la clé API pour ce tourniquet maintenant ? La clé existante perdra immédiatement sa validité.",
+    confirmSystemRepair: "Effectuer la réparation système ? Les sessions expirées et les verrouillages de connexion seront nettoyés.",
+    confirmApprovalDecision: "Vraiment {decision} l'approbation {id} ?",
+    confirmDeadLetterRetry: "Renvoyer la facture Dead-Letter maintenant ?",
+    confirmDeadLetterResolve: "Marquer le cas Dead-Letter comme résolu ?",
+    confirmInvoicePaid: "Marquer cette facture comme payée ? Le blocage éventuel de la société sera levé.",
+    confirmInvoiceRetry: "Renvoyer la facture maintenant ?",
+    confirmInvoicePaidSimple: "Marquer la facture comme payée maintenant ?",
+    confirmDemoInvoices: "Des factures de démonstration doivent-elles également être créées ?",
+    confirmDemoAccessLogs: "Des journaux d'accès de démonstration doivent-ils être créés ?",
+    confirmDemoReplace: "Charger les données de démonstration pour {name} en mode REPLACE maintenant ? Les employés, sous-traitants et journaux existants seront remplacés.",
+    confirmDemoAppend: "Charger les données de démonstration pour {name} en mode APPEND en plus ?",
+    confirmExportAudit: "Inclure le journal d'audit dans l'export ?",
+    confirmExportDayClose: "Inclure les acquittements de clôture journalière dans l'export ?",
+    confirmExportDeleted: "Inclure les entrées supprimées dans l'export ?",
+    confirmExportAll: "En tant que superadmin : exporter tout le système ? (Non = société actuelle uniquement)",
+    confirmExportDownload: "Télécharger l'export système{scope} maintenant ?",
+    confirmLogout: "Vraiment se déconnecter ?",
+    confirmImportChangesOnly: "Importer uniquement les modifications ? (Recommandé)",
+    confirmBulkRetrySelected: "Renvoyer {count} facture(s) sélectionnée(s) maintenant ?",
+    confirmBulkRetryCritical: "Renvoyer {count} facture(s) critique(s) maintenant ?",
+    confirmPhotoMatchFailed: "Comparaison de photos échouée ({score}%). Seul le superadmin peut sauvegarder avec risque. Sauvegarder quand même ?",
+    promptDocEmail: "Définir l'e-mail document pour {name}",
+    promptTurnstilePassword: "Définir le mot de passe tourniquet pour {name} (min. 4 caractères) :",
+    promptTurnstilePasswordNew: "Définir un nouveau mot de passe tourniquet (min. 4 caractères) :",
+    promptCopyData: "Données à copier :",
+    promptAppLink: "Lien de l'application pour l'employé :",
+    promptPhotoOverrideReason: "Veuillez saisir la raison du remplacement photo (au moins 8 caractères) :",
+    promptNewPassword: "Saisir un nouveau mot de passe (au moins 8 caractères) :",
+    promptTfaCode: "Veuillez saisir le code à 6 chiffres de votre application d'authentification :",
+    promptTfaDisableCode: "Veuillez saisir le code 2FA actuel pour désactiver :",
+    promptDemoMode: "Données de démonstration pour {name} : saisir le mode (replace ou append)",
+    promptRejectionReason: "Raison du rejet (obligatoire) :",
+    promptRejectApproval: "Veuillez saisir la raison du rejet :",
+    invoiceTitle: "Facture",
+    invoiceAltLogo: "Logo société",
+    invoiceLabelNumber: "Numéro de facture :",
+    invoiceLabelDate: "Date de facture :",
+    invoiceLabelDue: "Date d'échéance :",
+    invoiceLabelCustomer: "Client :",
+    invoiceLabelContact: "Interlocuteur :",
+    invoiceLabelPeriod: "Période de prestation :",
+    invoiceColService: "Prestation / Employé",
+    invoiceColAccess: "Accès",
+    invoiceColNet: "Montant net",
+    invoiceRowUnknown: "Inconnu",
+    invoiceRowPlan: "Forfait : {label}",
+    invoiceTotalNet: "Sous-total net",
+    invoiceTotalVat: "TVA ({rate} %)",
+    invoiceTotalGross: "Montant total",
+    invoiceFooter: "Merci pour votre collaboration. Cette facture a été créée numériquement et peut être envoyée directement.",
+    invoiceHistoryEmpty: "Aucune facture envoyée ou sauvegardée pour l'instant.",
+    invoiceHistoryRecipient: "Destinataire :",
+    invoiceHistoryTotal: "Total :",
+    invoiceHistoryCreated: "Créé :",
+    invoiceHistorySent: "Envoyé :",
+    invoiceHistoryError: "Erreur :",
+    tfaStatusActive: "La 2FA est active",
+    tfaStatusInactive: "La 2FA n'est pas active",
+    tfaBtnSetup: "Configurer la 2FA",
+    tfaBtnEnable: "Activer la 2FA",
+    tfaBtnDisable: "Désactiver la 2FA",
+    tfaQrHint: "Configurer le secret avec l'application d'authentification :",
+    tfaSecretLabel: "Code manuel :",
+    tfaCodeLabel: "Code depuis l'app :",
+    tfaCodePlaceholder: "Code à 6 chiffres",
+    tfaEnableHint: "Entrez le code à 6 chiffres de votre application d'authentification et cliquez sur 'Activer'.",
   },
   es: {
     authEyebrow: "Página de acceso",
@@ -3498,6 +3853,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "App de badge móvil (badge digital + QR)",
     workerPassLockLabel: "Proteger el credencial con bloqueo PIN",
     workerSearchPlaceholder: "Buscar: Nombre, Badge-ID, Obra …",
+    confirmDeleteCompanyText: "\u00bfEliminar la empresa {name} y todos los registros asociados?\n\nAceptar = eliminaci\u00f3n completa (incl. empleados, subcontratistas y registros)\nCancelar = no eliminar",
+    confirmLockCompany: "\u00bfBloquear la empresa {name} ahora? El administrador, el torniquete y la app de empleados de esta empresa ser\u00e1n bloqueados.",
+    confirmUnlockCompany: "\u00bfLevantar el bloqueo de {name} ahora? La empresa podr\u00e1 volver a iniciar sesi\u00f3n.",
+    confirmDeleteWorkerBulk: "\u00bfRealmente eliminar {count} empleados?",
+    confirmApiKeyRotate: "\u00bfRegenarar la clave API para este torniquete ahora? La clave existente perder\u00e1 su validez inmediatamente.",
+    confirmSystemRepair: "\u00bfEjecutar reparaci\u00f3n del sistema? Se limpiar\u00e1n las sesiones expiradas y los bloqueos de inicio de sesi\u00f3n.",
+    confirmApprovalDecision: "\u00bfRealmente {decision} la aprobaci\u00f3n {id}?",
+    confirmDeadLetterRetry: "\u00bfReenviar la factura Dead-Letter ahora?",
+    confirmDeadLetterResolve: "\u00bfMarcar el caso Dead-Letter como resuelto?",
+    confirmInvoicePaid: "\u00bfMarcar esta factura como pagada? Se levantar\u00e1 cualquier bloqueo de la empresa.",
+    confirmInvoiceRetry: "\u00bfReenviar la factura ahora?",
+    confirmInvoicePaidSimple: "\u00bfMarcar la factura como pagada ahora?",
+    confirmDemoInvoices: "\u00bfTambi\u00e9n se deben crear facturas de demostraci\u00f3n?",
+    confirmDemoAccessLogs: "\u00bfSe deben crear registros de acceso de demostraci\u00f3n?",
+    confirmDemoReplace: "\u00bfCargar datos de demostraci\u00f3n para {name} en modo REPLACE ahora? Los empleados, subcontratistas y registros existentes ser\u00e1n reemplazados.",
+    confirmDemoAppend: "\u00bfCargar datos de demostraci\u00f3n para {name} en modo APPEND adicionalmente?",
+    confirmExportAudit: "\u00bfIncluir registro de auditor\u00eda en la exportaci\u00f3n?",
+    confirmExportDayClose: "\u00bfIncluir acuses de cierre de d\u00eda en la exportaci\u00f3n?",
+    confirmExportDeleted: "\u00bfIncluir entradas eliminadas en la exportaci\u00f3n?",
+    confirmExportAll: "Como superadmin: \u00bfexportar todo el sistema? (No = solo empresa actual)",
+    confirmExportDownload: "\u00bfDescargar exportaci\u00f3n del sistema{scope} ahora?",
+    confirmLogout: "\u00bfRealmente cerrar sesi\u00f3n?",
+    confirmImportChangesOnly: "\u00bfImportar solo cambios? (Recomendado)",
+    confirmBulkRetrySelected: "\u00bfReenviar {count} factura(s) seleccionada(s) ahora?",
+    confirmBulkRetryCritical: "\u00bfReenviar {count} factura(s) cr\u00edtica(s) ahora?",
+    confirmPhotoMatchFailed: "Comparaci\u00f3n de fotos fallida ({score}%). Solo el superadmin puede guardar con riesgo. \u00bfGuardar de todas formas?",
+    promptDocEmail: "Establecer correo de documentos para {name}",
+    promptTurnstilePassword: "Establecer contrase\u00f1a de torniquete para {name} (m\u00edn. 4 caracteres):",
+    promptTurnstilePasswordNew: "Establecer nueva contrase\u00f1a de torniquete (m\u00edn. 4 caracteres):",
+    promptCopyData: "Datos para copiar:",
+    promptAppLink: "Enlace de la app para el empleado:",
+    promptPhotoOverrideReason: "Por favor, ingrese el motivo de la anulaci\u00f3n de foto (al menos 8 caracteres):",
+    promptNewPassword: "Ingrese la nueva contrase\u00f1a (al menos 8 caracteres):",
+    promptTfaCode: "Por favor, ingrese el c\u00f3digo de 6 d\u00edgitos de su app de autenticaci\u00f3n:",
+    promptTfaDisableCode: "Por favor, ingrese el c\u00f3digo 2FA actual para desactivar:",
+    promptDemoMode: "Datos de demostraci\u00f3n para {name}: ingresar modo (replace o append)",
+    promptRejectionReason: "Motivo de rechazo (obligatorio):",
+    promptRejectApproval: "Por favor, ingrese el motivo del rechazo:",
+    invoiceTitle: "Factura",
+    invoiceAltLogo: "Logo de empresa",
+    invoiceLabelNumber: "N\u00famero de factura:",
+    invoiceLabelDate: "Fecha de factura:",
+    invoiceLabelDue: "Fecha de vencimiento:",
+    invoiceLabelCustomer: "Cliente:",
+    invoiceLabelContact: "Persona de contacto:",
+    invoiceLabelPeriod: "Per\u00edodo de servicio:",
+    invoiceColService: "Servicio / Empleado",
+    invoiceColAccess: "Accesos",
+    invoiceColNet: "Importe neto",
+    invoiceRowUnknown: "Desconocido",
+    invoiceRowPlan: "Plan: {label}",
+    invoiceTotalNet: "Subtotal neto",
+    invoiceTotalVat: "IVA ({rate} %)",
+    invoiceTotalGross: "Importe total",
+    invoiceFooter: "Gracias por la colaboraci\u00f3n. Esta factura fue creada digitalmente y puede enviarse directamente.",
+    invoiceHistoryEmpty: "A\u00fan no hay facturas enviadas ni guardadas.",
+    invoiceHistoryRecipient: "Destinatario:",
+    invoiceHistoryTotal: "Total:",
+    invoiceHistoryCreated: "Creado:",
+    invoiceHistorySent: "Enviado:",
+    invoiceHistoryError: "Error:",
+    tfaStatusActive: "La 2FA est\u00e1 activa",
+    tfaStatusInactive: "La 2FA no est\u00e1 activa",
+    tfaBtnSetup: "Configurar 2FA",
+    tfaBtnEnable: "Activar 2FA",
+    tfaBtnDisable: "Desactivar 2FA",
+    tfaQrHint: "Configurar secreto con app de autenticaci\u00f3n:",
+    tfaSecretLabel: "C\u00f3digo manual:",
+    tfaCodeLabel: "C\u00f3digo de la app:",
+    tfaCodePlaceholder: "C\u00f3digo de 6 d\u00edgitos",
+    tfaEnableHint: "Ingresa el c\u00f3digo de 6 d\u00edgitos de tu app de autenticaci\u00f3n y haz clic en 'Activar'.",
   },
   it: {
     authEyebrow: "Pagina di accesso",
@@ -4062,6 +4488,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "App badge mobile (badge digitale + QR)",
     workerPassLockLabel: "Proteggere il badge con blocco PIN",
     workerSearchPlaceholder: "Cerca: Nome, Badge-ID, Cantiere …",
+    confirmDeleteCompanyText: "Eliminare la societ\u00e0 {name} e tutti i record associati?\n\nOK = eliminazione completa (incl. dipendenti, subappaltatori e log)\nAnnulla = non eliminare",
+    confirmLockCompany: "Bloccare la societ\u00e0 {name} ora? L'admin, il tornello e l'app dipendenti di questa societ\u00e0 verranno bloccati.",
+    confirmUnlockCompany: "Rimuovere il blocco di {name} ora? La societ\u00e0 potr\u00e0 accedere di nuovo.",
+    confirmDeleteWorkerBulk: "Eliminare davvero {count} dipendenti?",
+    confirmApiKeyRotate: "Rigenerare la chiave API per questo tornello ora? La chiave esistente perder\u00e0 immediatamente validit\u00e0.",
+    confirmSystemRepair: "Eseguire la riparazione del sistema? Le sessioni scadute e i blocchi di accesso verranno puliti.",
+    confirmApprovalDecision: "Davvero {decision} l'approvazione {id}?",
+    confirmDeadLetterRetry: "Reinviare la fattura Dead-Letter ora?",
+    confirmDeadLetterResolve: "Contrassegnare il caso Dead-Letter come risolto?",
+    confirmInvoicePaid: "Contrassegnare questa fattura come pagata? L'eventuale blocco della societ\u00e0 sar\u00e0 rimosso.",
+    confirmInvoiceRetry: "Reinviare la fattura ora?",
+    confirmInvoicePaidSimple: "Contrassegnare la fattura come pagata ora?",
+    confirmDemoInvoices: "Devono essere create anche fatture dimostrative?",
+    confirmDemoAccessLogs: "Devono essere creati log di accesso dimostrativi?",
+    confirmDemoReplace: "Caricare i dati dimostrativi per {name} in modalit\u00e0 REPLACE ora? Dipendenti, subappaltatori e log esistenti verranno sostituiti.",
+    confirmDemoAppend: "Caricare i dati dimostrativi per {name} in modalit\u00e0 APPEND in aggiunta?",
+    confirmExportAudit: "Includere il log di audit nell'esportazione?",
+    confirmExportDayClose: "Includere le conferme di chiusura giornaliera nell'esportazione?",
+    confirmExportDeleted: "Includere le voci eliminate nell'esportazione?",
+    confirmExportAll: "Come superadmin: esportare l'intero sistema? (No = solo societ\u00e0 corrente)",
+    confirmExportDownload: "Scaricare l'esportazione del sistema{scope} ora?",
+    confirmLogout: "Vuoi davvero disconnetterti?",
+    confirmImportChangesOnly: "Importare solo le modifiche? (Consigliato)",
+    confirmBulkRetrySelected: "Reinviare {count} fattura/e selezionata/e ora?",
+    confirmBulkRetryCritical: "Reinviare {count} fattura/e critica/e ora?",
+    confirmPhotoMatchFailed: "Confronto foto fallito ({score}%). Solo il superadmin pu\u00f2 salvare con rischio. Salvare comunque?",
+    promptDocEmail: "Impostare l'e-mail documenti per {name}",
+    promptTurnstilePassword: "Impostare la password del tornello per {name} (min. 4 caratteri):",
+    promptTurnstilePasswordNew: "Impostare una nuova password tornello (min. 4 caratteri):",
+    promptCopyData: "Dati da copiare:",
+    promptAppLink: "Link app per il dipendente:",
+    promptPhotoOverrideReason: "Inserire il motivo dell'override foto (almeno 8 caratteri):",
+    promptNewPassword: "Inserire la nuova password (almeno 8 caratteri):",
+    promptTfaCode: "Inserire il codice a 6 cifre dall'app di autenticazione:",
+    promptTfaDisableCode: "Inserire il codice 2FA attuale per disabilitare:",
+    promptDemoMode: "Dati dimostrativi per {name}: inserire la modalit\u00e0 (replace o append)",
+    promptRejectionReason: "Motivo del rifiuto (obbligatorio):",
+    promptRejectApproval: "Inserire il motivo del rifiuto:",
+    invoiceTitle: "Fattura",
+    invoiceAltLogo: "Logo aziendale",
+    invoiceLabelNumber: "Numero fattura:",
+    invoiceLabelDate: "Data fattura:",
+    invoiceLabelDue: "Data scadenza:",
+    invoiceLabelCustomer: "Cliente:",
+    invoiceLabelContact: "Referente:",
+    invoiceLabelPeriod: "Periodo di servizio:",
+    invoiceColService: "Servizio / Dipendente",
+    invoiceColAccess: "Accessi",
+    invoiceColNet: "Importo netto",
+    invoiceRowUnknown: "Sconosciuto",
+    invoiceRowPlan: "Piano: {label}",
+    invoiceTotalNet: "Subtotale netto",
+    invoiceTotalVat: "IVA ({rate} %)",
+    invoiceTotalGross: "Importo totale",
+    invoiceFooter: "Grazie per la collaborazione. Questa fattura e stata creata digitalmente e puo essere inviata direttamente.",
+    invoiceHistoryEmpty: "Nessuna fattura inviata o salvata finora.",
+    invoiceHistoryRecipient: "Destinatario:",
+    invoiceHistoryTotal: "Totale:",
+    invoiceHistoryCreated: "Creato:",
+    invoiceHistorySent: "Inviato:",
+    invoiceHistoryError: "Errore:",
+    tfaStatusActive: "La 2FA e attiva",
+    tfaStatusInactive: "La 2FA non e attiva",
+    tfaBtnSetup: "Configura 2FA",
+    tfaBtnEnable: "Abilita 2FA",
+    tfaBtnDisable: "Disabilita 2FA",
+    tfaQrHint: "Configura il segreto con l'app di autenticazione:",
+    tfaSecretLabel: "Codice manuale:",
+    tfaCodeLabel: "Codice dall'app:",
+    tfaCodePlaceholder: "Codice a 6 cifre",
+    tfaEnableHint: "Inserisci il codice a 6 cifre dalla tua app di autenticazione e clicca 'Abilita'.",
   },
   pl: {
     authEyebrow: "Strona logowania",
@@ -4626,6 +5123,77 @@ const UI_TRANSLATIONS = {
     workerAppEnabledLabel: "Mobilna aplikacja badge (cyfrowy identyfikator + QR)",
     workerPassLockLabel: "Zabezpiecz identyfikator blokadą PIN",
     workerSearchPlaceholder: "Szukaj: Imię, Badge-ID, Budowa …",
+    confirmDeleteCompanyText: "Usunąć firmę {name} i wszystkie powiązane rekordy?\n\nOK = pełne usunięcie (w tym pracownicy, podwykonawcy i logi)\nAnuluj = nie usuwaj",
+    confirmLockCompany: "Zablokować firmę {name} teraz? Administrator firmy, kołowrót i aplikacja pracownika zostaną zablokowane.",
+    confirmUnlockCompany: "Zdjąć blokadę z {name} teraz? Firma będzie mogła się ponownie zalogować.",
+    confirmDeleteWorkerBulk: "Czy naprawdę usunąć {count} pracowników?",
+    confirmApiKeyRotate: "Wygenerować nowy klucz API dla tego kołowrotu teraz? Obecny klucz straci ważność natychmiast.",
+    confirmSystemRepair: "Uruchomić naprawę systemu? Wygasłe sesje i blokady logowania zostaną wyczyszczone.",
+    confirmApprovalDecision: "Czy naprawdę {decision} zatwierdzenie {id}?",
+    confirmDeadLetterRetry: "Ponownie wysłać fakturę Dead-Letter teraz?",
+    confirmDeadLetterResolve: "Oznaczyć sprawę Dead-Letter jako rozwiązaną?",
+    confirmInvoicePaid: "Oznaczyć tę fakturę jako opłaconą? Ewentualna blokada firmy zostanie zniesiona.",
+    confirmInvoiceRetry: "Ponownie wysłać fakturę teraz?",
+    confirmInvoicePaidSimple: "Oznaczyć fakturę jako opłaconą teraz?",
+    confirmDemoInvoices: "Czy mają być również tworzone faktury demonstracyjne?",
+    confirmDemoAccessLogs: "Czy mają być tworzone dzienniki dostępu demonstracyjnego?",
+    confirmDemoReplace: "Załadować dane demonstracyjne dla {name} w trybie REPLACE teraz? Istniejący pracownicy, podwykonawcy i logi zostaną zastąpieni.",
+    confirmDemoAppend: "Załadować dane demonstracyjne dla {name} w trybie APPEND dodatkowo?",
+    confirmExportAudit: "Uwzględnić dziennik audytu w eksporcie?",
+    confirmExportDayClose: "Uwzględnić potwierdzenia zamknięcia dnia w eksporcie?",
+    confirmExportDeleted: "Uwzględnić usunięte wpisy w eksporcie?",
+    confirmExportAll: "Jako superadmin: eksportować cały system? (Nie = tylko bieżąca firma)",
+    confirmExportDownload: "Pobrać eksport systemu{scope} teraz?",
+    confirmLogout: "Czy naprawdę się wylogować?",
+    confirmImportChangesOnly: "Importować tylko zmiany? (Zalecane)",
+    confirmBulkRetrySelected: "Ponownie wysłać {count} wybraną/e fakturę/faktury teraz?",
+    confirmBulkRetryCritical: "Ponownie wysłać {count} krytyczną/e fakturę/faktury teraz?",
+    confirmPhotoMatchFailed: "Porównanie zdjęć nie powiodło się ({score}%). Tylko superadmin może zapisać z ryzykiem. Czy zapisać mimo to?",
+    promptDocEmail: "Ustaw e-mail dokumentów dla {name}",
+    promptTurnstilePassword: "Ustaw hasło kołowrotu dla {name} (min. 4 znaki):",
+    promptTurnstilePasswordNew: "Ustaw nowe hasło kołowrotu (min. 4 znaki):",
+    promptCopyData: "Dane do skopiowania:",
+    promptAppLink: "Link do aplikacji dla pracownika:",
+    promptPhotoOverrideReason: "Podaj powód nadpisania zdjęcia (co najmniej 8 znaków):",
+    promptNewPassword: "Podaj nowe hasło (co najmniej 8 znaków):",
+    promptTfaCode: "Podaj 6-cyfrowy kod z aplikacji uwierzytelniającej:",
+    promptTfaDisableCode: "Podaj aktualny kod 2FA, aby wyłączyć:",
+    promptDemoMode: "Dane demonstracyjne dla {name}: wpisz tryb (replace lub append)",
+    promptRejectionReason: "Powód odrzucenia (wymagane):",
+    promptRejectApproval: "Podaj powód odrzucenia:",
+    invoiceTitle: "Faktura",
+    invoiceAltLogo: "Logo firmy",
+    invoiceLabelNumber: "Numer faktury:",
+    invoiceLabelDate: "Data faktury:",
+    invoiceLabelDue: "Termin płatności:",
+    invoiceLabelCustomer: "Klient:",
+    invoiceLabelContact: "Osoba kontaktowa:",
+    invoiceLabelPeriod: "Okres świadczenia usług:",
+    invoiceColService: "Usługa / Pracownik",
+    invoiceColAccess: "Wejścia",
+    invoiceColNet: "Kwota netto",
+    invoiceRowUnknown: "Nieznany",
+    invoiceRowPlan: "Plan: {label}",
+    invoiceTotalNet: "Suma częściowa netto",
+    invoiceTotalVat: "VAT ({rate} %)",
+    invoiceTotalGross: "Kwota całkowita",
+    invoiceFooter: "Dziękujemy za współpracę. Faktura została stworzona cyfrowo i może być wysłana bezpośrednio.",
+    invoiceHistoryEmpty: "Brak wysłanych lub zapisanych faktur.",
+    invoiceHistoryRecipient: "Odbiorca:",
+    invoiceHistoryTotal: "Razem:",
+    invoiceHistoryCreated: "Utworzono:",
+    invoiceHistorySent: "Wysłano:",
+    invoiceHistoryError: "Błąd:",
+    tfaStatusActive: "2FA jest aktywna",
+    tfaStatusInactive: "2FA nie jest aktywna",
+    tfaBtnSetup: "Skonfiguruj 2FA",
+    tfaBtnEnable: "Włącz 2FA",
+    tfaBtnDisable: "Wyłącz 2FA",
+    tfaQrHint: "Skonfiguruj sekret z aplikacją uwierzytelniającą:",
+    tfaSecretLabel: "Ręczny kod:",
+    tfaCodeLabel: "Kod z aplikacji:",
+    tfaCodePlaceholder: "6-cyfrowy kod",
+    tfaEnableHint: "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej i kliknij 'Włącz'.",
   },
 };
 
@@ -7585,6 +8153,7 @@ function refreshAll() {
   renderBadge();
   loadDevices();
   showLoginGreeting();
+  renderTwofaPanel();
   renderInvoiceHistory();
   renderInvoiceManagementList();
   if (getCurrentViewName() === "invoices") {
@@ -8679,7 +9248,7 @@ async function renderPhotoOverrideApprovalPanel() {
 
   list.querySelectorAll(".approval-reject-btn").forEach((btn) => {
     btn.onclick = async () => {
-      const reason = window.prompt("Bitte Ablehnungsgrund eingeben:") || "";
+      const reason = window.prompt(uiT("promptRejectApproval")) || "";
       if (!reason.trim()) {
         window.alert(uiT("alertPhotoOverrideRejectReasonRequired"));
         return;
@@ -8919,7 +9488,7 @@ function bindCompanyRowActions() {
       }
 
       const currentValue = getCompanyDocumentEmail(company);
-      const nextValue = window.prompt(`Dokument-E-Mail für ${company.name} festlegen`, currentValue || suggestCompanyDocumentEmail(company.name));
+      const nextValue = window.prompt(uiT("promptDocEmail").replace("{name}", company.name), currentValue || suggestCompanyDocumentEmail(company.name));
       if (nextValue === null) {
         return;
       }
@@ -8954,7 +9523,7 @@ function bindCompanyRowActions() {
       const company = state.companies.find((entry) => entry.id === companyId);
       const companyName = company?.name || "diese Firma";
       const forceDelete = window.confirm(
-        `Firma ${companyName} und alle zugehörigen Datensätze löschen?\n\nOK = komplette Löschung (inkl. Mitarbeiter, Subunternehmen und Logs)\nAbbrechen = nicht löschen`
+        uiT("confirmDeleteCompanyText").replace("{name}", companyName)
       );
       if (!forceDelete) {
         return;
@@ -8983,8 +9552,8 @@ function bindCompanyRowActions() {
       const currentStatus = String(company?.status || "aktiv").toLowerCase();
       const nextStatus = currentStatus === "gesperrt" ? "aktiv" : "gesperrt";
       const promptText = nextStatus === "gesperrt"
-        ? `Firma ${companyName} jetzt sperren? Firmen-Admin, Drehkreuz und Mitarbeiter-App dieser Firma werden blockiert.`
-        : `Sperre fuer ${companyName} jetzt aufheben? Die Firma kann sich danach wieder anmelden.`;
+        ? uiT("confirmLockCompany").replace("{name}", companyName)
+        : uiT("confirmUnlockCompany").replace("{name}", companyName);
       if (!window.confirm(promptText)) {
         return;
       }
@@ -9093,7 +9662,7 @@ function bindCompanyRowActions() {
       const company = state.companies.find((entry) => entry.id === companyId);
       if (!companyId || !company) return;
 
-      const password = window.prompt(`Drehkreuz-Passwort für ${company.name} festlegen (min. 4 Zeichen):`, "");
+      const password = window.prompt(uiT("promptTurnstilePassword").replace("{name}", company.name), "");
       if (password === null) return;
       if (password.trim().length < 4) {
         window.alert(uiT("alertPasswordMinLength"));
@@ -9129,7 +9698,7 @@ function bindCompanyRowActions() {
     if (resetTurnstileButton && elements.companyList.contains(resetTurnstileButton)) {
       const companyId = resetTurnstileButton.dataset.turnstileCompany;
       const userId = resetTurnstileButton.dataset.turnstileReset;
-      const password = window.prompt("Neues Drehkreuz-Passwort festlegen (min. 4 Zeichen):", "");
+      const password = window.prompt(uiT("promptTurnstilePasswordNew"), "");
       if (password === null) return;
       if (password.trim().length < 4) {
         window.alert(uiT("alertPasswordMinLength"));
@@ -9151,7 +9720,7 @@ function bindCompanyRowActions() {
     if (rotateTurnstileKeyButton && elements.companyList.contains(rotateTurnstileKeyButton)) {
       const companyId = rotateTurnstileKeyButton.dataset.turnstileCompany;
       const userId = rotateTurnstileKeyButton.dataset.turnstileRotateKey;
-      if (!window.confirm("API-Key fuer dieses Drehkreuz jetzt neu erzeugen? Der bisherige Key verliert sofort seine Gueltigkeit.")) {
+      if (!window.confirm(uiT("confirmApiKeyRotate"))) {
         return;
       }
       try {
@@ -9557,7 +10126,7 @@ window.triggerWorkerAccess = triggerWorkerAccess;
 
   elements.workerList.querySelectorAll("[data-worker-delete]").forEach((button) => {
     button.addEventListener("click", async () => {
-      if (!window.confirm("Mitarbeiter wirklich loeschen?")) {
+      if (!window.confirm(uiT("confirmDeleteWorker"))) {
         return;
       }
 
@@ -9645,10 +10214,10 @@ function showSecretDialog(title, lines, options = {}) {
         await navigator.clipboard.writeText(copyValue);
         window.alert(uiT("alertDataCopied"));
       } else {
-        window.prompt("Daten zum Kopieren:", copyValue);
+        window.prompt(uiT("promptCopyData"), copyValue);
       }
     } catch {
-      window.prompt("Daten zum Kopieren:", copyValue);
+      window.prompt(uiT("promptCopyData"), copyValue);
     }
   });
 
@@ -9737,10 +10306,10 @@ function showWorkerAppQrDialog(worker, absoluteLink, payload = null) {
         await navigator.clipboard.writeText(absoluteLink);
         window.alert(uiT("alertAppLinkCopied"));
       } else {
-        window.prompt("App-Link für den Mitarbeiter:", absoluteLink);
+        window.prompt(uiT("promptAppLink"), absoluteLink);
       }
     } catch {
-      window.prompt("App-Link für den Mitarbeiter:", absoluteLink);
+      window.prompt(uiT("promptAppLink"), absoluteLink);
     }
   });
 
@@ -10697,12 +11266,12 @@ async function handleWorkerSubmit(event) {
             return;
           }
           const proceed = window.confirm(
-            `Fotovergleich fehlgeschlagen (${scorePct}%). Nur Superadmin darf mit Risiko speichern. Trotzdem speichern?`
+            uiT("confirmPhotoMatchFailed").replace("{score}", scorePct)
           );
           if (!proceed) {
             return;
           }
-          const overrideReason = window.prompt("Bitte Grund für den Foto-Override eingeben (mindestens 8 Zeichen):", "") || "";
+          const overrideReason = window.prompt(uiT("promptPhotoOverrideReason"), "") || "";
           if (overrideReason.trim().length < 8) {
             window.alert(uiT("alertOverrideReasonTooShort"));
             return;
@@ -11276,7 +11845,7 @@ async function refreshSystemStatus() {
 }
 
 async function handleSystemRepair() {
-  if (!window.confirm("System-Reparatur ausfuehren? Abgelaufene Sitzungen und Login-Sperren werden bereinigt.")) {
+  if (!window.confirm(uiT("confirmSystemRepair"))) {
     return;
   }
 
@@ -11621,7 +12190,7 @@ function renderInvoiceHtml(invoice) {
       <meta charset="UTF-8" />
       <meta name="google" content="notranslate" />
       <meta http-equiv="Content-Language" content="de" />
-      <title>Rechnung ${escapeHtml(invoice.invoiceNumber)}</title>
+      <title>${escapeHtml(uiT("invoiceTitle"))} ${escapeHtml(invoice.invoiceNumber)}</title>
       <style>
         body { margin: 0; font-family: Arial, sans-serif; color: #1b1b1b; }
         .sheet { padding: 28px; }
@@ -11645,30 +12214,30 @@ function renderInvoiceHtml(invoice) {
       <div class="sheet">
         <div class="head">
           <div class="brand">
-            <h1>Rechnung</h1>
+            <h1>${escapeHtml(uiT("invoiceTitle"))}</h1>
             <p>${escapeHtml(state.settings.operatorName)}</p>
             <p>${escapeHtml(state.settings.platformName)}</p>
           </div>
-          ${invoice.logo ? `<img class="logo" src="${invoice.logo}" alt="Firmenlogo" />` : ""}
+          ${invoice.logo ? `<img class="logo" src="${invoice.logo}" alt="${escapeHtml(uiT('invoiceAltLogo'))}" />` : ""}
         </div>
 
         <div class="bar"></div>
 
         <table class="meta">
           <tr>
-            <td><strong>Rechnungsnummer:</strong> ${escapeHtml(invoice.invoiceNumber)}</td>
-            <td><strong>Rechnungsdatum:</strong> ${escapeHtml(formatDate(invoice.invoiceDate))}</td>
+            <td><strong>${escapeHtml(uiT("invoiceLabelNumber"))}</strong> ${escapeHtml(invoice.invoiceNumber)}</td>
+            <td><strong>${escapeHtml(uiT("invoiceLabelDate"))}</strong> ${escapeHtml(formatDate(invoice.invoiceDate))}</td>
           </tr>
           <tr>
-            <td><strong>Faelligkeitsdatum:</strong> ${escapeHtml(formatDate(invoice.dueDate))}</td>
+            <td><strong>${escapeHtml(uiT("invoiceLabelDue"))}</strong> ${escapeHtml(formatDate(invoice.dueDate))}</td>
             <td></td>
           </tr>
           <tr>
-            <td><strong>Kunde:</strong> ${escapeHtml(invoice.company.name)}</td>
-            <td><strong>Ansprechpartner:</strong> ${escapeHtml(invoice.company.contact || "-")}</td>
+            <td><strong>${escapeHtml(uiT("invoiceLabelCustomer"))}</strong> ${escapeHtml(invoice.company.name)}</td>
+            <td><strong>${escapeHtml(uiT("invoiceLabelContact"))}</strong> ${escapeHtml(invoice.company.contact || "-")}</td>
           </tr>
           <tr>
-            <td colspan="2"><strong>Leistungszeitraum:</strong> ${escapeHtml(invoice.invoicePeriod)}</td>
+            <td colspan="2"><strong>${escapeHtml(uiT("invoiceLabelPeriod"))}</strong> ${escapeHtml(invoice.invoicePeriod)}</td>
           </tr>
         </table>
 
@@ -11676,23 +12245,23 @@ function renderInvoiceHtml(invoice) {
           <table>
             <thead>
               <tr>
-                <th>Leistung / Mitarbeiter</th>
-                <th style="text-align:center">Zugänge</th>
-                <th style="text-align:right">Nettobetrag</th>
+                <th>${escapeHtml(uiT("invoiceColService"))}</th>
+                <th style="text-align:center">${escapeHtml(uiT("invoiceColAccess"))}</th>
+                <th style="text-align:right">${escapeHtml(uiT("invoiceColNet"))}</th>
               </tr>
             </thead>
             <tbody>
               ${invoice.accessLineItems && invoice.accessLineItems.length > 0 ? 
                 invoice.accessLineItems.map(item => `
                   <tr>
-                    <td>${escapeHtml(item.workerName || 'Unbekannt')}</td>
+                    <td>${escapeHtml(item.workerName || uiT('invoiceRowUnknown'))}</td>
                     <td style="text-align:center">${item.accessCount}</td>
                     <td style="text-align:right">${formatCurrency(item.amount)}</td>
                   </tr>
                 `).join('') :
                 `
                   <tr>
-                    <td>Tarif: ${escapeHtml(invoice.planLabel)}</td>
+                    <td>${escapeHtml(uiT("invoiceRowPlan").replace("{label}", invoice.planLabel))}</td>
                     <td style="text-align:center">-</td>
                     <td style="text-align:right">${formatCurrency(invoice.netAmount)}</td>
                   </tr>
@@ -11708,12 +12277,12 @@ function renderInvoiceHtml(invoice) {
         </div>
 
         <table class="totals">
-          <tr><td>Zwischensumme netto</td><td>${formatCurrency(invoice.netAmount)}</td></tr>
-          <tr><td>MwSt. (${invoice.vatRate.toFixed(1)} %)</td><td>${formatCurrency(invoice.vatAmount)}</td></tr>
-          <tr><td>Gesamtbetrag</td><td>${formatCurrency(invoice.totalAmount)}</td></tr>
+          <tr><td>${escapeHtml(uiT("invoiceTotalNet"))}</td><td>${formatCurrency(invoice.netAmount)}</td></tr>
+          <tr><td>${escapeHtml(uiT("invoiceTotalVat").replace("{rate}", invoice.vatRate.toFixed(1)))}</td><td>${formatCurrency(invoice.vatAmount)}</td></tr>
+          <tr><td>${escapeHtml(uiT("invoiceTotalGross"))}</td><td>${formatCurrency(invoice.totalAmount)}</td></tr>
         </table>
 
-        <p class="footer">Vielen Dank für die Zusammenarbeit. Diese Rechnung wurde digital erstellt und kann direkt versendet werden.</p>
+        <p class="footer">${escapeHtml(uiT("invoiceFooter"))}</p>
       </div>
     </body>
     </html>
@@ -11736,7 +12305,7 @@ function refreshInvoicePreview(options = {}) {
 
 function renderInvoiceHistory() {
   if (!state.invoices.length) {
-    elements.invoiceHistoryList.innerHTML = '<div class="empty-state">Noch keine versendeten oder gespeicherten Rechnungen.</div>';
+    elements.invoiceHistoryList.innerHTML = `<div class="empty-state">${escapeHtml(uiT("invoiceHistoryEmpty"))}</div>`;
     return;
   }
 
@@ -11752,11 +12321,11 @@ function renderInvoiceHistory() {
             </div>
             <span class="status-pill status-${escapeHtml(invoice.status || "test")}">${escapeHtml(invoice.status || "-")}</span>
           </header>
-          <span>Empfänger: ${escapeHtml(invoice.recipient_email)}</span>
-          <span>Gesamt: ${formatCurrency(invoice.total_amount)}</span>
-          <span>Erstellt: ${formatTimestamp(invoice.created_at)}</span>
-          ${invoice.sent_at ? `<span>Versendet: ${formatTimestamp(invoice.sent_at)}</span>` : ""}
-          ${invoice.error_message ? `<span>Fehler: ${escapeHtml(invoice.error_message)}</span>` : ""}
+          <span>${escapeHtml(uiT("invoiceHistoryRecipient"))} ${escapeHtml(invoice.recipient_email)}</span>
+          <span>${escapeHtml(uiT("invoiceHistoryTotal"))} ${formatCurrency(invoice.total_amount)}</span>
+          <span>${escapeHtml(uiT("invoiceHistoryCreated"))} ${formatTimestamp(invoice.created_at)}</span>
+          ${invoice.sent_at ? `<span>${escapeHtml(uiT("invoiceHistorySent"))} ${formatTimestamp(invoice.sent_at)}</span>` : ""}
+          ${invoice.error_message ? `<span>${escapeHtml(uiT("invoiceHistoryError"))} ${escapeHtml(invoice.error_message)}</span>` : ""}
         </article>
       `
     )
@@ -12037,13 +12606,13 @@ function renderInvoiceApprovalQueue() {
     }
 
     const decisionText = decision === "approve" ? "freigeben" : "ablehnen";
-    if (!window.confirm(`Freigabe ${approvalId} wirklich ${decisionText}?`)) {
+    if (!window.confirm(uiT("confirmApprovalDecision").replace("{id}", approvalId).replace("{decision}", decisionText))) {
       return;
     }
 
     let note = "";
     if (decision === "reject") {
-      note = String(window.prompt("Ablehnungsgrund (Pflicht):", "") || "").trim();
+      note = String(window.prompt(uiT("promptRejectionReason"), "") || "").trim();
       if (!note) {
         window.alert(uiT("alertApprovalRejectReasonRequired"));
         return;
@@ -12108,7 +12677,7 @@ function renderInvoiceDeadLetters() {
     const retryButton = event.target.closest("[data-dead-letter-retry-id]");
     if (retryButton && container.contains(retryButton)) {
       const invoiceId = String(retryButton.dataset.deadLetterRetryId || "").trim();
-      if (!invoiceId || !window.confirm("Dead-Letter-Rechnung jetzt erneut senden?")) {
+      if (!invoiceId || !window.confirm(uiT("confirmDeadLetterRetry"))) {
         return;
       }
       try {
@@ -12133,7 +12702,7 @@ function renderInvoiceDeadLetters() {
     const resolveButton = event.target.closest("[data-dead-letter-resolve-id]");
     if (resolveButton && container.contains(resolveButton)) {
       const invoiceId = String(resolveButton.dataset.deadLetterResolveId || "").trim();
-      if (!invoiceId || !window.confirm("Dead-Letter-Fall als erledigt markieren?")) {
+      if (!invoiceId || !window.confirm(uiT("confirmDeadLetterResolve"))) {
         return;
       }
       try {
@@ -12449,7 +13018,7 @@ function renderInvoiceManagementList() {
   container.querySelectorAll("[data-invoice-id]").forEach(button => {
     button.addEventListener("click", async (e) => {
       const invId = e.target.dataset.invoiceId;
-      if (!invId || !window.confirm("Diese Rechnung als bezahlt markieren? Firmensperrung wird ggf. aufgehoben.")) return;
+      if (!invId || !window.confirm(uiT("confirmInvoicePaid"))) return;
       
       try {
         await apiRequest(API_BASE + `/api/invoices/${invId}/pay`, {
@@ -12478,7 +13047,7 @@ function renderInvoiceManagementList() {
     button.addEventListener("click", async (event) => {
       const retryId = event.target.dataset.invoiceRetryId;
       if (!retryId) return;
-      if (!window.confirm("Rechnung jetzt erneut senden?")) return;
+      if (!window.confirm(uiT("confirmInvoiceRetry"))) return;
 
       try {
         const payload = await apiRequest(API_BASE + `/api/invoices/${retryId}/retry-send`, {
@@ -12705,7 +13274,7 @@ function renderInvoiceRetryQueue(container, sourceInvoices) {
     if (!retryButton || !container.contains(retryButton)) return;
     const retryId = retryButton.dataset.retryQueueSend;
     if (!retryId) return;
-    if (!window.confirm("Rechnung jetzt erneut senden?")) return;
+    if (!window.confirm(uiT("confirmInvoiceRetry"))) return;
 
     try {
       const payload = await apiRequest(API_BASE + `/api/invoices/${retryId}/retry-send`, {
@@ -12932,7 +13501,7 @@ function renderCollectionsList() {
     const paidButton = event.target.closest("[data-collections-mark-paid]");
     if (paidButton && container.contains(paidButton)) {
       const invoiceId = paidButton.dataset.collectionsMarkPaid;
-      if (!invoiceId || !window.confirm("Rechnung jetzt als bezahlt markieren?")) {
+      if (!invoiceId || !window.confirm(uiT("confirmInvoicePaidSimple"))) {
         return;
       }
       try {
@@ -12958,8 +13527,8 @@ function renderCollectionsList() {
       const currentStatus = String(company.status || "aktiv").toLowerCase();
       const nextStatus = currentStatus === "gesperrt" ? "aktiv" : "gesperrt";
       const ok = window.confirm(nextStatus === "gesperrt"
-        ? `Firma ${company.name} jetzt manuell sperren?`
-        : `Sperre fuer ${company.name} jetzt aufheben?`
+        ? uiT("confirmLockCompany").replace("{name}", company.name)
+        : uiT("confirmUnlockCompany").replace("{name}", company.name)
       );
       if (!ok) {
         return;
@@ -13103,7 +13672,7 @@ async function maybeHandlePasswordResetToken() {
   if (!rawToken) {
     return;
   }
-  const newPassword = window.prompt("Neues Passwort eingeben (mindestens 8 Zeichen):", "");
+  const newPassword = window.prompt(uiT("promptNewPassword"), "");
   if (!newPassword) {
     return;
   }
@@ -13162,6 +13731,58 @@ async function handlePasswordChange(event) {
   }
 }
 
+
+// ── 2FA Panel ──────────────────────────────────────────────────────────────
+function renderTwofaPanel() {
+  const panel = document.getElementById("twofaPanel");
+  if (!panel) {
+    return;
+  }
+
+  // Sync enabled state from currentUser on initial load
+  const enabled = Boolean(state.twofa.enabled || state.currentUser?.twofa_enabled);
+
+  if (enabled) {
+    panel.innerHTML = `
+      <div style="margin-bottom:10px">
+        <span class="status-pill status-ok">${escapeHtml(uiT("tfaStatusActive"))}</span>
+      </div>
+      <div class="button-row">
+        <button type="button" class="danger-button" onclick="disableTwofa()">${escapeHtml(uiT("tfaBtnDisable"))}</button>
+      </div>
+    `;
+    return;
+  }
+
+  const hasSecret = Boolean(state.twofa.secret);
+
+  if (hasSecret) {
+    panel.innerHTML = `
+      <div style="margin-bottom:10px">
+        <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
+      </div>
+      <p style="margin:8px 0 4px;font-size:0.9rem">${escapeHtml(uiT("tfaQrHint"))}</p>
+      <p style="margin:4px 0 8px;font-size:0.85rem">
+        <strong>${escapeHtml(uiT("tfaSecretLabel"))}</strong>
+        <code style="user-select:all;word-break:break-all">${escapeHtml(state.twofa.secret)}</code>
+      </p>
+      <p style="margin:0 0 10px;font-size:0.85rem;color:#666">${escapeHtml(uiT("tfaEnableHint"))}</p>
+      <div class="button-row">
+        <button type="button" class="primary-button" onclick="enableTwofa()">${escapeHtml(uiT("tfaBtnEnable"))}</button>
+      </div>
+    `;
+  } else {
+    panel.innerHTML = `
+      <div style="margin-bottom:10px">
+        <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
+      </div>
+      <div class="button-row">
+        <button type="button" class="primary-button" onclick="setupTwofa()">${escapeHtml(uiT("tfaBtnSetup"))}</button>
+      </div>
+    `;
+  }
+}
+
 async function setupTwofa() {
   try {
     const payload = await apiRequest(API_BASE + "/api/me/2fa/setup", { method: "POST", body: {} });
@@ -13175,7 +13796,7 @@ async function setupTwofa() {
 }
 
 async function enableTwofa() {
-  const code = window.prompt("Bitte 6-stelligen Code aus deiner Authenticator-App eingeben:") || "";
+  const code = window.prompt(uiT("promptTfaCode")) || "";
   if (!code) {
     return;
   }
@@ -13189,7 +13810,7 @@ async function enableTwofa() {
 }
 
 async function disableTwofa() {
-  const code = window.prompt("Bitte aktuellen 2FA-Code zum Deaktivieren eingeben:") || "";
+  const code = window.prompt(uiT("promptTfaDisableCode")) || "";
   if (!code) {
     return;
   }
@@ -14166,7 +14787,7 @@ async function loadDemoData() {
   const company = state.companies.find((entry) => entry.id === companyId);
   const companyName = company?.name || "die ausgewaehlte Firma";
   const modeRaw = window.prompt(
-    `Demo-Daten fuer ${companyName}: Modus eingeben (replace oder append)`,
+    uiT("promptDemoMode").replace("{name}", companyName),
     "replace"
   );
   if (modeRaw === null) {
@@ -14178,13 +14799,13 @@ async function loadDemoData() {
     return;
   }
 
-  const includeInvoices = window.confirm("Sollen Demo-Rechnungen mit erzeugt werden?");
-  const includeAccessLogs = window.confirm("Sollen Demo-Zutrittslogs erzeugt werden?");
+  const includeInvoices = window.confirm(uiT("confirmDemoInvoices"));
+  const includeAccessLogs = window.confirm(uiT("confirmDemoAccessLogs"));
 
   const proceed = window.confirm(
     mode === "replace"
-      ? `Demo-Daten jetzt für ${companyName} im Modus REPLACE laden? Vorhandene Mitarbeiter, Subunternehmen und Logs werden ersetzt.`
-      : `Demo-Daten jetzt fuer ${companyName} im Modus APPEND zusaetzlich laden?`
+      ? uiT("confirmDemoReplace").replace("{name}", companyName)
+      : uiT("confirmDemoAppend").replace("{name}", companyName)
   );
   if (!proceed) {
     return;
@@ -14219,19 +14840,19 @@ async function handleTopbarExport() {
   const exportCompanyId = state.currentUser?.company_id || state.currentUser?.companyId || "";
   const exportCompany = state.companies.find((entry) => entry.id === exportCompanyId);
   const exportScopeLabel = exportCompany ? ` fuer ${exportCompany.name}` : "";
-  const includeAudit = window.confirm("Audit-Log im Export einschließen?");
-  const includeDayClose = window.confirm("Tagesabschluss-Quittierungen im Export einschließen?");
-  const includeDeleted = window.confirm("Gelöschte Einträge im Export einschließen?");
+  const includeAudit = window.confirm(uiT("confirmExportAudit"));
+  const includeDayClose = window.confirm(uiT("confirmExportDayClose"));
+  const includeDeleted = window.confirm(uiT("confirmExportDeleted"));
 
   let exportCompanyTarget = "";
   if (state.currentUser?.role === "superadmin") {
-    const exportAll = window.confirm("Als Superadmin: Gesamtsystem exportieren? (Nein = nur aktuelle Firma)");
+    const exportAll = window.confirm(uiT("confirmExportAll"));
     if (!exportAll) {
       exportCompanyTarget = exportCompanyId;
     }
   }
 
-  const proceed = window.confirm(`System-Export${exportScopeLabel} jetzt herunterladen?`);
+  const proceed = window.confirm(uiT("confirmExportDownload").replace("{scope}", exportScopeLabel));
   if (!proceed) {
     return;
   }
@@ -14244,7 +14865,7 @@ async function handleTopbarExport() {
 }
 
 async function handleTopbarLogout() {
-  const proceed = window.confirm("Wirklich abmelden?");
+  const proceed = window.confirm(uiT("confirmLogout"));
   if (!proceed) {
     return;
   }
@@ -14402,7 +15023,7 @@ async function handleTopbarImport() {
       const parsed = JSON.parse(text);
       const payloadData = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
 
-      const importOnlyChanges = window.confirm("Nur Änderungen importieren? (Empfohlen)");
+      const importOnlyChanges = window.confirm(uiT("confirmImportChangesOnly"));
 
       const dryRunResult = await apiRequest(`${API_BASE}/api/import`, {
         method: "POST",
@@ -14786,7 +15407,7 @@ if (invoiceRetryBulkSendBtn) {
       window.alert(uiT("alertSelectInvoiceForRetry"));
       return;
     }
-    if (!window.confirm(`${selectedIds.length} ausgewählte Rechnung(en) jetzt erneut senden?`)) {
+    if (!window.confirm(uiT("confirmBulkRetrySelected").replace("{count}", selectedIds.length))) {
       return;
     }
     try {
@@ -14820,7 +15441,7 @@ if (invoiceRetryCriticalSendBtn) {
       return;
     }
 
-    if (!window.confirm(`${criticalIds.length} kritische Rechnung(en) jetzt erneut senden?`)) {
+    if (!window.confirm(uiT("confirmBulkRetryCritical").replace("{count}", criticalIds.length))) {
       return;
     }
 
@@ -15087,7 +15708,7 @@ wireDesktopInstallPrompt();
     elements.bulkDeleteButton.addEventListener("click", async () => {
       const ids = getSelectedWorkerIds();
       if (!ids.length) return;
-      if (!window.confirm(`${ids.length} Mitarbeiter wirklich löschen?`)) return;
+      if (!window.confirm(uiT("confirmDeleteWorkerBulk").replace("{count}", ids.length))) return;
       try {
         await Promise.all(ids.map((id) => apiRequest(`${API_BASE}/api/workers/${id}`, { method: "DELETE" })));
         await loadAllData();
