@@ -2209,13 +2209,27 @@ def _run_smtp_diagnostics(smtp_settings):
 
 def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, html_body):
     """Send e-mail via Resend API over HTTPS (fallback when SMTP egress is blocked)."""
-    api_key = (os.getenv("RESEND_API_KEY") or "").strip()
-    if not api_key:
-        return False, "resend_not_configured"
+    def _normalize_env_value(raw):
+        value = str(raw or "").strip()
+        if len(value) >= 2 and ((value[0] == '"' and value[-1] == '"') or (value[0] == "'" and value[-1] == "'")):
+            value = value[1:-1].strip()
+        return value
 
-    endpoint = (os.getenv("RESEND_API_URL") or "https://api.resend.com/emails").strip()
-    from_email = (os.getenv("RESEND_FROM_EMAIL") or sender_email or "").strip()
-    from_name = (os.getenv("RESEND_FROM_NAME") or sender_name or "").strip()
+    def _get_resend_api_key():
+        # Accept common variable names to reduce deployment misconfiguration issues.
+        for key_name in ("RESEND_API_KEY", "RESEND_KEY", "RESEND_API_TOKEN"):
+            candidate = _normalize_env_value(os.getenv(key_name))
+            if candidate:
+                return candidate
+        return ""
+
+    api_key = _get_resend_api_key()
+    if not api_key:
+        return False, "resend_not_configured (expected: RESEND_API_KEY | RESEND_KEY | RESEND_API_TOKEN)"
+
+    endpoint = _normalize_env_value(os.getenv("RESEND_API_URL") or "https://api.resend.com/emails")
+    from_email = _normalize_env_value(os.getenv("RESEND_FROM_EMAIL") or sender_email or "")
+    from_name = _normalize_env_value(os.getenv("RESEND_FROM_NAME") or sender_name or "")
     if not from_email:
         return False, "resend_missing_from_email"
     from_header = f'"{from_name}" <{from_email}>' if from_name else from_email
@@ -10050,7 +10064,11 @@ def otp_test_send():
         app.logger.error(
             f"[OTP-TEST-DIAG] stage={diag_result.get('stage')} type={diag_result.get('errorType')} error={diag_result.get('error')}"
         )
-    resend_configured = bool((os.getenv("RESEND_API_KEY") or "").strip())
+    resend_configured = bool(
+        str(os.getenv("RESEND_API_KEY") or "").strip()
+        or str(os.getenv("RESEND_KEY") or "").strip()
+        or str(os.getenv("RESEND_API_TOKEN") or "").strip()
+    )
     detail_text = "SMTP delivery failed. Check server logs for [OTP-MAIL]."
     fallback_error = ""
     if diag_result.get("stage") == "connect" and "Network is unreachable" in str(diag_result.get("error") or ""):
@@ -10058,7 +10076,10 @@ def otp_test_send():
             detail_text = "SMTP egress blocked on Railway. Resend fallback is configured; check [OTP-MAIL] logs for provider errors."
             fallback_error = "resend_configured_but_send_failed"
         else:
-            detail_text = "SMTP egress blocked on Railway and RESEND_API_KEY is missing. Configure RESEND_API_KEY to send OTP via HTTPS fallback."
+            detail_text = (
+                "SMTP egress blocked on Railway and Resend API key is missing. "
+                "Configure RESEND_API_KEY (or RESEND_KEY / RESEND_API_TOKEN) for HTTPS fallback."
+            )
             fallback_error = "resend_not_configured"
     return jsonify({
         "ok": False,
