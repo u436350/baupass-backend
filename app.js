@@ -58,6 +58,7 @@ function resolveApiBase() {
 const API_BASE = resolveApiBase();
 const SESSION_TOKEN_STORAGE_KEY = "baupass-control-token";
 const SUPPORT_LOGIN_CONTEXT_KEY = "baupass-support-login-context";
+const SUPPORT_PHONE_STORAGE_KEY = "baupass-support-phone";
 const UI_LANG_STORAGE_KEY = "baupass-ui-lang";
 const UI_FALLBACK_LANG = "de";
 
@@ -7067,6 +7068,19 @@ function syncSupportLoginUi() {
       const actorText = context.actorName ? ` ${escapeHtml(uiT("supportStartedBy"))} ${escapeHtml(context.actorName)}` : "";
       elements.loginSupportNotice.innerHTML = `<strong>${escapeHtml(uiT("supportLoginActive"))}</strong> ${escapeHtml(context.companyName || uiT("supportCompanyFallback"))}${actorText}. ${escapeHtml(uiT("supportReadOnlyNotice"))}`;
       elements.loginSupportNotice.style.display = "block";
+
+function updateLoginOtpVisibility() {
+  const otpLabel = elements.loginOtpCode?.closest("label");
+  if (!otpLabel) {
+    return;
+  }
+  const scope = String(elements.loginScope?.value || "auto").trim().toLowerCase();
+  const hideOtpForTurnstile = scope === "turnstile";
+  otpLabel.style.display = hideOtpForTurnstile ? "none" : "";
+  if (hideOtpForTurnstile && elements.loginOtpCode) {
+    elements.loginOtpCode.value = "";
+  }
+}
     } else {
       elements.loginSupportNotice.innerHTML = "";
       elements.loginSupportNotice.style.display = "none";
@@ -9954,6 +9968,7 @@ function renderAdminSettingsForm() {
   const smtpUseTls = document.querySelector("#smtpUseTls");
   const adminIpWhitelist = document.querySelector("#adminIpWhitelist");
   const enforceTenantDomain = document.querySelector("#enforceTenantDomain");
+  const supportPhone = document.querySelector("#supportPhone");
   const workerAppEnabled = document.querySelector("#workerAppEnabled");
 
   if (platformName) platformName.value = state.settings.platformName || "BauPass Control";
@@ -9971,6 +9986,7 @@ function renderAdminSettingsForm() {
   if (smtpUseTls) smtpUseTls.value = state.settings.smtpUseTls === false ? "0" : "1";
   if (adminIpWhitelist) adminIpWhitelist.value = state.settings.adminIpWhitelist || "";
   if (enforceTenantDomain) enforceTenantDomain.value = state.settings.enforceTenantDomain ? "1" : "0";
+  if (supportPhone) supportPhone.value = getSupportPhoneForLockScreen();
   if (workerAppEnabled) workerAppEnabled.value = state.settings.workerAppEnabled === false ? "0" : "1";
   if (elements.invoiceLogoData) {
     elements.invoiceLogoData.value = state.settings.invoiceLogoData || "";
@@ -11809,6 +11825,18 @@ async function handleSettingsSubmit(event) {
       method: "PUT",
       body: settingsBody
     });
+
+    const supportPhoneInput = String(document.querySelector("#supportPhone")?.value || "").trim();
+    try {
+      if (supportPhoneInput) {
+        window.localStorage.setItem(SUPPORT_PHONE_STORAGE_KEY, supportPhoneInput);
+      } else {
+        window.localStorage.removeItem(SUPPORT_PHONE_STORAGE_KEY);
+      }
+    } catch {
+      // ignore storage failures (private mode / quota)
+    }
+
     state.settings = updated;
     document.dispatchEvent(new CustomEvent("baupass:settingsLoaded"));
     refreshAll();
@@ -13564,7 +13592,7 @@ function renderCollectionsList() {
 }
 
 function getSupportPhoneForLockScreen() {
-  const fromStorage = String(window.localStorage.getItem("baupass-support-phone") || "").trim();
+  const fromStorage = String(window.localStorage.getItem(SUPPORT_PHONE_STORAGE_KEY) || "").trim();
   return fromStorage || LOGIN_SUPPORT_PHONE_FALLBACK;
 }
 
@@ -15330,11 +15358,14 @@ if (elements.authOverlay) {
 
 if (elements.loginScope) {
   elements.loginScope.addEventListener("change", () => {
+    updateLoginOtpVisibility();
     if (!token) {
       focusLoginInput({ force: true });
     }
   });
 }
+
+updateLoginOtpVisibility();
 
 if (elements.logoutButton) {
   elements.logoutButton.addEventListener("click", handleTopbarLogout);

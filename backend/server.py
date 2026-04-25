@@ -3164,7 +3164,9 @@ def login():
         log_audit("login.failed", f"Login-Typ passt nicht zu {username or 'unbekannt'}")
         return login_error("login_scope_mismatch")
 
-    if int(user["twofa_enabled"]) == 1:
+    twofa_enabled = int(user["twofa_enabled"]) == 1
+    turnstile_auto_2fa = user["role"] == "turnstile"
+    if twofa_enabled and not turnstile_auto_2fa:
         if not otp_code:
             register_login_failure(throttle_key)
             return login_error("otp_required")
