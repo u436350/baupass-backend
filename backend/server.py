@@ -2207,6 +2207,53 @@ def _run_smtp_diagnostics(smtp_settings):
         return result
 
 
+def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, html_body):
+    """Send e-mail via Resend API over HTTPS (fallback when SMTP egress is blocked)."""
+    api_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    if not api_key:
+        return False, "resend_not_configured"
+
+    endpoint = (os.getenv("RESEND_API_URL") or "https://api.resend.com/emails").strip()
+    from_email = (os.getenv("RESEND_FROM_EMAIL") or sender_email or "").strip()
+    from_name = (os.getenv("RESEND_FROM_NAME") or sender_name or "").strip()
+    if not from_email:
+        return False, "resend_missing_from_email"
+    from_header = f'"{from_name}" <{from_email}>' if from_name else from_email
+
+    payload = {
+        "from": from_header,
+        "to": [recipient],
+        "subject": subject,
+        "text": text_body,
+        "html": html_body,
+    }
+    req = Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=15) as resp:
+            status = int(getattr(resp, "status", 200) or 200)
+            if 200 <= status < 300:
+                return True, ""
+            return False, f"resend_http_{status}"
+    except HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        return False, f"resend_http_{exc.code}: {body[:300]}"
+    except URLError as exc:
+        return False, f"resend_url_error: {exc}"
+    except Exception as exc:
+        return False, f"resend_error: {exc}"
+
+
 def _build_email_html(platform_name: str, primary_color: str, accent_color: str, title: str, body_html: str, footer_name: str) -> str:
     """Return a branded HTML email string."""
     # Inline SVG logo (simplified icon part only for email compatibility)
@@ -2347,10 +2394,11 @@ def _send_otp_email_to_user(db, user_row, code, smtp_settings_override=None):
     msg["Subject"] = f"{platform_name}: Ihr Sicherheitscode – {code}"
     msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
     msg["To"] = email
-    msg.set_content(
+    text_content = (
         f"Guten Tag,\n\nIhr Sicherheitscode: {code}\n\nGültig 10 Minuten.\nBenutzerkonto: {username}\n\n"
         f"Falls Sie sich nicht angemeldet haben, ignorieren Sie diese E-Mail.\n\n{operator_name}"
     )
+    msg.set_content(text_content)
     msg.add_alternative(html_content, subtype="html")
 
     try:
@@ -2363,6 +2411,18 @@ def _send_otp_email_to_user(db, user_row, code, smtp_settings_override=None):
         return True
     except Exception as exc:
         app.logger.error(f"[OTP-MAIL] SMTP-Fehler beim Senden an {email}: {exc}")
+        fallback_ok, fallback_error = _send_via_resend(
+            subject=msg["Subject"],
+            sender_email=smtp_sender,
+            sender_name=smtp_sender_name,
+            recipient=email,
+            text_body=text_content,
+            html_body=html_content,
+        )
+        if fallback_ok:
+            app.logger.warning(f"[OTP-MAIL] SMTP ausgefallen, OTP über Resend versendet an {email}")
+            return True
+        app.logger.error(f"[OTP-MAIL] Resend-Fallback fehlgeschlagen: {fallback_error}")
         return False
 
 
@@ -3932,9 +3992,11 @@ def smtp_test():
         operator_name = smtp_settings["operator_name"]
         html_content = _build_email_html(platform_name, primary_color, accent_color,
                                          "SMTP Konfiguration erfolgreich", body_html, operator_name)
-        msg.set_content(
-            f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_settings['smtp_sender_email']}\nHost: {smtp_settings['smtp_host']}\n\n{operator_name}"
+        text_content = (
+            f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_settings['smtp_sender_email']}\n"
+            f"Host: {smtp_settings['smtp_host']}\n\n{operator_name}"
         )
+        msg.set_content(text_content)
         msg.add_alternative(html_content, subtype="html")
         with _smtp_connect(smtp_settings["smtp_host"], smtp_settings["smtp_port"], smtp_settings["smtp_use_tls"]) as s:
             smtp_username = smtp_settings["smtp_username"]
@@ -3946,11 +4008,28 @@ def smtp_test():
     except Exception as exc:
         diag_result = _run_smtp_diagnostics(smtp_settings)
         app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
+        fallback_ok, fallback_error = _send_via_resend(
+            subject=msg["Subject"] if "msg" in locals() else f"{platform_name}: SMTP Test-Mail",
+            sender_email=smtp_settings["smtp_sender_email"],
+            sender_name=smtp_settings["smtp_sender_name"],
+            recipient=recipient,
+            text_body=text_content if "text_content" in locals() else "SMTP Test",
+            html_body=html_content if "html_content" in locals() else "<p>SMTP Test</p>",
+        )
+        if fallback_ok:
+            app.logger.warning(f"[SMTP-TEST] SMTP ausgefallen, Test-Mail über Resend versendet an {recipient}")
+            return jsonify({"ok": True, "recipient": recipient, "delivery": "resend_fallback"})
         if not diag_result.get("ok"):
             app.logger.error(
                 f"[SMTP-TEST-DIAG] stage={diag_result.get('stage')} type={diag_result.get('errorType')} error={diag_result.get('error')}"
             )
-        return jsonify({"ok": False, "error": "smtp_send_failed", "detail": str(exc), "diagnostics": diag_result}), 500
+        return jsonify({
+            "ok": False,
+            "error": "smtp_send_failed",
+            "detail": str(exc),
+            "diagnostics": diag_result,
+            "fallbackError": fallback_error,
+        }), 500
 
 
 @app.post("/api/settings/smtp-diagnose")

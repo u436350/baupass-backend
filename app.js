@@ -12318,7 +12318,11 @@ async function sendSmtpTestMail() {
     });
     if (result) {
       result.style.color = "#16a34a";
-      result.textContent = `✅ Mail gesendet an ${res.recipient}`;
+      if (res?.delivery === "resend_fallback") {
+        result.textContent = `✅ Mail gesendet an ${res.recipient} (Fallback via HTTPS/Resend)`;
+      } else {
+        result.textContent = `✅ Mail gesendet an ${res.recipient}`;
+      }
     }
   } catch (err) {
     if (result) {
