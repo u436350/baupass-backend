@@ -2200,18 +2200,25 @@ def _send_otp_email_to_user(db, user_row, code):
     try:
         user_keys = set(user_row.keys()) if hasattr(user_row, "keys") else set()
         email = (user_row["email"] if "email" in user_keys else "").strip()
-    except Exception:
+    except Exception as exc:
+        app.logger.error(f"[OTP-MAIL] Fehler beim Lesen der E-Mail-Adresse: {exc}")
         return False
     if not email:
+        app.logger.warning(f"[OTP-MAIL] Kein E-Mail für Benutzer '{user_row.get('username', '?')}' – E-Mail-Versand übersprungen")
         return False
 
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
     if not settings:
+        app.logger.error("[OTP-MAIL] Keine Settings in der Datenbank gefunden")
         return False
 
     smtp_host = (settings["smtp_host"] or "").strip()
     smtp_sender = (settings["smtp_sender_email"] or "").strip()
-    if not smtp_host or not smtp_sender:
+    if not smtp_host:
+        app.logger.warning("[OTP-MAIL] SMTP-Host nicht konfiguriert – E-Mail-Versand nicht möglich")
+        return False
+    if not smtp_sender:
+        app.logger.warning("[OTP-MAIL] SMTP-Absender nicht konfiguriert – E-Mail-Versand nicht möglich")
         return False
 
     platform_name = (settings["platform_name"] or "BauPass Control").strip()
@@ -2273,8 +2280,10 @@ def _send_otp_email_to_user(db, user_row, code):
             if smtp_username:
                 smtp.login(smtp_username, settings["smtp_password"] or "")
             smtp.send_message(msg)
+        app.logger.info(f"[OTP-MAIL] OTP-Code erfolgreich gesendet an {email} (Benutzer: {username})")
         return True
-    except Exception:
+    except Exception as exc:
+        app.logger.error(f"[OTP-MAIL] SMTP-Fehler beim Senden an {email}: {exc}")
         return False
 
 
