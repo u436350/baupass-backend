@@ -2182,7 +2182,10 @@ def _send_otp_email_to_user(db, user_row, code):
             smtp.send_message(msg)
         return True
     except Exception:
-        return False(db):
+        return False
+
+
+def run_invoice_dunning_cycle(db):
     """Update overdue status and send staged reminders before automatic suspension."""
     today = utc_now().date()
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
