@@ -12248,7 +12248,14 @@ function formatSmtpTestError(err) {
   if (err?.code === "smtp_send_failed" || err?.code === "otp_send_failed") {
     const base = err?.payload?.detail || err?.message || "SMTP-Versand fehlgeschlagen.";
     const diag = formatSmtpDiagnosticsPayload(err?.payload?.diagnostics);
-    return diag ? `${base} | ${diag}` : base;
+    const fallbackError = String(err?.payload?.fallbackError || "");
+    const fallbackHint = fallbackError === "resend_not_configured"
+      ? "Resend-Fallback ist nicht aktiv. Setze in Railway die Variable RESEND_API_KEY."
+      : "";
+    const parts = [base];
+    if (diag) parts.push(diag);
+    if (fallbackHint) parts.push(fallbackHint);
+    return parts.join(" | ");
   }
   return err?.message || "Unbekannter Fehler";
 }

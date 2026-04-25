@@ -4052,7 +4052,7 @@ def smtp_diagnose():
     result = _run_smtp_diagnostics(smtp_settings)
     status_code = 200
     if not result.get("ok"):
-        app.logger.error(
+        app.logger.warning(
             f"[SMTP-DIAG] stage={result.get('stage')} type={result.get('errorType')} error={result.get('error')}"
         )
     return jsonify(result), status_code
@@ -10050,11 +10050,23 @@ def otp_test_send():
         app.logger.error(
             f"[OTP-TEST-DIAG] stage={diag_result.get('stage')} type={diag_result.get('errorType')} error={diag_result.get('error')}"
         )
+    resend_configured = bool((os.getenv("RESEND_API_KEY") or "").strip())
+    detail_text = "SMTP delivery failed. Check server logs for [OTP-MAIL]."
+    fallback_error = ""
+    if diag_result.get("stage") == "connect" and "Network is unreachable" in str(diag_result.get("error") or ""):
+        if resend_configured:
+            detail_text = "SMTP egress blocked on Railway. Resend fallback is configured; check [OTP-MAIL] logs for provider errors."
+            fallback_error = "resend_configured_but_send_failed"
+        else:
+            detail_text = "SMTP egress blocked on Railway and RESEND_API_KEY is missing. Configure RESEND_API_KEY to send OTP via HTTPS fallback."
+            fallback_error = "resend_not_configured"
     return jsonify({
         "ok": False,
         "error": "otp_send_failed",
-        "detail": "SMTP delivery failed. Check server logs for [OTP-MAIL].",
+        "detail": detail_text,
         "diagnostics": diag_result,
+        "fallbackError": fallback_error,
+        "resendConfigured": resend_configured,
     }), 500
 
 
