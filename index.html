@@ -1003,6 +1003,13 @@
                   <option value="0" data-ui-i18n="optTlsNo">Nein</option>
                 </select>
               </label>
+              <label class="full-width">
+                <span></span>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" id="smtpTestBtn" class="btn btn-secondary" onclick="sendSmtpTestMail()" data-ui-i18n="btnTestSmtp">Test-Mail senden</button>
+                  <span id="smtpTestResult" style="font-size:0.85rem"></span>
+                </div>
+              </label>
 
               <!-- ── Dokument-Postfach (IMAP) ── -->
               <div class="form-section">

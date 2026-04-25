@@ -3707,6 +3707,45 @@ def get_settings():
     )
 
 
+@app.post("/api/settings/smtp-test")
+@require_auth
+@require_roles("superadmin")
+def smtp_test():
+    """Send a test e-mail using the currently saved SMTP settings."""
+    db = get_db()
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    if not settings:
+        return jsonify({"ok": False, "error": "no_settings"}), 400
+    smtp_host = (settings["smtp_host"] or "").strip()
+    smtp_sender = (settings["smtp_sender_email"] or "").strip()
+    if not smtp_host or not smtp_sender:
+        return jsonify({"ok": False, "error": "smtp_not_configured"}), 400
+    # Send to the logged-in user's email, or the sender address as fallback
+    recipient = (g.current_user["email"] or "").strip() or smtp_sender
+    platform_name = (settings["platform_name"] or "BauPass Control").strip()
+    smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = f"{platform_name}: SMTP Test-Mail"
+        msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
+        msg["To"] = recipient
+        msg.set_content(
+            f"Hallo,\n\nDiese Test-Mail bestätigt dass SMTP für {platform_name} korrekt konfiguriert ist.\n\n"
+            f"Empfänger: {recipient}\nAbsender: {smtp_sender}\nSMTP-Host: {smtp_host}\n\n"
+            f"Viele Grüße\n{platform_name}"
+        )
+        with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as s:
+            if int(settings["smtp_use_tls"] or 0) == 1:
+                s.starttls()
+            smtp_username = (settings["smtp_username"] or "").strip()
+            if smtp_username:
+                s.login(smtp_username, settings["smtp_password"] or "")
+            s.send_message(msg)
+        return jsonify({"ok": True, "recipient": recipient})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.put("/api/settings")
 @require_auth
 @require_roles("superadmin")

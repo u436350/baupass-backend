@@ -539,6 +539,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS aktiv",
     optTlsYes: "Ja",
     optTlsNo: "Nein",
+    btnTestSmtp: "Test-Mail senden",
     optYes: "Ja",
     optNo: "Nein",
     labelIpWhitelist: "Admin IP-Whitelist (Komma getrennt, optional CIDR)",
@@ -1216,6 +1217,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS active",
     optTlsYes: "Yes",
     optTlsNo: "No",
+    btnTestSmtp: "Send test mail",
     optYes: "Yes",
     optNo: "No",
     labelIpWhitelist: "Admin IP whitelist (comma separated, optional CIDR)",
@@ -1623,9 +1625,10 @@ const UI_TRANSLATIONS = {
     labelSenderName: "G\u00f6nderen Ad\u0131",
     labelTls: "TLS aktif",
     optTlsYes: "Evet",
-    optTlsNo: "Hay\u0131r",
+    optTlsNo: "Hayır",
+    btnTestSmtp: "Test maili gönder",
     optYes: "Evet",
-    optNo: "Hay\u0131r",
+    optNo: "Hayır",
     labelIpWhitelist: "Admin IP beyaz listesi",
     labelEnforceDomain: "Firma domain zorla",
     btnSaveAdmin: "Admin ayarlar\u0131n\u0131 kaydet",
@@ -2380,6 +2383,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS نشط",
     optTlsYes: "نعم",
     optTlsNo: "لا",
+    btnTestSmtp: "إرسال بريد اختبار",
     optYes: "نعم",
     optNo: "لا",
     labelIpWhitelist: "قائمة بيضاء IP للمشرف",
@@ -3023,6 +3027,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS actif",
     optTlsYes: "Oui",
     optTlsNo: "Non",
+    btnTestSmtp: "Envoyer un e-mail test",
     optYes: "Oui",
     optNo: "Non",
     labelIpWhitelist: "Liste blanche IP admin",
@@ -3666,6 +3671,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS activo",
     optTlsYes: "Sí",
     optTlsNo: "No",
+    btnTestSmtp: "Enviar correo de prueba",
     optYes: "Sí",
     optNo: "No",
     labelIpWhitelist: "Lista blanca IP admin",
@@ -4301,6 +4307,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS attivo",
     optTlsYes: "Sì",
     optTlsNo: "No",
+    btnTestSmtp: "Invia email di prova",
     optYes: "Sì",
     optNo: "No",
     labelIpWhitelist: "Whitelist IP admin",
@@ -4944,6 +4951,7 @@ const UI_TRANSLATIONS = {
     labelTls: "TLS aktywne",
     optTlsYes: "Tak",
     optTlsNo: "Nie",
+    btnTestSmtp: "Wyślij testowy e-mail",
     optYes: "Tak",
     optNo: "Nie",
     labelIpWhitelist: "Biała lista IP admina",
@@ -12136,6 +12144,27 @@ async function handleSettingsSubmit(event) {
     refreshAll();
   } catch (error) {
     window.alert(uiT("alertSettingsSaveFailed").replace("{error}", error.message));
+  }
+}
+
+async function sendSmtpTestMail() {
+  const btn = document.querySelector("#smtpTestBtn");
+  const result = document.querySelector("#smtpTestResult");
+  if (btn) btn.disabled = true;
+  if (result) result.textContent = "⏳ …";
+  try {
+    const res = await apiRequest(API_BASE + "/api/settings/smtp-test", { method: "POST", body: {} });
+    if (result) {
+      result.style.color = "#16a34a";
+      result.textContent = `✅ Mail gesendet an ${res.recipient}`;
+    }
+  } catch (err) {
+    if (result) {
+      result.style.color = "#dc2626";
+      result.textContent = `❌ Fehler: ${err.message}`;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
