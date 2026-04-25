@@ -5626,6 +5626,55 @@ def delete_company(company_id):
     return jsonify({"ok": True, "force": force})
 
 
+@app.put("/api/companies/<company_id>/admin-security")
+@require_auth
+@require_roles("superadmin")
+def set_company_admin_security(company_id):
+    """Superadmin sets OTP email and enables/disables 2FA for a company's admin user."""
+    payload = request.get_json(silent=True) or {}
+    email = (payload.get("email") or "").strip().lower()
+    enable_2fa = bool(payload.get("enable2fa", False))
+    if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return jsonify({"error": "invalid_email"}), 400
+    db = get_db()
+    admin_user = db.execute(
+        "SELECT id, username, email, twofa_enabled FROM users WHERE company_id = ? AND role = 'company-admin' LIMIT 1",
+        (company_id,)
+    ).fetchone()
+    if not admin_user:
+        return jsonify({"error": "admin_not_found"}), 404
+    db.execute(
+        "UPDATE users SET email = ?, twofa_enabled = ? WHERE id = ?",
+        (email, 1 if enable_2fa else 0, admin_user["id"])
+    )
+    if not enable_2fa:
+        db.execute("DELETE FROM otp_codes WHERE user_id = ?", (admin_user["id"],))
+    db.commit()
+    log_audit("security.admin_otp_updated",
+              f"OTP-Einstellungen fuer Admin '{admin_user['username']}' der Firma {company_id} aktualisiert",
+              target_type="user", target_id=admin_user["id"], actor=g.current_user)
+    return jsonify({"ok": True, "username": admin_user["username"], "email": email, "twofa_enabled": enable_2fa})
+
+
+@app.get("/api/companies/<company_id>/admin-security")
+@require_auth
+@require_roles("superadmin")
+def get_company_admin_security(company_id):
+    """Get OTP/2FA status of a company's admin user."""
+    db = get_db()
+    admin_user = db.execute(
+        "SELECT username, email, twofa_enabled FROM users WHERE company_id = ? AND role = 'company-admin' LIMIT 1",
+        (company_id,)
+    ).fetchone()
+    if not admin_user:
+        return jsonify({"error": "admin_not_found"}), 404
+    return jsonify({
+        "username": admin_user["username"],
+        "email": admin_user["email"] or "",
+        "twofa_enabled": bool(int(admin_user["twofa_enabled"] or 0))
+    })
+
+
 @app.post("/api/companies/<company_id>/add-turnstile")
 @require_auth
 @require_roles("superadmin")

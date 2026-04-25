@@ -6144,6 +6144,7 @@ const state = {
   companyRepairStatus: {},
   companyLockBusy: {},
   companyTurnstiles: {},
+  companyAdminSecurity: {},
   complianceOverview: [],
   auditLogs: [],
   repairHistoryWindowDays: 30,
@@ -7218,7 +7219,7 @@ function applySupportReadOnlyUiState() {
     "#docAssignForm input, #docAssignForm select, #docAssignForm textarea, #docAssignForm button",
     "#docCompanyMatchForm input, #docCompanyMatchForm select, #docCompanyMatchForm textarea, #docCompanyMatchForm button",
     "[data-worker-edit], [data-worker-delete], [data-worker-restore], [data-worker-app-link], [data-worker-reset-pin]",
-    "[data-company-doc-email], [data-company-add-turnstile], [data-company-repair], [data-company-toggle-lock], [data-company-delete]",
+    "[data-company-doc-email], [data-company-otp-setup], [data-company-add-turnstile], [data-company-repair], [data-company-toggle-lock], [data-company-delete]",
     "[data-collections-mark-paid], [data-collections-toggle-lock]"
   ];
 
@@ -8185,16 +8186,28 @@ async function loadAllData() {
   }
 
   state.companyTurnstiles = {};
+  state.companyAdminSecurity = {};
   if (companies.status === "fulfilled" && ["superadmin", "company-admin"].includes(String(state.currentUser?.role || ""))) {
     const visibleCompanies = (companies.value || []).filter((company) => !company.deleted_at);
-    const turnstileRequests = await Promise.allSettled(
-      visibleCompanies.map((company) => apiRequest(`${API_BASE}/api/companies/${company.id}/turnstiles`))
-    );
+    const [turnstileRequests, securityRequests] = await Promise.all([
+      Promise.allSettled(
+        visibleCompanies.map((company) => apiRequest(`${API_BASE}/api/companies/${company.id}/turnstiles`))
+      ),
+      state.currentUser?.role === "superadmin"
+        ? Promise.allSettled(
+            visibleCompanies.map((company) => apiRequest(`${API_BASE}/api/companies/${company.id}/admin-security`))
+          )
+        : Promise.resolve(visibleCompanies.map(() => ({ status: "skipped" }))),
+    ]);
     visibleCompanies.forEach((company, index) => {
       const result = turnstileRequests[index];
       state.companyTurnstiles[company.id] = result?.status === "fulfilled" && Array.isArray(result.value)
         ? result.value
         : [];
+      if (state.currentUser?.role === "superadmin") {
+        const sec = securityRequests[index];
+        state.companyAdminSecurity[company.id] = sec?.status === "fulfilled" ? sec.value : null;
+      }
     });
   }
 }
@@ -9663,6 +9676,17 @@ function renderCompanyList() {
           <p class="${statusMeta.className}">Status: ${escapeHtml(statusMeta.label)}</p>
           <p><strong>Design:</strong> ${escapeHtml(getCompanyBrandingPresetLabel(brandingPreset))}</p>
           <p><strong>Dokument-E-Mail:</strong> ${escapeHtml(documentEmail || "Nicht gesetzt")}</p>
+          ${(() => {
+            const sec = state.companyAdminSecurity?.[companyId];
+            if (!sec) return "";
+            const otpIcon = sec.twofa_enabled ? "🔐" : "🔓";
+            const otpLabel = sec.twofa_enabled
+              ? `OTP aktiv · ${escapeHtml(sec.email || "keine E-Mail")}`
+              : sec.email
+                ? `OTP deaktiviert · ${escapeHtml(sec.email)}`
+                : "OTP nicht konfiguriert";
+            return `<p>${otpIcon} <strong>Admin-OTP:</strong> ${otpLabel}</p>`;
+          })()}
           <div class="button-row" style="align-items:center; margin-top:2px;">
             <select data-company-branding-select="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>
               <option value="construction" ${brandingPreset === "construction" ? "selected" : ""}>Bau</option>
@@ -9685,6 +9709,7 @@ function renderCompanyList() {
           ${repairStatus ? `<p class="${repairStatusClass}">${escapeHtml(repairStatus.message || "")}</p>` : ""}
           <div class="button-row">
             <button type="button" class="ghost-button" data-company-doc-email="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Dokument-Mail setzen</button>
+            <button type="button" class="ghost-button" data-company-otp-setup="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>🔐 Admin-OTP</button>
             <button type="button" class="ghost-button" data-company-add-turnstile="${escapeHtml(companyId)}" ${canDeleteAny && !deleted ? "" : "disabled"}>Drehkreuz hinzufügen</button>
             <button type="button" class="ghost-button" data-company-repair="${escapeHtml(companyId)}" ${canRepair && !deleted && !isRepairing ? "" : "disabled"}>${isRepairing ? "Login wird vorbereitet..." : "Firmen-Login"}</button>
             <button type="button" class="ghost-button" data-company-toggle-lock="${escapeHtml(companyId)}" ${canToggleLock && !deleted && !isLockBusy ? "" : "disabled"}>${isLockBusy ? "Speichert..." : String(company.status || "aktiv").toLowerCase() === "gesperrt" ? "Sperre aufheben" : "Firma sperren"}</button>
@@ -9810,6 +9835,37 @@ function bindCompanyRowActions() {
   });
 
   elements.companyList.addEventListener("click", async (event) => {
+    // ── Admin-OTP einrichten ──
+    const otpSetupButton = event.target.closest("[data-company-otp-setup]");
+    if (otpSetupButton && !otpSetupButton.disabled && elements.companyList.contains(otpSetupButton)) {
+      const companyId = otpSetupButton.dataset.companyOtpSetup;
+      const company = state.companies.find((c) => c.id === companyId);
+      if (!companyId || !company) return;
+      const sec = state.companyAdminSecurity?.[companyId];
+      const currentEmail = sec?.email || "";
+      const newEmail = window.prompt(
+        `OTP-E-Mail für Admin der Firma „${company.name}":\n(Leer lassen = OTP deaktivieren)`,
+        currentEmail
+      );
+      if (newEmail === null) return;
+      const enable = newEmail.trim().length > 0;
+      try {
+        await apiRequest(`${API_BASE}/api/companies/${companyId}/admin-security`, {
+          method: "PUT",
+          body: { email: newEmail.trim(), enable2fa: enable }
+        });
+        await loadAllData();
+        refreshAll();
+        window.alert(enable
+          ? `✅ OTP aktiviert!\nE-Mail: ${newEmail.trim()}\n\nDer Admin erhält beim nächsten Login einen Code an diese Adresse.`
+          : `🔓 OTP deaktiviert für Admin der Firma „${company.name}".`
+        );
+      } catch (err) {
+        window.alert(`Fehler: ${err.message}`);
+      }
+      return;
+    }
+
     const docEmailButton = event.target.closest("[data-company-doc-email]");
     if (docEmailButton && !docEmailButton.disabled && elements.companyList.contains(docEmailButton)) {
       const companyId = docEmailButton.dataset.companyDocEmail;
