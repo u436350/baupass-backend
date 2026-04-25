@@ -64,8 +64,11 @@ const UI_FALLBACK_LANG = "de";
 
 function loadStoredSessionToken() {
   try {
-    return (window.localStorage.getItem(SESSION_TOKEN_STORAGE_KEY) || "").trim();
-  } catch {
+    const stored = (window.localStorage.getItem(SESSION_TOKEN_STORAGE_KEY) || "").trim();
+    console.log("[Token] Loaded from storage:", stored ? `${stored.slice(0, 20)}...` : "NONE");
+    return stored;
+  } catch (err) {
+    console.warn("[Token] Failed to load from storage:", err);
     return "";
   }
 }
@@ -7998,14 +8001,17 @@ async function loadAllData() {
   if (!state.currentUser) {
     let bootstrap;
     try {
+      console.log("[Bootstrap] Attempting with token:", token ? `${token.slice(0, 20)}...` : "NONE");
       bootstrap = await apiRequest(`${API_BASE}/api/session/bootstrap`, {
         auth: false,
         // Bei Cross-Site-Cookies (z. B. Railway) kann der Cookie fehlen.
         // Wenn bereits ein Token im Speicher ist, sende es explizit mit.
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
+      console.log("[Bootstrap] Success:", { hasUser: !!bootstrap?.user, username: bootstrap?.user?.username });
     } catch (error) {
       const msg = String(error?.message || "");
+      console.warn("[Bootstrap] Failed:", msg);
       // Nicht eingeloggt ist beim ersten Laden ein normaler Zustand.
       if (["unauthorized", "invalid_session", "session_expired"].includes(msg)) {
         clearSession();
@@ -13736,7 +13742,9 @@ async function handleLoginSubmit(event) {
 
     resetLoginFailureCounter();
     token = payload.token;
+    console.log("[Login] Token received:", token ? `${token.slice(0, 20)}...` : "NONE");
     persistSessionToken(token);
+    console.log("[Login] Token persisted to storage");
     state.currentUser = payload.user;
     clearSupportLoginContext();
     state.supportLoginContext = null;
@@ -16011,14 +16019,20 @@ async function bulkSetStatus(status) {
 (async () => {
   initSystemThemeControl();
   setView("dashboard");
-  refreshAll();
-
+  
+  // Try to restore session from storage before showing UI
   try {
+    console.log("[App Init] Starting bootstrap with token:", token ? "present" : "missing");
     await loadAllData();
+    console.log("[App Init] Bootstrap complete. CurrentUser:", state.currentUser?.username || "none");
+    
     if (token && state.currentUser) {
+      console.log("[App Init] Session restored successfully");
       startHeartbeat();
       startBackendStatusMonitor();
       setView(getDefaultViewForRole(state.currentUser.role));
+    } else {
+      console.log("[App Init] No session after bootstrap");
     }
   } catch (error) {
     if (error.message !== "session_expired" && error.message !== "backend_unreachable") {
@@ -16027,6 +16041,7 @@ async function bulkSetStatus(status) {
     clearSession();
   }
 
+  // Show appropriate UI after session is loaded
   refreshAll();
 })();
 
