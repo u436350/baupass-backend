@@ -6019,7 +6019,7 @@ let loginLockOverlayTimer = null;
 let companyBrandingPreviewOverride = "";
 let superadminUiPreviewCompanyId = "";
 const LOGIN_HARD_LOCK_MS = 10 * 60 * 1000;
-const LOGIN_SUPPORT_PHONE_FALLBACK = "+49 170 0000000";
+const LOGIN_SUPPORT_PHONE_FALLBACK = "+49 176 31676589";
 
 const PLAN_LABELS = {
   tageskarte: "Besucherkarte",
