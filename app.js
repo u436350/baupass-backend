@@ -6206,7 +6206,7 @@ function getRuntimeUiTexts() {
     statsWorkersActive: "Active workers",
     statsVisitorsTotal: "Visitors total",
     statsCompanies: "Companies",
-    statsAccessToday: "Access today",
+    statsAccessToday: "Currently on-site",
     badgePinHintVisitor: "Visitors use the one-time link/QR. A badge PIN is not required for visitors.",
     badgePinHintWorker: "Badge login in the worker app now works only with badge ID and this PIN. While editing, you can set a new PIN here.",
     workerListEmpty: "No workers created yet.",
@@ -6312,7 +6312,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Aktive Mitarbeiter",
       statsVisitorsTotal: "Besucher gesamt",
       statsCompanies: "Firmen",
-      statsAccessToday: "Zutritte heute",
+      statsAccessToday: "Aktiv auf Baustelle",
       badgePinHintVisitor: "Besucher nutzen den Einmal-Link/QR. Eine Badge-PIN ist fuer Besucher nicht erforderlich.",
       badgePinHintWorker: "Badge-Login in der Mitarbeiter-App funktioniert nur noch mit Badge-ID und dieser PIN. Beim Bearbeiten kannst du hier eine neue PIN setzen.",
       workerListEmpty: "Noch keine Mitarbeiter angelegt.",
@@ -6417,7 +6417,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Aktif \u00e7al\u0131\u015fan",
       statsVisitorsTotal: "Toplam ziyaret\u00e7i",
       statsCompanies: "Firmalar",
-      statsAccessToday: "Bug\u00fcnk\u00fc giri\u015f",
+      statsAccessToday: "Şu an sahada",
       badgePinHintVisitor: "Ziyaret\u00e7iler tek kullan\u0131ml\u0131k link/QR kullan\u0131r. Ziyaret\u00e7iler i\u00e7in Badge PIN gerekli de\u011fildir.",
       badgePinHintWorker: "\u00c7al\u0131\u015fan uygulamas\u0131nda rozet giri\u015fi yaln\u0131zca Badge ID ve PIN ile \u00e7al\u0131\u015f\u0131r. D\u00fczenleme s\u0131ras\u0131nda burada yeni PIN ayarlayabilirsiniz.",
       workerListEmpty: "Hen\u00fcz \u00e7al\u0131\u015fan eklenmemi\u015f.",
@@ -6522,7 +6522,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "الموظفون النشطون",
       statsVisitorsTotal: "إجمالي الزوار",
       statsCompanies: "الشركات",
-      statsAccessToday: "دخول اليوم",
+      statsAccessToday: "في الموقع الآن",
       badgePinHintVisitor: "يستخدم الزوار الرابط/QR لمرة واحدة. لا يلزم وجود Badge PIN للزوار.",
       badgePinHintWorker: "يعمل تسجيل الدخول برمز الشارة في تطبيق العمال فقط مع Badge ID وهذا PIN. يمكنك تعيين PIN جديد هنا عند التحرير.",
       workerListEmpty: "لم يتم إضافة أي عمال بعد.",
@@ -6627,7 +6627,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Employés actifs",
       statsVisitorsTotal: "Visiteurs total",
       statsCompanies: "Entreprises",
-      statsAccessToday: "Accès aujourd'hui",
+      statsAccessToday: "Actifs sur site",
       badgePinHintVisitor: "Les visiteurs utilisent le lien/QR à usage unique. Un Badge PIN n'est pas nécessaire pour les visiteurs.",
       badgePinHintWorker: "La connexion via badge dans l'app travailleurs fonctionne uniquement avec Badge ID et ce PIN. Vous pouvez définir un nouveau PIN ici lors de la modification.",
       workerListEmpty: "Aucun travailleur créé.",
@@ -6732,7 +6732,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Trabajadores activos",
       statsVisitorsTotal: "Visitantes total",
       statsCompanies: "Empresas",
-      statsAccessToday: "Accesos hoy",
+      statsAccessToday: "Activos en obra",
       badgePinHintVisitor: "Los visitantes usan el enlace/QR de un solo uso. No se requiere Badge PIN para visitantes.",
       badgePinHintWorker: "El inicio de sesión en la app de trabajadores solo funciona con Badge ID y este PIN. Puede establecer un nuevo PIN aquí al editar.",
       workerListEmpty: "No hay trabajadores creados aún.",
@@ -6837,7 +6837,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Lavoratori attivi",
       statsVisitorsTotal: "Visitatori totali",
       statsCompanies: "Aziende",
-      statsAccessToday: "Accessi oggi",
+      statsAccessToday: "Attivi in cantiere",
       badgePinHintVisitor: "I visitatori utilizzano il link/QR monouso. Un Badge PIN non è necessario per i visitatori.",
       badgePinHintWorker: "L'accesso tramite badge nell'app lavoratori funziona solo con Badge ID e questo PIN. È possibile impostare un nuovo PIN qui durante la modifica.",
       workerListEmpty: "Nessun lavoratore creato.",
@@ -6942,7 +6942,7 @@ function getRuntimeUiTexts() {
       statsWorkersActive: "Aktywni pracownicy",
       statsVisitorsTotal: "Goście łącznie",
       statsCompanies: "Firmy",
-      statsAccessToday: "Wejścia dziś",
+      statsAccessToday: "Aktywni na budowie",
       badgePinHintVisitor: "Odwiedzający używają jednorazowego linku/QR. PIN Badge nie jest wymagany dla odwiedzających.",
       badgePinHintWorker: "Logowanie przez badge w aplikacji pracownika działa tylko z Badge ID i tym PIN. Możesz ustawić nowy PIN tutaj podczas edycji.",
       workerListEmpty: "Nie dodano jeszcze pracowników.",
@@ -9009,10 +9009,19 @@ function renderStats() {
   const activeWorkers = visibleWorkers.filter((w) => !w.deletedAt && w.status === "aktiv").length;
   const totalVisitors = visibleWorkers.filter((w) => !w.deletedAt && isVisitorWorker(w)).length;
   const totalCompanies = scopedCompanyId ? 1 : state.companies.filter((c) => !c.deleted_at).length;
-  const accessToday = visibleLogs.filter((log) => {
-    const ts = String(log.timestamp || "").slice(0, 10);
-    return ts === new Date().toISOString().slice(0, 10);
-  }).length;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayLogs = visibleLogs.filter((log) => String(log.timestamp || "").slice(0, 10) === today);
+  // Nur Mitarbeiter zählen, die aktuell noch auf der Baustelle sind:
+  // letzter Eintrag des Tages muss "check-in" sein (nicht check-out).
+  const lastLogByWorker = {};
+  for (const log of todayLogs) {
+    const wid = log.workerId || log.worker_id || "";
+    if (!wid) continue;
+    if (!lastLogByWorker[wid] || log.timestamp > lastLogByWorker[wid].timestamp) {
+      lastLogByWorker[wid] = log;
+    }
+  }
+  const accessToday = Object.values(lastLogByWorker).filter((log) => log.direction === "check-in").length;
 
   const cards = [
     [texts.statsWorkersTotal, totalWorkers],
