@@ -1011,6 +1011,10 @@
                   <button type="button" id="otpTestBtn" class="btn btn-secondary" onclick="sendOtpTestMail()" style="margin-left:8px">OTP-Test senden</button>
                   <span id="otpTestResult" style="font-size:0.85rem"></span>
                 </div>
+                <small style="display:block;margin-top:8px;color:#6b7280;line-height:1.4;">
+                  Hinweis: Auf Railway kann SMTP blockiert sein. Dann nutzt BauPass automatisch den HTTPS-Fallback über Resend.
+                  Setze dafür in Railway die Variablen <strong>RESEND_API_KEY</strong> (optional: <strong>RESEND_FROM_EMAIL</strong>, <strong>RESEND_FROM_NAME</strong>).
+                </small>
               </label>
 
               <!-- ── Dokument-Postfach (IMAP) ── -->
