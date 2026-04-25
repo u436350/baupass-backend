@@ -8437,6 +8437,28 @@ function loadTtsVoiceList() {
     const highlighted = ["de", "ar", "tr", "en", "fr", "es", "it", "pl"];
 
     let html = `<p style="font-size:0.82rem;color:#555;margin:0 0 10px">${voices.length} Stimmen verfügbar</p>`;
+
+    // Warnung wenn wichtige Sprachen fehlen
+    const missingLangs = [];
+    const availPrefixes = new Set(Object.keys(byLang).map((l) => l.split("-")[0].toLowerCase()));
+    const needed = { ar: "Arabisch", tr: "Türkisch", de: "Deutsch", en: "Englisch", fr: "Französisch", es: "Spanisch", it: "Italienisch", pl: "Polnisch" };
+    for (const [code, label] of Object.entries(needed)) {
+      if (!availPrefixes.has(code)) missingLangs.push({ code, label });
+    }
+    if (missingLangs.length) {
+      html += `<div style="background:#fff8e1;border:1px solid #f59e0b;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:0.83rem">`;
+      html += `<p style="margin:0 0 4px;font-weight:600;color:#92400e">⚠️ Fehlende Sprachen: ${missingLangs.map((l) => l.label).join(", ")}</p>`;
+      html += `<p style="margin:0 0 6px;color:#555">So installieren (Windows):</p>`;
+      html += `<ol style="margin:0 0 6px;padding-left:18px;color:#555;line-height:1.75">`;
+      html += `<li>Öffne <strong>Einstellungen → Zeit &amp; Sprache → Sprache</strong></li>`;
+      html += `<li>Klicke auf <strong>„Sprache hinzufügen"</strong></li>`;
+      html += `<li>Suche nach der fehlenden Sprache (z.B. <strong>العربية</strong> für Arabisch) und installiere sie</li>`;
+      html += `<li>Stelle sicher dass bei der installierten Sprache <strong>„Sprachausgabe"</strong> aktiviert ist</li>`;
+      html += `<li>Browser neu starten und <strong>„Stimmen laden"</strong> erneut klicken</li>`;
+      html += `</ol>`;
+      html += `<p style="margin:0;color:#555">Bis zur Installation spricht die Begrüßung auf <strong>Englisch</strong> als Fallback.</p>`;
+      html += `</div>`;
+    }
     html += `<div style="max-height:400px;overflow-y:auto;font-size:0.83rem">`;
     for (const lang of langKeys) {
       const prefix = lang.split("-")[0].toLowerCase();
@@ -8567,27 +8589,38 @@ function showLoginGreeting() {
         utter.lang   = ttsLang;
         utter.volume = 0.7;
         utter.rate   = 0.92;
-        utter.pitch  = 1.15;  // etwas höher = weiblicher Klang
+        utter.pitch  = 1.15;
         const voices = window.speechSynthesis.getVoices();
         const prefix = ttsLang.split("-")[0].toLowerCase();
 
-        // Weibliche Stimme bevorzugen – anhand typischer Namen erkennen
         const femaleKeywords = /female|frau|woman|féminin|feminine|zira|sabina|anna|lekha|helena|susan|karen|victoria|moira|samantha|ava|alice|amelie|céline|celine|hazel|heera|nora|laura|lucia|mia|paulina|kendra|joana|microsoft.*zira|google.*female/i;
+        function isFemale(v) { return femaleKeywords.test(v.name); }
 
-        function isFemale(v) {
-          return femaleKeywords.test(v.name);
+        // Prüfen ob für die gewünschte Sprache überhaupt eine Stimme existiert
+        const langAvailable = voices.some((v) => v.lang.toLowerCase().startsWith(prefix));
+
+        let preferred;
+        if (langAvailable) {
+          // Normale Auswahl: weiblich > lokal > beliebig in der Zielsprache
+          preferred =
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix)) ||
+            voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith(prefix));
+        } else {
+          // Zielsprache nicht verfügbar → Fallback: weibliche Englisch-Stimme
+          utter.lang = "en-GB";
+          preferred =
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith("en") && v.localService) ||
+            voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith("en")) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith("en") && v.localService) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
+            voices.find((v) => isFemale(v) && v.localService) ||
+            voices.find((v) => isFemale(v));
         }
-
-        // Priorität: weiblich + exakte Sprache + lokal > weiblich + Sprachpräfix + lokal > weiblich + exakt > weiblich + Präfix > beliebig lokal > beliebig
-        const preferred =
-          voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
-          voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
-          voices.find((v) => isFemale(v) && v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
-          voices.find((v) => isFemale(v) && v.lang.toLowerCase().startsWith(prefix)) ||
-          voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase() && v.localService) ||
-          voices.find((v) => v.lang.toLowerCase().startsWith(prefix) && v.localService) ||
-          voices.find((v) => v.lang.toLowerCase() === ttsLang.toLowerCase()) ||
-          voices.find((v) => v.lang.toLowerCase().startsWith(prefix));
         if (preferred) utter.voice = preferred;
         window.speechSynthesis.speak(utter);
       }
