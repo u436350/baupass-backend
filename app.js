@@ -13757,15 +13757,20 @@ function renderTwofaPanel() {
   const hasSecret = Boolean(state.twofa.secret);
 
   if (hasSecret) {
+    const qrSrc = state.twofa.otpauthUri
+      ? `${API_BASE}/api/qr.png?data=${encodeURIComponent(state.twofa.otpauthUri)}&size=200`
+      : "";
+    const qrImg = qrSrc
+      ? `<img src="${qrSrc}" alt="2FA QR-Code" style="display:block;width:200px;height:200px;margin:8px 0;border:1px solid #ddd;border-radius:4px">`
+      : "";
     panel.innerHTML = `
       <div style="margin-bottom:10px">
         <span class="status-pill status-test">${escapeHtml(uiT("tfaStatusInactive"))}</span>
       </div>
       <p style="margin:8px 0 4px;font-size:0.9rem">${escapeHtml(uiT("tfaQrHint"))}</p>
-      <p style="margin:4px 0 8px;font-size:0.85rem">
-        <strong>${escapeHtml(uiT("tfaSecretLabel"))}</strong>
-        <code style="user-select:all;word-break:break-all">${escapeHtml(state.twofa.secret)}</code>
-      </p>
+      ${qrImg}
+      <p style="margin:4px 0 2px;font-size:0.8rem;color:#555">${escapeHtml(uiT("tfaSecretLabel"))}</p>
+      <code style="display:block;user-select:all;word-break:break-all;font-size:0.85rem;background:#f4f4f4;padding:6px 8px;border-radius:4px;margin-bottom:8px">${escapeHtml(state.twofa.secret)}</code>
       <p style="margin:0 0 10px;font-size:0.85rem;color:#666">${escapeHtml(uiT("tfaEnableHint"))}</p>
       <div class="button-row">
         <button type="button" class="primary-button" onclick="enableTwofa()">${escapeHtml(uiT("tfaBtnEnable"))}</button>
