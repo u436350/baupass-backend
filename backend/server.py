@@ -2140,6 +2140,61 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
         return False, str(exc)
 
 
+def _build_email_html(platform_name: str, primary_color: str, accent_color: str, title: str, body_html: str, footer_name: str) -> str:
+    """Return a branded HTML email string."""
+    # Inline SVG logo (simplified icon part only for email compatibility)
+    logo_svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 310 310">'
+        f'<rect width="310" height="310" rx="46" fill="{primary_color}"/>'
+        '<path d="M56 224 L156 92 L256 224 Z" fill="#ffffff" opacity="0.94"/>'
+        '<path d="M96 224 L156 144 L216 224 Z" fill="#12343b" opacity="0.95"/>'
+        '<circle cx="235" cy="88" r="20" fill="#fff4e6"/>'
+        '</svg>'
+    )
+    return f"""<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);max-width:600px;width:100%;">
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,{primary_color} 0%,{accent_color} 100%);padding:28px 36px;text-align:left;">
+          <table cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:middle;padding-right:14px;">{logo_svg}</td>
+              <td style="vertical-align:middle;">
+                <span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">{platform_name}</span><br>
+                <span style="color:rgba(255,255,255,0.75);font-size:12px;letter-spacing:2px;text-transform:uppercase;">Digitale Baustellenkontrolle</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <!-- Body -->
+      <tr>
+        <td style="padding:36px 36px 28px;">
+          <h2 style="margin:0 0 20px;color:{primary_color};font-size:20px;font-weight:700;">{title}</h2>
+          {body_html}
+        </td>
+      </tr>
+      <!-- Footer -->
+      <tr>
+        <td style="background:#f8f9fa;border-top:1px solid #e9ecef;padding:18px 36px;text-align:center;">
+          <p style="margin:0;color:#6c757d;font-size:12px;">
+            {footer_name} &nbsp;·&nbsp; Diese E-Mail wurde automatisch generiert.<br>
+            Bitte antworten Sie nicht auf diese E-Mail.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+
 def _send_otp_email_to_user(db, user_row, code):
     """Send a 6-digit OTP code to the user's stored email address via SMTP."""
     try:
@@ -2161,21 +2216,54 @@ def _send_otp_email_to_user(db, user_row, code):
 
     platform_name = (settings["platform_name"] or "BauPass Control").strip()
     smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
+    primary_color = (settings.get("invoice_primary_color") or "#0f4c5c") if hasattr(settings, "get") else "#0f4c5c"
+    accent_color = (settings.get("invoice_accent_color") or "#e36414") if hasattr(settings, "get") else "#e36414"
+    try:
+        primary_color = (settings["invoice_primary_color"] or "#0f4c5c").strip()
+        accent_color = (settings["invoice_accent_color"] or "#e36414").strip()
+    except Exception:
+        pass
     username = user_row["username"] if hasattr(user_row, "keys") else str(user_row)
+    operator_name = ""
+    try:
+        operator_name = (settings["operator_name"] or platform_name).strip()
+    except Exception:
+        operator_name = platform_name
+
+    body_html = f"""
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
+            Guten Tag,<br><br>
+            Ihr Anmelde-Sicherheitscode für <strong>{platform_name}</strong>:
+        </p>
+        <div style="text-align:center;margin:0 0 28px;">
+            <div style="display:inline-block;background:#f8f9fa;border:2px dashed {primary_color};border-radius:10px;padding:18px 40px;">
+                <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:{primary_color};font-family:'Courier New',monospace;">{code}</span>
+            </div>
+            <p style="margin:10px 0 0;color:#6c757d;font-size:12px;">⏱ Gültig für <strong>10 Minuten</strong></p>
+        </div>
+        <table cellpadding="0" cellspacing="0" style="background:#fff8f0;border-left:4px solid {accent_color};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:24px;width:100%;">
+            <tr><td>
+                <p style="margin:0;color:#374151;font-size:13px;">
+                    <strong>Benutzerkonto:</strong> {username}
+                </p>
+            </td></tr>
+        </table>
+        <p style="color:#6c757d;font-size:13px;margin:0;border-top:1px solid #e9ecef;padding-top:16px;">
+            ⚠️ Falls Sie sich <strong>nicht</strong> angemeldet haben, ignorieren Sie diese E-Mail. Ihr Konto ist sicher.
+        </p>"""
+
+    html_content = _build_email_html(platform_name, primary_color, accent_color,
+                                     "Ihr Sicherheitscode", body_html, operator_name)
 
     msg = EmailMessage()
-    msg["Subject"] = f"{platform_name}: Ihr Sicherheitscode"
+    msg["Subject"] = f"{platform_name}: Ihr Sicherheitscode – {code}"
     msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
     msg["To"] = email
     msg.set_content(
-        f"Guten Tag,\n\n"
-        f"Ihr Anmelde-Sicherheitscode für {platform_name}:\n\n"
-        f"  {code}\n\n"
-        f"Dieser Code ist 10 Minuten gültig.\n\n"
-        f"Benutzerkonto: {username}\n\n"
-        f"Falls Sie sich nicht angemeldet haben, ignorieren Sie diese E-Mail.\n\n"
-        f"Viele Grüße\n{settings['operator_name'] or platform_name}"
+        f"Guten Tag,\n\nIhr Sicherheitscode: {code}\n\nGültig 10 Minuten.\nBenutzerkonto: {username}\n\n"
+        f"Falls Sie sich nicht angemeldet haben, ignorieren Sie diese E-Mail.\n\n{operator_name}"
     )
+    msg.add_alternative(html_content, subtype="html")
 
     try:
         with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
@@ -3724,16 +3812,42 @@ def smtp_test():
     recipient = (g.current_user["email"] or "").strip() or smtp_sender
     platform_name = (settings["platform_name"] or "BauPass Control").strip()
     smtp_sender_name = (settings["smtp_sender_name"] or platform_name).strip()
+    primary_color = "#0f4c5c"
+    accent_color = "#e36414"
+    try:
+        primary_color = (settings["invoice_primary_color"] or "#0f4c5c").strip()
+        accent_color = (settings["invoice_accent_color"] or "#e36414").strip()
+    except Exception:
+        pass
     try:
         msg = EmailMessage()
-        msg["Subject"] = f"{platform_name}: SMTP Test-Mail"
+        msg["Subject"] = f"{platform_name}: SMTP Test-Mail ✅"
         msg["From"] = f'"{smtp_sender_name}" <{smtp_sender}>'
         msg["To"] = recipient
+        body_html = f"""
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px;">
+                Diese E-Mail bestätigt, dass SMTP für <strong>{platform_name}</strong> korrekt konfiguriert ist.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:24px;width:100%;">
+                <tr><td>
+                    <p style="margin:0 0 6px;color:#15803d;font-size:14px;font-weight:700;">✅ Verbindung erfolgreich</p>
+                    <p style="margin:0;color:#374151;font-size:13px;">
+                        <strong>Empfänger:</strong> {recipient}<br>
+                        <strong>Absender:</strong> {smtp_sender}<br>
+                        <strong>SMTP-Host:</strong> {smtp_host}:{settings["smtp_port"] or 587}
+                    </p>
+                </td></tr>
+            </table>
+            <p style="color:#6c757d;font-size:13px;margin:0;">
+                OTP-Codes für die Zwei-Faktor-Anmeldung werden ab sofort an diese Adresse zugestellt.
+            </p>"""
+        operator_name = (settings["operator_name"] or platform_name).strip()
+        html_content = _build_email_html(platform_name, primary_color, accent_color,
+                                         "SMTP Konfiguration erfolgreich", body_html, operator_name)
         msg.set_content(
-            f"Hallo,\n\nDiese Test-Mail bestätigt dass SMTP für {platform_name} korrekt konfiguriert ist.\n\n"
-            f"Empfänger: {recipient}\nAbsender: {smtp_sender}\nSMTP-Host: {smtp_host}\n\n"
-            f"Viele Grüße\n{platform_name}"
+            f"SMTP Test erfolgreich.\nEmpfänger: {recipient}\nAbsender: {smtp_sender}\nHost: {smtp_host}\n\n{operator_name}"
         )
+        msg.add_alternative(html_content, subtype="html")
         with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as s:
             if int(settings["smtp_use_tls"] or 0) == 1:
                 s.starttls()
