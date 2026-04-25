@@ -2156,6 +2156,57 @@ def _smtp_connect(host, port, use_tls):
             yield smtp
 
 
+def _run_smtp_diagnostics(smtp_settings):
+    host = smtp_settings["smtp_host"]
+    port = int(smtp_settings["smtp_port"] or 587)
+    use_tls = int(smtp_settings["smtp_use_tls"] or 0) == 1
+    smtp_username = smtp_settings["smtp_username"]
+    smtp_password = smtp_settings["smtp_password"]
+    stage = "init"
+    result = {
+        "ok": False,
+        "host": host,
+        "port": port,
+        "useTls": use_tls,
+        "hasUsername": bool(smtp_username),
+        "hasPassword": bool(str(smtp_password or "").strip()),
+        "hasSender": bool(smtp_settings["smtp_sender_email"]),
+    }
+    try:
+        stage = "dns"
+        result["resolvedAddresses"] = len(socket.getaddrinfo(host, port, type=socket.SOCK_STREAM))
+
+        if port == 465:
+            stage = "connect_ssl"
+            with smtplib.SMTP_SSL(host, port, timeout=15) as smtp:
+                stage = "ehlo_ssl"
+                smtp.ehlo()
+                if smtp_username:
+                    stage = "auth"
+                    smtp.login(smtp_username, smtp_password)
+        else:
+            stage = "connect"
+            with smtplib.SMTP(host, port, timeout=15) as smtp:
+                stage = "ehlo"
+                smtp.ehlo()
+                if use_tls:
+                    stage = "starttls"
+                    smtp.starttls()
+                    stage = "ehlo_tls"
+                    smtp.ehlo()
+                if smtp_username:
+                    stage = "auth"
+                    smtp.login(smtp_username, smtp_password)
+        result["ok"] = True
+        result["stage"] = "done"
+        return result
+    except Exception as exc:
+        result["stage"] = stage
+        result["errorType"] = exc.__class__.__name__
+        result["error"] = str(exc)
+        return result
+
+
 def _build_email_html(platform_name: str, primary_color: str, accent_color: str, title: str, body_html: str, footer_name: str) -> str:
     """Return a branded HTML email string."""
     # Inline SVG logo (simplified icon part only for email compatibility)
@@ -3895,6 +3946,32 @@ def smtp_test():
     except Exception as exc:
         app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
         return jsonify({"ok": False, "error": "smtp_send_failed", "detail": str(exc)}), 500
+
+
+@app.post("/api/settings/smtp-diagnose")
+@require_auth
+@require_roles("superadmin")
+def smtp_diagnose():
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    if not settings:
+        return jsonify({"ok": False, "error": "no_settings"}), 400
+    smtp_settings = _resolve_smtp_settings(settings, payload)
+    missing_fields = []
+    if not smtp_settings["smtp_host"]:
+        missing_fields.append("smtpHost")
+    if not smtp_settings["smtp_sender_email"]:
+        missing_fields.append("smtpSenderEmail")
+    if missing_fields:
+        return jsonify({"ok": False, "error": "smtp_not_configured", "missingFields": missing_fields}), 400
+    result = _run_smtp_diagnostics(smtp_settings)
+    if result.get("ok"):
+        return jsonify(result)
+    app.logger.error(
+        f"[SMTP-DIAG] stage={result.get('stage')} type={result.get('errorType')} error={result.get('error')}"
+    )
+    return jsonify(result), 500
 
 
 @app.put("/api/settings")

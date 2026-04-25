@@ -12251,6 +12251,24 @@ function formatSmtpTestError(err) {
   return err?.message || "Unbekannter Fehler";
 }
 
+function formatSmtpDiagnosticsPayload(payload) {
+  if (!payload) return "";
+  if (payload.ok) {
+    return `Diagnose OK: Host ${payload.host}:${payload.port}, TLS ${payload.useTls ? "an" : "aus"}, Auth ${payload.hasUsername ? "gesetzt" : "ohne Login"}`;
+  }
+  const stage = payload.stage ? `Stufe ${payload.stage}` : "Diagnose fehlgeschlagen";
+  const type = payload.errorType ? `${payload.errorType}: ` : "";
+  const message = payload.error || "Unbekannter Fehler";
+  return `${stage} - ${type}${message}`;
+}
+
+async function runSmtpDiagnostics() {
+  return apiRequest(API_BASE + "/api/settings/smtp-diagnose", {
+    method: "POST",
+    body: getCurrentSmtpSettingsFromForm()
+  });
+}
+
 async function sendOtpTestMail() {
   const btn = document.querySelector("#otpTestBtn");
   const result = document.querySelector("#otpTestResult");
@@ -12270,7 +12288,16 @@ async function sendOtpTestMail() {
   } catch (err) {
     if (result) {
       result.style.color = "#dc2626";
-      result.textContent = `❌ Fehler: ${formatSmtpTestError(err)}`;
+      let message = formatSmtpTestError(err);
+      try {
+        const diag = await runSmtpDiagnostics();
+        const diagText = formatSmtpDiagnosticsPayload(diag);
+        if (diagText) message += ` | ${diagText}`;
+      } catch (diagErr) {
+        const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
+        if (diagText) message += ` | ${diagText}`;
+      }
+      result.textContent = `❌ Fehler: ${message}`;
     }
   } finally {
     if (btn) btn.disabled = false;
@@ -12294,7 +12321,16 @@ async function sendSmtpTestMail() {
   } catch (err) {
     if (result) {
       result.style.color = "#dc2626";
-      result.textContent = `❌ Fehler: ${formatSmtpTestError(err)}`;
+      let message = formatSmtpTestError(err);
+      try {
+        const diag = await runSmtpDiagnostics();
+        const diagText = formatSmtpDiagnosticsPayload(diag);
+        if (diagText) message += ` | ${diagText}`;
+      } catch (diagErr) {
+        const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
+        if (diagText) message += ` | ${diagText}`;
+      }
+      result.textContent = `❌ Fehler: ${message}`;
     }
   } finally {
     if (btn) btn.disabled = false;
