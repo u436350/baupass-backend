@@ -3890,9 +3890,11 @@ def smtp_test():
             if smtp_username:
                 s.login(smtp_username, smtp_settings["smtp_password"])
             s.send_message(msg)
+        app.logger.info(f"[SMTP-TEST] Test-Mail erfolgreich gesendet an {recipient}")
         return jsonify({"ok": True, "recipient": recipient})
     except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
+        app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
+        return jsonify({"ok": False, "error": "smtp_send_failed", "detail": str(exc)}), 500
 
 
 @app.put("/api/settings")
@@ -9861,6 +9863,15 @@ def otp_test_send():
     target_email = (payload.get("email") or "").strip()
     if not target_email or "@" not in target_email:
         return jsonify({"ok": False, "error": "invalid_email"}), 400
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    smtp_settings = _resolve_smtp_settings(settings, payload)
+    missing_fields = []
+    if not smtp_settings["smtp_host"]:
+        missing_fields.append("smtpHost")
+    if not smtp_settings["smtp_sender_email"]:
+        missing_fields.append("smtpSenderEmail")
+    if missing_fields:
+        return jsonify({"ok": False, "error": "smtp_not_configured", "missingFields": missing_fields}), 400
     test_code = "123456"
     # Use a fake user_row with the target email
     class _FakeUser:
@@ -9873,7 +9884,7 @@ def otp_test_send():
     sent = _send_otp_email_to_user(db, _FakeUser(), test_code, smtp_settings_override=payload)
     if sent:
         return jsonify({"ok": True, "recipient": target_email})
-    return jsonify({"ok": False, "error": "send_failed_check_logs"}), 500
+    return jsonify({"ok": False, "error": "otp_send_failed", "detail": "SMTP delivery failed. Check server logs for [OTP-MAIL]."}), 500
 
 
 # IMAP-Settings GET/PATCH (in allgemeine Settings integriert)

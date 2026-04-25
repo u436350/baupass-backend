@@ -8028,10 +8028,6 @@ async function apiRequest(url, options = {}) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (auth && ["invalid_session", "unauthorized"].includes(String(payload?.error || ""))) {
-      handleExpiredControlSession();
-      throw new Error("session_expired");
-    }
     // ── Retry bei 401 mit neuer Session ──
     if (auth && response.status === 401 && retries > 0) {
       console.warn("⚠️  401 erhalten, versuche neue Session zu laden...");
@@ -8046,6 +8042,10 @@ async function apiRequest(url, options = {}) {
         handleExpiredControlSession();
         throw new Error("session_expired");
       }
+    }
+    if (auth && ["invalid_session", "unauthorized"].includes(String(payload?.error || ""))) {
+      handleExpiredControlSession();
+      throw new Error("session_expired");
     }
     const requestError = new Error(payload?.error || `http_${response.status}`);
     requestError.code = payload?.error || `http_${response.status}`;
@@ -12244,6 +12244,9 @@ function formatSmtpTestError(err) {
       smtpSenderEmail: "Absender E-Mail"
     };
     return `Fehlende Felder: ${missingFields.map((field) => labels[field] || field).join(", ")}`;
+  }
+  if (err?.code === "smtp_send_failed" || err?.code === "otp_send_failed") {
+    return err?.payload?.detail || err?.message || "SMTP-Versand fehlgeschlagen.";
   }
   return err?.message || "Unbekannter Fehler";
 }
