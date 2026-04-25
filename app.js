@@ -12249,12 +12249,16 @@ function formatSmtpTestError(err) {
     const base = err?.payload?.detail || err?.message || "SMTP-Versand fehlgeschlagen.";
     const diag = formatSmtpDiagnosticsPayload(err?.payload?.diagnostics);
     const fallbackError = String(err?.payload?.fallbackError || "");
-    const fallbackHint = fallbackError === "resend_not_configured"
+    const fallbackHint = fallbackError.startsWith("resend_not_configured")
       ? "Resend-Fallback ist nicht aktiv. Setze in Railway die Variable RESEND_API_KEY."
       : "";
+    const resendState = err?.payload?.resendConfigured === true
+      ? `Resend erkannt (${err?.payload?.resendKeySource || "unbekannt"})`
+      : (err?.payload?.resendConfigured === false ? "Resend nicht erkannt" : "");
     const parts = [base];
     if (diag) parts.push(diag);
     if (fallbackHint) parts.push(fallbackHint);
+    if (resendState) parts.push(resendState);
     return parts.join(" | ");
   }
   return err?.message || "Unbekannter Fehler";
@@ -12263,12 +12267,14 @@ function formatSmtpTestError(err) {
 function formatSmtpDiagnosticsPayload(payload) {
   if (!payload) return "";
   if (payload.ok) {
-    return `Diagnose OK: Host ${payload.host}:${payload.port}, TLS ${payload.useTls ? "an" : "aus"}, Auth ${payload.hasUsername ? "gesetzt" : "ohne Login"}`;
+    const resendState = payload.resendConfigured ? `, Resend erkannt (${payload.resendKeySource || "unbekannt"})` : ", Resend nicht erkannt";
+    return `Diagnose OK: Host ${payload.host}:${payload.port}, TLS ${payload.useTls ? "an" : "aus"}, Auth ${payload.hasUsername ? "gesetzt" : "ohne Login"}${resendState}`;
   }
   const stage = payload.stage ? `Stufe ${payload.stage}` : "Diagnose fehlgeschlagen";
   const type = payload.errorType ? `${payload.errorType}: ` : "";
   const message = payload.error || "Unbekannter Fehler";
-  return `${stage} - ${type}${message}`;
+  const resendState = payload.resendConfigured ? ` | Resend erkannt (${payload.resendKeySource || "unbekannt"})` : " | Resend nicht erkannt";
+  return `${stage} - ${type}${message}${resendState}`;
 }
 
 async function runSmtpDiagnostics() {
@@ -12298,13 +12304,16 @@ async function sendOtpTestMail() {
     if (result) {
       result.style.color = "#dc2626";
       let message = formatSmtpTestError(err);
-      try {
-        const diag = await runSmtpDiagnostics();
-        const diagText = formatSmtpDiagnosticsPayload(diag);
-        if (diagText) message += ` | ${diagText}`;
-      } catch (diagErr) {
-        const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
-        if (diagText) message += ` | ${diagText}`;
+      const hasInlineDiag = Boolean(err?.payload?.diagnostics);
+      if (!hasInlineDiag) {
+        try {
+          const diag = await runSmtpDiagnostics();
+          const diagText = formatSmtpDiagnosticsPayload(diag);
+          if (diagText) message += ` | ${diagText}`;
+        } catch (diagErr) {
+          const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
+          if (diagText) message += ` | ${diagText}`;
+        }
       }
       result.textContent = `❌ Fehler: ${message}`;
     }
@@ -12335,13 +12344,16 @@ async function sendSmtpTestMail() {
     if (result) {
       result.style.color = "#dc2626";
       let message = formatSmtpTestError(err);
-      try {
-        const diag = await runSmtpDiagnostics();
-        const diagText = formatSmtpDiagnosticsPayload(diag);
-        if (diagText) message += ` | ${diagText}`;
-      } catch (diagErr) {
-        const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
-        if (diagText) message += ` | ${diagText}`;
+      const hasInlineDiag = Boolean(err?.payload?.diagnostics);
+      if (!hasInlineDiag) {
+        try {
+          const diag = await runSmtpDiagnostics();
+          const diagText = formatSmtpDiagnosticsPayload(diag);
+          if (diagText) message += ` | ${diagText}`;
+        } catch (diagErr) {
+          const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
+          if (diagText) message += ` | ${diagText}`;
+        }
       }
       result.textContent = `❌ Fehler: ${message}`;
     }
