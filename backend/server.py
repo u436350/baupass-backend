@@ -3243,7 +3243,13 @@ def login():
                     (otp_id, user["id"], otp, expires)
                 )
                 db.commit()
-                _send_otp_email_to_user(db, user, otp)
+                sent = _send_otp_email_to_user(db, user, otp)
+                if not sent:
+                    # E-Mail-Versand fehlgeschlagen → Code im Server-Log ausgeben als Notfall-Fallback
+                    app.logger.warning(
+                        f"[OTP-FALLBACK] Kein SMTP konfiguriert oder Versand fehlgeschlagen – "
+                        f"OTP fuer Benutzer '{user['username']}': {otp}"
+                    )
                 # Return "otp_sent" – NOT a login failure
                 return login_error("otp_sent")
             else:
@@ -3620,6 +3626,32 @@ def disable_twofa():
     db.commit()
     log_audit("security.2fa_disabled", "2FA wurde deaktiviert", target_type="user", target_id=g.current_user["id"], actor=g.current_user)
     return jsonify({"ok": True})
+
+
+@app.post("/api/emergency/disable-2fa")
+def emergency_disable_twofa():
+    """Emergency endpoint: disable 2FA for a user using a server-side secret token."""
+    emergency_token = os.getenv("BAUPASS_EMERGENCY_TOKEN", "").strip()
+    if not emergency_token:
+        return jsonify({"error": "not_configured"}), 403
+    payload = request.get_json(silent=True) or {}
+    submitted = (payload.get("token") or "").strip()
+    username = (payload.get("username") or "").strip()
+    if not submitted or not username:
+        return jsonify({"error": "missing_fields"}), 400
+    # Constant-time compare to avoid timing attacks
+    import hmac as _hmac
+    if not _hmac.compare_digest(submitted, emergency_token):
+        return jsonify({"error": "forbidden"}), 403
+    db = get_db()
+    user = db.execute("SELECT id, username, twofa_enabled FROM users WHERE username = ?", (username,)).fetchone()
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+    db.execute("UPDATE users SET twofa_enabled = 0, email = '' WHERE id = ?", (user["id"],))
+    db.execute("DELETE FROM otp_codes WHERE user_id = ?", (user["id"],))
+    db.commit()
+    app.logger.warning(f"[EMERGENCY] 2FA deaktiviert fuer Benutzer '{username}' via Emergency-Endpunkt")
+    return jsonify({"ok": True, "username": username})
 
 
 @app.put("/api/me/email")
