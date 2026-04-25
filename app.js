@@ -7061,6 +7061,19 @@ function showSupportReadOnlyAlert() {
   window.alert(uiT("supportReadOnlyAlert"));
 }
 
+function updateLoginOtpVisibility() {
+  const otpLabel = elements.loginOtpCode?.closest("label");
+  if (!otpLabel) {
+    return;
+  }
+  const scope = String(elements.loginScope?.value || "auto").trim().toLowerCase();
+  const hideOtpForTurnstile = scope === "turnstile";
+  otpLabel.style.display = hideOtpForTurnstile ? "none" : "";
+  if (hideOtpForTurnstile && elements.loginOtpCode) {
+    elements.loginOtpCode.value = "";
+  }
+}
+
 function syncSupportLoginUi() {
   const context = state.supportLoginContext || loadSupportLoginContext();
   state.supportLoginContext = context;
@@ -7084,19 +7097,6 @@ function syncSupportLoginUi() {
       const actorText = context.actorName ? ` ${escapeHtml(uiT("supportStartedBy"))} ${escapeHtml(context.actorName)}` : "";
       elements.loginSupportNotice.innerHTML = `<strong>${escapeHtml(uiT("supportLoginActive"))}</strong> ${escapeHtml(context.companyName || uiT("supportCompanyFallback"))}${actorText}. ${escapeHtml(uiT("supportReadOnlyNotice"))}`;
       elements.loginSupportNotice.style.display = "block";
-
-function updateLoginOtpVisibility() {
-  const otpLabel = elements.loginOtpCode?.closest("label");
-  if (!otpLabel) {
-    return;
-  }
-  const scope = String(elements.loginScope?.value || "auto").trim().toLowerCase();
-  const hideOtpForTurnstile = scope === "turnstile";
-  otpLabel.style.display = hideOtpForTurnstile ? "none" : "";
-  if (hideOtpForTurnstile && elements.loginOtpCode) {
-    elements.loginOtpCode.value = "";
-  }
-}
     } else {
       elements.loginSupportNotice.innerHTML = "";
       elements.loginSupportNotice.style.display = "none";
