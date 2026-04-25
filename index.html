@@ -874,6 +874,7 @@
       <section class="view" data-view="admin">
         <div class="panel-grid two-columns">
           <article class="panel">
+            <div data-superadmin-only>
             <div class="panel-heading">
               <div>
                 <p class="eyebrow" data-ui-i18n="adminEyebrow">Admin-Zentrale</p>
@@ -1063,6 +1064,10 @@
                   <option value="1" data-ui-i18n="optYes">Ja</option>
                 </select>
               </label>
+              <label class="full-width">
+                <span>Admin-Notfallnummer fuer Sicherheitsbildschirm</span>
+                <input id="supportPhone" type="text" placeholder="+49 176 31676589" />
+              </label>
 
               <!-- ── App-Features ── -->
               <div class="form-section">
@@ -1183,6 +1188,7 @@
               </label>
               <button type="submit" class="ghost-button full-width" data-ui-i18n="btnCreateCompany">Baufirma anlegen</button>
             </form>
+            </div><!-- /data-superadmin-only -->
 
             <div class="divider"></div>
 

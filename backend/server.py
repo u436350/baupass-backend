@@ -3598,7 +3598,6 @@ def get_twofa_status():
 
 @app.post("/api/me/2fa/activate")
 @require_auth
-@require_roles("superadmin")
 def activate_twofa():
     db = get_db()
     row = db.execute("SELECT * FROM users WHERE id = ?", (g.current_user["id"],)).fetchone()
@@ -3615,7 +3614,6 @@ def activate_twofa():
 
 @app.post("/api/me/2fa/disable")
 @require_auth
-@require_roles("superadmin")
 def disable_twofa():
     db = get_db()
     db.execute("UPDATE users SET twofa_enabled = 0 WHERE id = ?", (g.current_user["id"],))
@@ -3626,7 +3624,6 @@ def disable_twofa():
 
 @app.put("/api/me/email")
 @require_auth
-@require_roles("superadmin")
 def update_me_email():
     payload = request.get_json(silent=True) or {}
     email = (payload.get("email") or "").strip().lower()

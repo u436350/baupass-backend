@@ -7798,7 +7798,7 @@ function getAllowedViewsForRole(role) {
     return ["dashboard", "workers", "badge", "access", "documents", "invoices", "admin", "devices"];
   }
   if (normalized === "company-admin") {
-    return ["dashboard", "workers", "badge", "access", "documents", "devices"];
+    return ["dashboard", "workers", "badge", "access", "documents", "devices", "admin"];
   }
   if (normalized === "turnstile") {
     return ["access", "documents", "dashboard"];
@@ -7820,6 +7820,12 @@ function enforceRoleViewAccess() {
     const viewName = link.dataset.view || "";
     const allowed = allowedViews.includes(viewName);
     link.style.display = allowed ? "" : "none";
+  });
+
+  // Hide sections that are only for superadmin
+  const isSuperadmin = role === "superadmin";
+  document.querySelectorAll("[data-superadmin-only]").forEach((el) => {
+    el.style.display = isSuperadmin ? "" : "none";
   });
 
   if (!allowedViews.includes(currentView)) {
