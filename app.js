@@ -4782,6 +4782,12 @@ function getRuntimeUiTexts() {
     loginResponseIncomplete: "Login response from server is incomplete. Please reload and try again.",
     demoAdminOnly: "Only admin roles can load demo data.",
     loginFirst: "Please sign in first.",
+    porterOnSiteByCompanyHeading: "On-site by company",
+    porterOnSiteHeading: "Currently on site",
+    porterNoActiveCheckins: "No active check-ins yet.",
+    porterTotal: "Total",
+    porterPersonSingular: "person",
+    porterPersonPlural: "persons",
   };
   const map = {
     de: {
@@ -4882,6 +4888,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "Login-Antwort vom Server ist unvollstaendig. Bitte Seite neu laden und erneut versuchen.",
       demoAdminOnly: "Nur Admin-Rollen duerfen Demo-Daten laden.",
       loginFirst: "Bitte zuerst anmelden.",
+      porterOnSiteByCompanyHeading: "Aktuell auf der Baustelle je Firma",
+      porterOnSiteHeading: "Aktuell auf der Baustelle",
+      porterNoActiveCheckins: "Noch keine aktiven Anmeldungen vorhanden.",
+      porterTotal: "Gesamt",
+      porterPersonSingular: "Person",
+      porterPersonPlural: "Personen",
     },
     tr: {
       sessionLoggedIn: "Giris yapan",
@@ -4981,6 +4993,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "Sunucudan gelen giri\u015f yan\u0131t\u0131 eksik. L\u00fctfen sayfay\u0131 yenileyin ve tekrar deneyin.",
       demoAdminOnly: "Yaln\u0131zca admin rolleri demo verileri y\u00fckleyebilir.",
       loginFirst: "L\u00fctfen \u00f6nce giri\u015f yap\u0131n.",
+      porterOnSiteByCompanyHeading: "Firmaya g\u00f6re \u015fantiyedekiler",
+      porterOnSiteHeading: "\u015eu anda \u015fantiyede",
+      porterNoActiveCheckins: "Hen\u00fcz aktif giri\u015f yok.",
+      porterTotal: "Toplam",
+      porterPersonSingular: "ki\u015fi",
+      porterPersonPlural: "ki\u015fi",
     },
     ar: {
       sessionLoggedIn: "تسجيل الدخول",
@@ -5080,6 +5098,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "استجابة تسجيل الدخول من الخادم غير مكتملة. يرجى إعادة التحميل والمحاولة مجدداً.",
       demoAdminOnly: "يمكن لأدوار المشرف فقط تحميل البيانات التجريبية.",
       loginFirst: "يرجى تسجيل الدخول أولاً.",
+      porterOnSiteByCompanyHeading: "على الموقع حسب الشركة",
+      porterOnSiteHeading: "حاليًا في الموقع",
+      porterNoActiveCheckins: "لا تسجيلات نشطة بعد.",
+      porterTotal: "الإجمالي",
+      porterPersonSingular: "شخص",
+      porterPersonPlural: "أشخاص",
     },
     fr: {
       sessionLoggedIn: "Connecté",
@@ -5179,6 +5203,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "La réponse de connexion du serveur est incomplète. Veuillez recharger et réessayer.",
       demoAdminOnly: "Seuls les rôles admin peuvent charger les données de démo.",
       loginFirst: "Veuillez d'abord vous connecter.",
+      porterOnSiteByCompanyHeading: "Sur site par entreprise",
+      porterOnSiteHeading: "Actuellement sur site",
+      porterNoActiveCheckins: "Aucune entr\u00e9e active pour l'instant.",
+      porterTotal: "Total",
+      porterPersonSingular: "personne",
+      porterPersonPlural: "personnes",
     },
     es: {
       sessionLoggedIn: "Conectado",
@@ -5278,6 +5308,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "La respuesta de inicio de sesión del servidor está incompleta. Recargue e intente de nuevo.",
       demoAdminOnly: "Solo los roles de admin pueden cargar datos de demo.",
       loginFirst: "Por favor inicie sesión primero.",
+      porterOnSiteByCompanyHeading: "En obra por empresa",
+      porterOnSiteHeading: "Actualmente en obra",
+      porterNoActiveCheckins: "Aún no hay entradas activas.",
+      porterTotal: "Total",
+      porterPersonSingular: "persona",
+      porterPersonPlural: "personas",
     },
     it: {
       sessionLoggedIn: "Accesso effettuato",
@@ -5377,6 +5413,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "La risposta di accesso dal server è incompleta. Ricaricare e riprovare.",
       demoAdminOnly: "Solo i ruoli admin possono caricare i dati demo.",
       loginFirst: "Accedere prima.",
+      porterOnSiteByCompanyHeading: "In cantiere per azienda",
+      porterOnSiteHeading: "Attualmente in cantiere",
+      porterNoActiveCheckins: "Nessun ingresso attivo al momento.",
+      porterTotal: "Totale",
+      porterPersonSingular: "persona",
+      porterPersonPlural: "persone",
     },
     pl: {
       sessionLoggedIn: "Zalogowany",
@@ -5476,6 +5518,12 @@ function getRuntimeUiTexts() {
       loginResponseIncomplete: "Odpowiedź logowania z serwera jest niepełna. Odśwież stronę i spróbuj ponownie.",
       demoAdminOnly: "Tylko role adminów mogą ładować dane demo.",
       loginFirst: "Najpierw się zaloguj.",
+      porterOnSiteByCompanyHeading: "Na budowie według firmy",
+      porterOnSiteHeading: "Aktualnie na budowie",
+      porterNoActiveCheckins: "Brak aktywnych wejść.",
+      porterTotal: "Łącznie",
+      porterPersonSingular: "osoba",
+      porterPersonPlural: "osoby",
     },
   };
   return {
@@ -9101,7 +9149,7 @@ function renderDashboardPorterLivePanel() {
   const companySummaryHtml = onSiteByCompany.length
     ? `
       <div class="porter-company-summary">
-        <strong>Aktuell auf der Baustelle je Firma</strong>
+        <strong>${runtimeText("porterOnSiteByCompanyHeading")}</strong>
         <div class="porter-company-list">
           ${onSiteByCompany.map((entry) => `<div class="porter-company-item"><span>${escapeHtml(entry.companyName)}</span><span class="porter-company-count">${entry.count}</span></div>`).join("")}
         </div>
@@ -9109,8 +9157,8 @@ function renderDashboardPorterLivePanel() {
     `
     : `
       <div class="porter-company-summary empty">
-        <strong>Aktuell auf der Baustelle je Firma</strong>
-        <div class="helper-text">Noch keine aktiven Anmeldungen vorhanden.</div>
+        <strong>${runtimeText("porterOnSiteByCompanyHeading")}</strong>
+        <div class="helper-text">${runtimeText("porterNoActiveCheckins")}</div>
       </div>
     `;
 
@@ -9163,7 +9211,7 @@ function renderPorterLivePanel() {
   const onSiteByCompany = getPorterOnSiteByCompany();
   if (!onSiteByCompany.length) {
     panel.className = "porter-live-card empty-state";
-    panel.innerHTML = `<strong>Aktuell auf der Baustelle je Firma</strong><p class="helper-text">Noch keine aktiven Anmeldungen vorhanden.</p>`;
+    panel.innerHTML = `<strong>${runtimeText("porterOnSiteByCompanyHeading")}</strong><p class="helper-text">${runtimeText("porterNoActiveCheckins")}</p>`;
     return;
   }
 
@@ -9171,16 +9219,16 @@ function renderPorterLivePanel() {
   panel.className = "porter-live-card";
   panel.innerHTML = `
     <div class="porter-company-summary">
-      <strong>Aktuell auf der Baustelle</strong>
+      <strong>${runtimeText("porterOnSiteHeading")}</strong>
       <div class="porter-company-total">
-        <span>Gesamt</span>
-        <span class="porter-company-count">${totalOnSite} ${totalOnSite === 1 ? "Person" : "Personen"}</span>
+        <span>${runtimeText("porterTotal")}</span>
+        <span class="porter-company-count">${totalOnSite} ${totalOnSite === 1 ? runtimeText("porterPersonSingular") : runtimeText("porterPersonPlural")}</span>
       </div>
       <div class="porter-company-list">
         ${onSiteByCompany.map((entry) => `
           <div class="porter-company-item">
             <span>${escapeHtml(entry.companyName)}</span>
-            <span class="porter-company-count">${entry.count} ${entry.count === 1 ? "Person" : "Personen"}</span>
+            <span class="porter-company-count">${entry.count} ${entry.count === 1 ? runtimeText("porterPersonSingular") : runtimeText("porterPersonPlural")}</span>
           </div>`).join("")}
       </div>
     </div>
