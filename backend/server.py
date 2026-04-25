@@ -194,8 +194,11 @@ _invoice_retry_inflight = {}
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        g.db = sqlite3.connect(DB_PATH, timeout=30)
         g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA journal_mode=WAL")
+        g.db.execute("PRAGMA synchronous=NORMAL")
+        g.db.execute("PRAGMA busy_timeout=30000")
     return g.db
 
 
@@ -1244,7 +1247,9 @@ def ip_allowed(ip_value, whitelist):
 
 
 def init_db():
-    db = sqlite3.connect(DB_PATH)
+    db = sqlite3.connect(DB_PATH, timeout=30)
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=30000")
     cur = db.cursor()
     cur.executescript(
         """
