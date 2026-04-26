@@ -4248,6 +4248,8 @@ def resend_test():
     settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
 
     recipient = (str(payload.get("recipient") or "").strip() or (g.current_user["email"] or "").strip())
+    if not recipient and settings:
+        recipient = str(settings["smtp_sender_email"] or "").strip()
     if not recipient:
         return jsonify({"ok": False, "error": "missing_recipient"})
 

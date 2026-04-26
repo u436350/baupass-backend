@@ -12340,7 +12340,16 @@ async function runResendDirectTest(recipient = "") {
 async function handleResendDirectTestClick() {
   const resultEl = document.querySelector("#resendDirectTestResult");
   if (resultEl) { resultEl.textContent = "…"; resultEl.style.color = "#6b7280"; }
-  const data = await runResendDirectTest("");
+  let data = await runResendDirectTest("");
+  // If missing_recipient the server has no email to fall back to — ask the user
+  if (data?.error === "missing_recipient") {
+    const addr = window.prompt("Resend-Test: An welche E-Mail senden? (Absender-E-Mail in SMTP nicht konfiguriert)");
+    if (!addr || !addr.includes("@")) {
+      if (resultEl) { resultEl.textContent = "Abgebrochen"; resultEl.style.color = "#9ca3af"; }
+      return;
+    }
+    data = await runResendDirectTest(addr);
+  }
   if (!resultEl) return;
   if (data?.ok) {
     resultEl.textContent = "✓ Resend: OK";
