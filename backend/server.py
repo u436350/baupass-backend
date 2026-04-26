@@ -2478,18 +2478,27 @@ def _send_otp_email_to_user(db, user_row, code, smtp_settings_override=None):
     smtp_settings = _resolve_smtp_settings(settings, smtp_settings_override)
     smtp_host = smtp_settings["smtp_host"]
     smtp_sender = smtp_settings["smtp_sender_email"]
-    if not smtp_host:
-        app.logger.warning("[OTP-MAIL] SMTP-Host nicht konfiguriert – E-Mail-Versand nicht möglich")
-        return False
-    if not smtp_sender:
-        app.logger.warning("[OTP-MAIL] SMTP-Absender nicht konfiguriert – E-Mail-Versand nicht möglich")
-        return False
     platform_name = smtp_settings["platform_name"]
     smtp_sender_name = smtp_settings["smtp_sender_name"]
     primary_color = smtp_settings["invoice_primary_color"]
     accent_color = smtp_settings["invoice_accent_color"]
     username = user_row["username"] if hasattr(user_row, "keys") else str(user_row)
     operator_name = smtp_settings["operator_name"]
+
+    # If SMTP is not configured at all, use Resend directly (no fallback loop needed)
+    smtp_configured = bool(smtp_host and smtp_sender)
+    resend_api_key, _ = _get_resend_api_key_and_source()
+    if not smtp_configured and not resend_api_key:
+        app.logger.warning("[OTP-MAIL] Weder SMTP noch Resend konfiguriert – E-Mail-Versand nicht möglich")
+        return False
+    if not smtp_configured:
+        app.logger.info("[OTP-MAIL] SMTP nicht konfiguriert, sende OTP direkt über Resend")
+    # Use smtp_sender as from address, fall back to resend_from_email cache
+    if not smtp_sender:
+        smtp_sender = _normalize_env_value(_resend_key_cache.get("from_email") or "")
+    if not smtp_sender:
+        app.logger.warning("[OTP-MAIL] Keine Absender-E-Mail konfiguriert – E-Mail-Versand nicht möglich")
+        return False
 
     body_html = f"""
         <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
@@ -2526,6 +2535,22 @@ def _send_otp_email_to_user(db, user_row, code, smtp_settings_override=None):
     )
     msg.set_content(text_content)
     msg.add_alternative(html_content, subtype="html")
+
+    # Skip SMTP attempt entirely if not configured — go straight to Resend
+    if not smtp_configured:
+        fallback_ok, fallback_error = _send_via_resend(
+            subject=msg["Subject"],
+            sender_email=smtp_sender,
+            sender_name=smtp_sender_name,
+            recipient=email,
+            text_body=text_content,
+            html_body=html_content,
+        )
+        if fallback_ok:
+            app.logger.info(f"[OTP-MAIL] OTP über Resend versendet an {email} (Benutzer: {username})")
+            return True
+        app.logger.error(f"[OTP-MAIL] Resend fehlgeschlagen: {fallback_error}")
+        return False
 
     try:
         with _smtp_connect(smtp_host, smtp_settings["smtp_port"], smtp_settings["smtp_use_tls"]) as smtp:
