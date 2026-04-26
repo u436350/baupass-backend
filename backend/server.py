@@ -2111,21 +2111,20 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
     else:
         timing_text = f"in {days_until_due} Tag(en) faellig"
 
+    text_body = (
+        f"Guten Tag,\n\n"
+        f"dies ist eine Zahlungs-{stage_label.lower()} für die Rechnung {invoice_row['invoice_number']} "
+        f"({company_row['name']}).\n"
+        f"Faelligkeit: {due_label} ({timing_text})\n"
+        f"Offener Betrag: {float(invoice_row['total_amount'] or 0):.2f} EUR\n\n"
+        f"Bitte begleichen Sie den Betrag zeitnah, um eine Sperrung zu vermeiden.\n\n"
+        f"Viele Grüße\n{settings_row['operator_name']}"
+    )
     message = EmailMessage()
     message["Subject"] = f"{stage_label}: Rechnung {invoice_row['invoice_number']} ({timing_text})"
     message["From"] = f"{settings_row['smtp_sender_name']} <{smtp_sender}>"
     message["To"] = invoice_row["recipient_email"]
-    message.set_content(
-        (
-            f"Guten Tag,\n\n"
-            f"dies ist eine Zahlungs-{stage_label.lower()} für die Rechnung {invoice_row['invoice_number']} "
-            f"({company_row['name']}).\n"
-            f"Faelligkeit: {due_label} ({timing_text})\n"
-            f"Offener Betrag: {float(invoice_row['total_amount'] or 0):.2f} EUR\n\n"
-            f"Bitte begleichen Sie den Betrag zeitnah, um eine Sperrung zu vermeiden.\n\n"
-            f"Viele Grüße\n{settings_row['operator_name']}"
-        )
-    )
+    message.set_content(text_body)
 
     try:
         with smtplib.SMTP(smtp_host, int(settings_row["smtp_port"] or 587), timeout=20) as smtp:
@@ -2137,7 +2136,17 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
             smtp.send_message(message)
         return True, ""
     except Exception as exc:
-        return False, str(exc)
+        fallback_ok, fallback_error = _send_via_resend(
+            subject=str(message["Subject"]),
+            sender_email=smtp_sender,
+            sender_name=settings_row["smtp_sender_name"] or "",
+            recipient=invoice_row["recipient_email"],
+            text_body=text_body,
+            html_body="",
+        )
+        if fallback_ok:
+            return True, ""
+        return False, f"{exc} | Resend-Fallback: {fallback_error}"
 
 
 @contextmanager
@@ -2726,6 +2735,7 @@ def check_visitor_card_expiry_notifications(db):
             f"Bitte verlängern oder löschen Sie die Karte im BauPass-Admin-Panel.\n\n"
             f"Viele Grüße\n{settings['operator_name']}"
         )
+        mail_sent = False
         try:
             with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=20) as smtp:
                 if int(settings["smtp_use_tls"] or 0) == 1:
@@ -2733,14 +2743,32 @@ def check_visitor_card_expiry_notifications(db):
                 if (settings["smtp_username"] or "").strip():
                     smtp.login(settings["smtp_username"].strip(), settings["smtp_password"] or "")
                 smtp.send_message(msg)
+            mail_sent = True
+        except Exception:
+            visitor_text = (
+                f"Guten Tag,\n\n"
+                f"die Besucherkarte von {worker['first_name']} {worker['last_name']} "
+                f"(Badge {worker['badge_id']}, Firma {worker['company_name']}) "
+                f"l\u00e4uft am {expire_label} Uhr ab.\n\n"
+                f"Bitte verl\u00e4ngern oder l\u00f6schen Sie die Karte im BauPass-Admin-Panel.\n\n"
+                f"Viele Gr\u00fc\u00dfe\n{settings['operator_name']}"
+            )
+            fallback_ok, _ = _send_via_resend(
+                subject=str(msg["Subject"]),
+                sender_email=smtp_sender,
+                sender_name=settings["smtp_sender_name"] or "",
+                recipient=recipient,
+                text_body=visitor_text,
+                html_body="",
+            )
+            mail_sent = fallback_ok
+        if mail_sent:
             db.execute(
                 "INSERT INTO audit_logs (id, event_type, actor_user_id, actor_role, company_id, target_type, target_id, message, created_at) VALUES (?,?,NULL,NULL,?,?,?,?,?)",
                 (f"aud-{secrets.token_hex(8)}", dedup_key, worker["company_id"], "worker", worker["id"],
                  f"Ablauf-Mail fuer {worker['first_name']} {worker['last_name']} (Badge {worker['badge_id']}) gesendet an {recipient}", now_iso()),
             )
             db.commit()
-        except Exception:
-            pass  # mail failure is non-fatal
 
 
 def run_dunning_job_once():
@@ -2882,21 +2910,31 @@ def start_background_jobs():
                 msg["Subject"] = f"BauPass Tageszusammenfassung {yesterday}"
                 msg["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
                 msg["To"] = admin_email
-                msg.set_content(
-                    f"BauPass Tageszusammenfassung für {yesterday}:\n\n"
+                summary_text = (
+                    f"BauPass Tageszusammenfassung f\u00fcr {yesterday}:\n\n"
                     f"  Zutritte gestern:       {total_entries}\n"
                     f"  Aktive Firmen gestern:  {companies_active}\n"
                     f"  Neue Mitarbeiter:       {new_workers}\n"
                     f"  Abgelaufene Dokumente:  {expired_docs_count}\n\n"
                     f"Diese Zusammenfassung wurde automatisch von BauPass Control erstellt."
                 )
-
-                with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
-                    if int(settings["smtp_use_tls"] or 0):
-                        smtp.starttls()
-                    if (settings["smtp_username"] or "").strip():
-                        smtp.login(settings["smtp_username"], settings["smtp_password"] or "")
-                    smtp.send_message(msg)
+                msg.set_content(summary_text)
+                try:
+                    with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=15) as smtp:
+                        if int(settings["smtp_use_tls"] or 0):
+                            smtp.starttls()
+                        if (settings["smtp_username"] or "").strip():
+                            smtp.login(settings["smtp_username"], settings["smtp_password"] or "")
+                        smtp.send_message(msg)
+                except Exception:
+                    _send_via_resend(
+                        subject=str(msg["Subject"]),
+                        sender_email=smtp_sender,
+                        sender_name=settings["smtp_sender_name"] or "",
+                        recipient=admin_email,
+                        text_body=summary_text,
+                        html_body="",
+                    )
         except Exception:
             pass
 
@@ -6934,22 +6972,41 @@ def send_invoice_email(invoice_row, company_row, settings_row):
     smtp_host = (settings_row["smtp_host"] or "").strip()
     smtp_sender = (settings_row["smtp_sender_email"] or "").strip()
     if not smtp_host or not smtp_sender:
+        # Try Resend-only path if SMTP not configured but Resend key is available
+        resend_key = _get_resend_api_key()
+        if resend_key:
+            text_body = (
+                f"Guten Tag,\n\n"
+                f"anbei erhalten Sie die Rechnung {invoice_row['invoice_number']} für {company_row['name']}.\n"
+                f"Faellig am: {(invoice_row['due_date'] or '-')}\n"
+                f"Gesamtbetrag: {invoice_row['total_amount']:.2f} EUR\n\n"
+                f"Viele Grüße\n{settings_row['operator_name']}"
+            )
+            ok, err = _send_via_resend(
+                subject=f"Rechnung {invoice_row['invoice_number']} - {settings_row['operator_name']}",
+                sender_email=smtp_sender or "noreply@example.com",
+                sender_name=settings_row["smtp_sender_name"] or "",
+                recipient=invoice_row["recipient_email"],
+                text_body=text_body,
+                html_body=invoice_row["rendered_html"] or "",
+            )
+            return ok, err if not ok else ""
         return False, "SMTP ist nicht konfiguriert"
 
+    text_body = (
+        f"Guten Tag,\n\n"
+        f"anbei erhalten Sie die Rechnung {invoice_row['invoice_number']} für {company_row['name']}.\n"
+        f"Faellig am: {(invoice_row['due_date'] or '-')}\n"
+        f"Gesamtbetrag: {invoice_row['total_amount']:.2f} EUR\n\n"
+        f"Viele Grüße\n{settings_row['operator_name']}"
+    )
+    html_body = invoice_row["rendered_html"] or ""
     message = EmailMessage()
     message["Subject"] = f"Rechnung {invoice_row['invoice_number']} - {settings_row['operator_name']}"
     message["From"] = f"{settings_row['smtp_sender_name']} <{smtp_sender}>"
     message["To"] = invoice_row["recipient_email"]
-    message.set_content(
-        (
-            f"Guten Tag,\n\n"
-            f"anbei erhalten Sie die Rechnung {invoice_row['invoice_number']} für {company_row['name']}.\n"
-            f"Faellig am: {(invoice_row['due_date'] or '-')}\n"
-            f"Gesamtbetrag: {invoice_row['total_amount']:.2f} EUR\n\n"
-            f"Viele Grüße\n{settings_row['operator_name']}"
-        )
-    )
-    message.add_alternative(invoice_row["rendered_html"], subtype="html")
+    message.set_content(text_body)
+    message.add_alternative(html_body, subtype="html")
 
     try:
         with smtplib.SMTP(smtp_host, int(settings_row["smtp_port"] or 587), timeout=20) as smtp:
@@ -6961,7 +7018,17 @@ def send_invoice_email(invoice_row, company_row, settings_row):
             smtp.send_message(message)
         return True, ""
     except Exception as exc:
-        return False, str(exc)
+        fallback_ok, fallback_error = _send_via_resend(
+            subject=str(message["Subject"]),
+            sender_email=smtp_sender,
+            sender_name=settings_row["smtp_sender_name"] or "",
+            recipient=invoice_row["recipient_email"],
+            text_body=text_body,
+            html_body=html_body,
+        )
+        if fallback_ok:
+            return True, ""
+        return False, f"{exc} | Resend-Fallback: {fallback_error}"
 
 
 def get_invoice_retry_delay_seconds(attempt_count):
@@ -7689,11 +7756,7 @@ def send_invoice_retry_backlog_alert_email(db, summary, severity):
             f"{float(item.get('amount', 0)):.2f} EUR | Alter {item.get('ageDays', 0)} Tage"
         )
 
-    message = EmailMessage()
-    message["Subject"] = f"[BauPass] {'KRITISCH' if severity == 'critical' else 'Warnung'}: {critical_count} kritische Retry-Faelle"
-    message["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
-    message["To"] = ", ".join(recipients)
-    message.set_content(
+    alert_text = (
         "BauPass hat eine kritische Lage in der Rechnungs-Retry-Queue erkannt.\n\n"
         f"Schweregrad: {severity}\n"
         f"Kritische Faelle (Score >= 70): {critical_count}\n"
@@ -7702,6 +7765,11 @@ def send_invoice_retry_backlog_alert_email(db, summary, severity):
         f"{chr(10).join(top_lines) if top_lines else 'Keine Top-Faelle.'}\n\n"
         "Bitte im Admin-Panel den Rechnungsbereich oeffnen und die Queue pruefen."
     )
+    message = EmailMessage()
+    message["Subject"] = f"[BauPass] {'KRITISCH' if severity == 'critical' else 'Warnung'}: {critical_count} kritische Retry-Faelle"
+    message["From"] = f"{settings['smtp_sender_name']} <{smtp_sender}>"
+    message["To"] = ", ".join(recipients)
+    message.set_content(alert_text)
 
     try:
         with smtplib.SMTP(smtp_host, int(settings["smtp_port"] or 587), timeout=20) as smtp:
@@ -7718,6 +7786,22 @@ def send_invoice_retry_backlog_alert_email(db, summary, severity):
         )
         return True, "sent"
     except Exception as exc:
+        for r in recipients:
+            fallback_ok, _ = _send_via_resend(
+                subject=str(message["Subject"]),
+                sender_email=smtp_sender,
+                sender_name=settings["smtp_sender_name"] or "",
+                recipient=r,
+                text_body=alert_text,
+                html_body="",
+            )
+            if fallback_ok:
+                record_ops_alert_email_sent(
+                    db,
+                    event_type,
+                    f"Retry-Backlog Alert (Resend-Fallback) versendet ({severity}) an {r}.",
+                )
+                return True, "sent_via_resend"
         return False, str(exc)
 
 
