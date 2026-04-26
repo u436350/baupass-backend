@@ -4214,7 +4214,7 @@ def resend_test():
 
     recipient = (str(payload.get("recipient") or "").strip() or (g.current_user["email"] or "").strip())
     if not recipient:
-        return jsonify({"ok": False, "error": "missing_recipient"}), 400
+        return jsonify({"ok": False, "error": "missing_recipient"})
 
     sender_email = ""
     sender_name = "BauPass"
@@ -4231,7 +4231,7 @@ def resend_test():
             "resendConfigured": False,
             "resendKeySource": "",
             "resendEnv": env_presence,
-        }), 400
+        })
 
     subject = "BauPass: Resend Direkt-Test"
     text_body = (
@@ -4268,7 +4268,7 @@ def resend_test():
         "resendConfigured": True,
         "resendKeySource": resend_key_source,
         "resendEnv": env_presence,
-    }), 502
+    })
 
 
 @app.put("/api/settings")

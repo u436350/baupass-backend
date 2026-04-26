@@ -12394,7 +12394,8 @@ async function sendSmtpTestMail() {
       }
       const isConnectFailure = String(err?.payload?.diagnostics?.stage || "") === "connect";
       if (isConnectFailure) {
-        const resendCheck = await runResendDirectTest();
+        const fallbackRecipient = document.querySelector("#smtpSenderEmail")?.value.trim() || "";
+        const resendCheck = await runResendDirectTest(fallbackRecipient);
         if (resendCheck?.ok) {
           message += " | Resend Direkt-Test: OK";
         } else if (resendCheck?.error) {
