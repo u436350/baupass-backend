@@ -4194,6 +4194,7 @@ def smtp_diagnose():
     resend_api_key, resend_key_source = _get_resend_api_key_and_source()
     result["resendConfigured"] = bool(resend_api_key)
     result["resendKeySource"] = resend_key_source
+    result["resendEnv"] = _collect_resend_env_presence()
     status_code = 200
     if not result.get("ok"):
         app.logger.warning(
@@ -10330,6 +10331,7 @@ def otp_test_send():
         "fallbackError": fallback_error,
         "resendConfigured": resend_configured,
         "resendKeySource": resend_key_source,
+        "resendEnv": _collect_resend_env_presence(),
     }), 500
 
 

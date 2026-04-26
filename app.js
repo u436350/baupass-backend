@@ -12233,6 +12233,27 @@ function getCurrentSmtpSettingsFromForm() {
   return settings;
 }
 
+function formatResendEnvState(payload) {
+  const known = Array.isArray(payload?.resendEnv?.known) ? payload.resendEnv.known : [];
+  if (!known.length) return "";
+  const keyNames = [
+    "RESEND_API_KEY",
+    "RESEND_KEY",
+    "RESEND_API_TOKEN",
+    "BAUPASS_RESEND_API_KEY",
+    "RESEND_APIKEY",
+    "RESEND_TOKEN"
+  ];
+  const states = keyNames
+    .map((name) => {
+      const row = known.find((item) => item?.name === name);
+      if (!row) return "";
+      return `${name}: ${row.set ? "gesetzt" : "leer"}`;
+    })
+    .filter(Boolean);
+  return states.length ? `Env-Check: ${states.join(", ")}` : "";
+}
+
 function formatSmtpTestError(err) {
   if (err?.code === "smtp_not_configured") {
     const missingFields = Array.isArray(err?.payload?.missingFields) ? err.payload.missingFields : [];
@@ -12255,10 +12276,12 @@ function formatSmtpTestError(err) {
     const resendState = err?.payload?.resendConfigured === true
       ? `Resend erkannt (${err?.payload?.resendKeySource || "unbekannt"})`
       : (err?.payload?.resendConfigured === false ? "Resend nicht erkannt" : "");
+    const resendEnvState = formatResendEnvState(err?.payload);
     const parts = [base];
     if (diag) parts.push(diag);
     if (fallbackHint) parts.push(fallbackHint);
     if (resendState) parts.push(resendState);
+    if (resendEnvState) parts.push(resendEnvState);
     return parts.join(" | ");
   }
   return err?.message || "Unbekannter Fehler";
@@ -12274,7 +12297,8 @@ function formatSmtpDiagnosticsPayload(payload) {
   const type = payload.errorType ? `${payload.errorType}: ` : "";
   const message = payload.error || "Unbekannter Fehler";
   const resendState = payload.resendConfigured ? ` | Resend erkannt (${payload.resendKeySource || "unbekannt"})` : " | Resend nicht erkannt";
-  return `${stage} - ${type}${message}${resendState}`;
+  const resendEnvState = formatResendEnvState(payload);
+  return `${stage} - ${type}${message}${resendState}${resendEnvState ? ` | ${resendEnvState}` : ""}`;
 }
 
 async function runSmtpDiagnostics() {
