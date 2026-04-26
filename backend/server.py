@@ -2261,6 +2261,46 @@ def _get_resend_api_key_and_source():
     return "", ""
 
 
+def _collect_resend_env_presence():
+    """Return non-secret visibility into RESEND-related env vars for diagnostics."""
+    known_names = [
+        "RESEND_API_KEY",
+        "RESEND_KEY",
+        "RESEND_API_TOKEN",
+        "BAUPASS_RESEND_API_KEY",
+        "RESEND_APIKEY",
+        "RESEND_TOKEN",
+        "RESEND_FROM_EMAIL",
+        "RESEND_FROM_NAME",
+        "RESEND_API_URL",
+    ]
+    details = []
+    for name in known_names:
+        raw = os.getenv(name)
+        value = _normalize_env_value(raw)
+        details.append({
+            "name": name,
+            "set": bool(value),
+            "length": len(value),
+        })
+
+    dynamic_names = []
+    for env_name, env_value in os.environ.items():
+        upper_name = str(env_name or "").upper()
+        if "RESEND" not in upper_name:
+            continue
+        if upper_name in known_names:
+            continue
+        candidate = _normalize_env_value(env_value)
+        dynamic_names.append({
+            "name": env_name,
+            "set": bool(candidate),
+            "length": len(candidate),
+        })
+
+    return {"known": details, "dynamic": dynamic_names}
+
+
 def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, html_body):
     """Send e-mail via Resend API over HTTPS (fallback when SMTP egress is blocked)."""
     api_key, _key_source = _get_resend_api_key_and_source()
@@ -4104,6 +4144,7 @@ def smtp_test():
     except Exception as exc:
         diag_result = _run_smtp_diagnostics(smtp_settings)
         app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
+        resend_api_key, resend_key_source = _get_resend_api_key_and_source()
         fallback_ok, fallback_error = _send_via_resend(
             subject=msg["Subject"] if "msg" in locals() else f"{platform_name}: SMTP Test-Mail",
             sender_email=smtp_settings["smtp_sender_email"],
@@ -4125,6 +4166,8 @@ def smtp_test():
             "detail": str(exc),
             "diagnostics": diag_result,
             "fallbackError": fallback_error,
+            "resendConfigured": bool(resend_api_key),
+            "resendKeySource": resend_key_source,
         }), 500
 
 
@@ -4155,6 +4198,74 @@ def smtp_diagnose():
             f"[SMTP-DIAG] stage={result.get('stage')} type={result.get('errorType')} error={result.get('error')}"
         )
     return jsonify(result), status_code
+
+
+@app.post("/api/settings/resend-test")
+@require_auth
+@require_roles("superadmin")
+def resend_test():
+    """Test Resend API directly (without SMTP) to verify Railway env wiring."""
+    db = get_db()
+    payload = request.get_json(silent=True) or {}
+    settings = db.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+
+    recipient = (str(payload.get("recipient") or "").strip() or (g.current_user["email"] or "").strip())
+    if not recipient:
+        return jsonify({"ok": False, "error": "missing_recipient"}), 400
+
+    sender_email = ""
+    sender_name = "BauPass"
+    if settings:
+        sender_email = str(settings["smtp_sender_email"] or "").strip()
+        sender_name = str(settings["smtp_sender_name"] or "BauPass").strip() or "BauPass"
+
+    env_presence = _collect_resend_env_presence()
+    resend_api_key, resend_key_source = _get_resend_api_key_and_source()
+    if not resend_api_key:
+        return jsonify({
+            "ok": False,
+            "error": "resend_not_configured",
+            "resendConfigured": False,
+            "resendKeySource": "",
+            "resendEnv": env_presence,
+        }), 400
+
+    subject = "BauPass: Resend Direkt-Test"
+    text_body = (
+        "Dieser Test wurde direkt ueber Resend (HTTPS) versendet.\n"
+        "Wenn diese Mail ankommt, ist die Railway-Umgebungsvariable korrekt im Container verfuegbar."
+    )
+    html_body = (
+        "<p>Dieser Test wurde direkt ueber <strong>Resend (HTTPS)</strong> versendet.</p>"
+        "<p>Wenn diese Mail ankommt, ist die Railway-Umgebungsvariable korrekt im Container verfuegbar.</p>"
+    )
+
+    fallback_ok, fallback_error = _send_via_resend(
+        subject=subject,
+        sender_email=sender_email,
+        sender_name=sender_name,
+        recipient=recipient,
+        text_body=text_body,
+        html_body=html_body,
+    )
+    if fallback_ok:
+        return jsonify({
+            "ok": True,
+            "recipient": recipient,
+            "delivery": "resend",
+            "resendConfigured": True,
+            "resendKeySource": resend_key_source,
+            "resendEnv": env_presence,
+        })
+
+    return jsonify({
+        "ok": False,
+        "error": "resend_send_failed",
+        "detail": fallback_error,
+        "resendConfigured": True,
+        "resendKeySource": resend_key_source,
+        "resendEnv": env_presence,
+    }), 502
 
 
 @app.put("/api/settings")
