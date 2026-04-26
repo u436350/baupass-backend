@@ -2359,6 +2359,8 @@ def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, h
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "BauPass/1.0 (resend-client; python-urllib)",
         },
         method="POST",
     )
@@ -4326,7 +4328,9 @@ def resend_test():
 
     # Enrich error with a hint about unverified sender domain (most common cause)
     detail_hint = fallback_error
-    if "403" in str(fallback_error) or "validation_error" in str(fallback_error) or "domain" in str(fallback_error).lower():
+    if "1010" in str(fallback_error):
+        detail_hint += " — Tipp: Cloudflare blockiert den Request (Bot-Erkennung). User-Agent wurde gesetzt, bitte erneut versuchen."
+    elif "403" in str(fallback_error) or "validation_error" in str(fallback_error) or "domain" in str(fallback_error).lower():
         detail_hint += " — Tipp: Absender-Domain muss in Resend verifiziert sein. Kein Gmail als Absender möglich."
     return jsonify({
         "ok": False,
