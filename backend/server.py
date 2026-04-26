@@ -114,6 +114,11 @@ _default_db_path = BASE_DIR / "backend" / "baupass.db"
 DB_PATH = Path((os.getenv("BAUPASS_DB_PATH") or str(_default_db_path)).strip() or str(_default_db_path)).expanduser()
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+# Module-level cache for Resend credentials stored in DB.
+# Populated at startup (init_db) and refreshed after settings save.
+# Avoids opening a second SQLite connection from background threads.
+_resend_key_cache: dict = {"key": "", "from_email": "", "source": ""}
+
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -1804,6 +1809,17 @@ def init_db():
     if "created_at" not in device_columns:
         cur.execute("ALTER TABLE devices ADD COLUMN created_at TEXT NOT NULL DEFAULT ''")
 
+    # Populate Resend key cache from DB so _get_resend_api_key_and_source() works without
+    # opening a second connection. Safe here because we're still in init_db's raw connection.
+    try:
+        db.row_factory = sqlite3.Row
+        _cache_row = db.execute("SELECT resend_api_key, resend_from_email FROM settings WHERE id = 1").fetchone()
+        if _cache_row:
+            _resend_key_cache["key"] = str(_cache_row["resend_api_key"] or "").strip()
+            _resend_key_cache["from_email"] = str(_cache_row["resend_from_email"] or "").strip()
+    except Exception:
+        pass
+
     db.commit()
     db.close()
 
@@ -2228,18 +2244,10 @@ def _normalize_env_value(raw):
 
 
 def _get_resend_api_key_and_source():
-    # Check DB settings first — allows admin to store the key via UI, bypassing env var issues.
-    try:
-        _db = sqlite3.connect(str(DB_PATH), timeout=5)
-        _db.row_factory = sqlite3.Row
-        _row = _db.execute("SELECT resend_api_key FROM settings WHERE id = 1").fetchone()
-        _db.close()
-        if _row:
-            _db_key = _normalize_env_value(_row["resend_api_key"] or "")
-            if _db_key:
-                return _db_key, "db_settings"
-    except Exception:
-        pass
+    # Check module-level cache first (populated from DB at startup and after settings save).
+    cached_key = _normalize_env_value(_resend_key_cache.get("key") or "")
+    if cached_key:
+        return cached_key, "db_settings"
 
     # Accept common variable names to reduce deployment misconfiguration issues.
     for key_name in (
@@ -2327,18 +2335,9 @@ def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, h
     endpoint = _normalize_env_value(os.getenv("RESEND_API_URL") or "https://api.resend.com/emails")
     from_email = _normalize_env_value(os.getenv("RESEND_FROM_EMAIL") or "")
     from_name = _normalize_env_value(os.getenv("RESEND_FROM_NAME") or "")
-    # Fall back to DB settings when env vars are absent (e.g. Railway blocks env propagation).
-    if not from_email or not from_name:
-        try:
-            _db2 = sqlite3.connect(str(DB_PATH), timeout=5)
-            _db2.row_factory = sqlite3.Row
-            _row2 = _db2.execute("SELECT resend_from_email FROM settings WHERE id = 1").fetchone()
-            _db2.close()
-            if _row2:
-                if not from_email:
-                    from_email = _normalize_env_value(_row2["resend_from_email"] or "")
-        except Exception:
-            pass
+    # Fall back to module-level cache (populated from DB at startup / after settings save).
+    if not from_email:
+        from_email = _normalize_env_value(_resend_key_cache.get("from_email") or "")
     if not from_email:
         from_email = sender_email or ""
     if not from_name:
@@ -4268,6 +4267,8 @@ def resend_test():
             "resendConfigured": False,
             "resendKeySource": "",
             "resendEnv": env_presence,
+            "resendDbKeySet": bool(_resend_key_cache.get("key")),
+            "resendCacheDebug": f"cache_key_len={len(_resend_key_cache.get('key',''))}",
         })
 
     subject = "BauPass: Resend Direkt-Test"
@@ -4356,12 +4357,24 @@ def update_settings():
     datenschutz_text = str(payload.get("datenschutzText") or "")[:20000]
     db.execute("UPDATE settings SET impressum_text = ?, datenschutz_text = ? WHERE id = 1", (impressum_text, datenschutz_text))
     # Resend-Konfiguration (API-Key direkt in DB speichern, umgeht Railway-Env-Probleme)
+    # Leeres Feld = bestehenden Key behalten (wie SMTP-Passwort-Logik)
     resend_api_key_payload = str(payload.get("resendApiKey") or "").strip()
     resend_from_email_payload = str(payload.get("resendFromEmail") or "").strip()
-    db.execute(
-        "UPDATE settings SET resend_api_key = ?, resend_from_email = ? WHERE id = 1",
-        (resend_api_key_payload, resend_from_email_payload),
-    )
+    if resend_api_key_payload:
+        # New key provided — save it and update cache
+        db.execute(
+            "UPDATE settings SET resend_api_key = ?, resend_from_email = ? WHERE id = 1",
+            (resend_api_key_payload, resend_from_email_payload),
+        )
+        _resend_key_cache["key"] = resend_api_key_payload
+        _resend_key_cache["from_email"] = resend_from_email_payload
+    elif resend_from_email_payload:
+        # Only from_email changed, keep existing key
+        db.execute(
+            "UPDATE settings SET resend_from_email = ? WHERE id = 1",
+            (resend_from_email_payload,),
+        )
+        _resend_key_cache["from_email"] = resend_from_email_payload
     # IMAP-Felder separat aktualisieren (immer optional)
     payload_imap_password = str(payload.get("imapPassword") or "")
     imap_fields = {
