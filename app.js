@@ -12337,6 +12337,35 @@ async function runResendDirectTest(recipient = "") {
   }
 }
 
+async function saveAndTestResend() {
+  const keyEl = document.querySelector("#resendApiKey");
+  const fromEl = document.querySelector("#resendFromEmail");
+  const resultEl = document.querySelector("#resendDirectTestResult");
+  const hintEl = document.querySelector("#resendKeyStoredHint");
+  const key = keyEl?.value?.trim() || "";
+  const fromEmail = fromEl?.value?.trim() || "";
+  if (!key) {
+    if (resultEl) { resultEl.textContent = "Bitte API-Key eingeben"; resultEl.style.color = "#dc2626"; }
+    return;
+  }
+  if (resultEl) { resultEl.textContent = "⏳ Speichern…"; resultEl.style.color = "#6b7280"; }
+  // Save via PUT /api/settings with just the Resend fields
+  try {
+    await apiRequest(API_BASE + "/api/settings", {
+      method: "PUT",
+      body: { ...getCurrentSmtpSettingsFromForm(), resendApiKey: key, resendFromEmail: fromEmail }
+    });
+  } catch (e) {
+    if (resultEl) { resultEl.textContent = `✗ Speichern fehlgeschlagen: ${e?.code || e}`;  resultEl.style.color = "#dc2626"; }
+    return;
+  }
+  if (hintEl) { hintEl.textContent = "✓ API-Key gespeichert"; hintEl.style.color = "#16a34a"; }
+  if (keyEl) keyEl.value = "";
+  // Now test
+  if (resultEl) { resultEl.textContent = "⏳ Teste…"; resultEl.style.color = "#6b7280"; }
+  await handleResendDirectTestClick();
+}
+
 async function handleResendDirectTestClick() {
   const resultEl = document.querySelector("#resendDirectTestResult");
   if (resultEl) { resultEl.textContent = "…"; resultEl.style.color = "#6b7280"; }

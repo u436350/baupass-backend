@@ -1034,14 +1034,17 @@
               </label>
               <label>
                 <span>Resend Absender-E-Mail</span>
-                <input id="resendFromEmail" type="email" placeholder="rechnung@deinefirma.de" />
+                <input id="resendFromEmail" type="email" placeholder="onboarding@resend.dev" />
               </label>
               <label class="full-width">
                 <span></span>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                  <button type="button" class="btn btn-secondary" onclick="handleResendDirectTestClick()">Resend Direkt-Test</button>
+                  <button type="button" class="btn btn-primary" onclick="saveAndTestResend()">💾 Speichern &amp; Testen</button>
                   <span id="resendDirectTestResult" style="font-size:0.85rem"></span>
                 </div>
+                <small style="display:block;margin-top:6px;color:#6b7280;font-size:0.8rem;">
+                  Absender muss eine bei Resend verifizierte Domain sein. Für Tests ohne eigene Domain: <code>onboarding@resend.dev</code>
+                </small>
               </label>
 
               <!-- ── Dokument-Postfach (IMAP) ── -->
