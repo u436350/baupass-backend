@@ -4145,6 +4145,7 @@ def smtp_test():
         diag_result = _run_smtp_diagnostics(smtp_settings)
         app.logger.error(f"[SMTP-TEST] Fehler beim Senden an {recipient}: {exc}")
         resend_api_key, resend_key_source = _get_resend_api_key_and_source()
+        resend_env = _collect_resend_env_presence()
         fallback_ok, fallback_error = _send_via_resend(
             subject=msg["Subject"] if "msg" in locals() else f"{platform_name}: SMTP Test-Mail",
             sender_email=smtp_settings["smtp_sender_email"],
@@ -4168,6 +4169,7 @@ def smtp_test():
             "fallbackError": fallback_error,
             "resendConfigured": bool(resend_api_key),
             "resendKeySource": resend_key_source,
+            "resendEnv": resend_env,
         }), 500
 
 
@@ -7094,7 +7096,7 @@ def send_invoice_email(invoice_row, company_row, settings_row):
     smtp_sender = (settings_row["smtp_sender_email"] or "").strip()
     if not smtp_host or not smtp_sender:
         # Try Resend-only path if SMTP not configured but Resend key is available
-        resend_key = _get_resend_api_key()
+        resend_key, _resend_key_source = _get_resend_api_key_and_source()
         if resend_key:
             text_body = (
                 f"Guten Tag,\n\n"
