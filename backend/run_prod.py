@@ -61,6 +61,12 @@ if __name__ == "__main__":
     diagnostics = get_runtime_diagnostics()
     warnings = diagnostics.get("warnings", [])
     print(f"[baupass] Runtime-Check: {len(warnings)} Warnung(en)")
+    resend_configured = bool(diagnostics.get("resendConfigured"))
+    resend_source = str(diagnostics.get("resendKeySource") or "")
+    if resend_configured:
+        print(f"[baupass] Resend: configured (source={resend_source or 'unknown'})")
+    else:
+        print("[baupass] Resend: NOT configured")
     for warning in warnings:
         print(f"[baupass][warn] {warning['code']}: {warning['message']}")
     if not SHOW_WAITRESS_QUEUE_WARNINGS:
