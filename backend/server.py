@@ -2109,13 +2109,13 @@ def send_payment_reminder_email(invoice_row, company_row, settings_row, stage, d
     elif days_until_due == 0:
         timing_text = "heute faellig"
     else:
-        timing_text = f"in {days_until_due} Tag(en) faellig"
+        timing_text = f"in {days_until_due} Tag(en) fällig"
 
     text_body = (
         f"Guten Tag,\n\n"
         f"dies ist eine Zahlungs-{stage_label.lower()} für die Rechnung {invoice_row['invoice_number']} "
         f"({company_row['name']}).\n"
-        f"Faelligkeit: {due_label} ({timing_text})\n"
+        f"Fälligkeit: {due_label} ({timing_text})\n"
         f"Offener Betrag: {float(invoice_row['total_amount'] or 0):.2f} EUR\n\n"
         f"Bitte begleichen Sie den Betrag zeitnah, um eine Sperrung zu vermeiden.\n\n"
         f"Viele Grüße\n{settings_row['operator_name']}"
@@ -2246,6 +2246,16 @@ def _get_resend_api_key_and_source():
             continue
         candidate = _normalize_env_value(env_value)
         if candidate:
+            return candidate, env_name
+
+    # Extra fallback for unusual variable names (e.g. just "RESEND"):
+    # accept values that look like real Resend keys.
+    for env_name, env_value in os.environ.items():
+        upper_name = str(env_name or "").upper()
+        if "RESEND" not in upper_name:
+            continue
+        candidate = _normalize_env_value(env_value)
+        if candidate.startswith("re_"):
             return candidate, env_name
 
     return "", ""
