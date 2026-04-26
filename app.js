@@ -12357,9 +12357,10 @@ async function handleResendDirectTestClick() {
   } else {
     const envLine = formatResendEnvState(data);
     const errText = data?.error || "Fehler";
+    const detail = data?.detail ? ` → ${data.detail}` : "";
     const dbHint = data?.resendDbKeySet === false ? " (DB: kein Key gespeichert)" : data?.resendDbKeySet === true ? " (DB: Key vorhanden?)" : "";
     const cacheDebug = data?.resendCacheDebug ? ` [${data.resendCacheDebug}]` : "";
-    resultEl.textContent = `✗ ${errText}${dbHint}${cacheDebug}${envLine ? ` | ${envLine}` : ""}`;
+    resultEl.textContent = `✗ ${errText}${detail}${dbHint}${cacheDebug}${envLine ? ` | ${envLine}` : ""}`;
     resultEl.style.color = "#dc2626";
   }
 }

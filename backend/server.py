@@ -4299,10 +4299,14 @@ def resend_test():
             "resendEnv": env_presence,
         })
 
+    # Enrich error with a hint about unverified sender domain (most common cause)
+    detail_hint = fallback_error
+    if "403" in str(fallback_error) or "validation_error" in str(fallback_error) or "domain" in str(fallback_error).lower():
+        detail_hint += " — Tipp: Absender-Domain muss in Resend verifiziert sein. Kein Gmail als Absender möglich."
     return jsonify({
         "ok": False,
         "error": "resend_send_failed",
-        "detail": fallback_error,
+        "detail": detail_hint,
         "resendConfigured": True,
         "resendKeySource": resend_key_source,
         "resendEnv": env_presence,
