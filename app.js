@@ -12279,8 +12279,9 @@ function formatSmtpTestError(err) {
     const resendEnvState = formatResendEnvState(err?.payload);
     const parts = [base];
     if (diag) parts.push(diag);
-    if (fallbackHint) parts.push(fallbackHint);
-    if (resendState) parts.push(resendState);
+    if (fallbackHint && !base.includes(fallbackHint) && !diag.includes(fallbackHint)) parts.push(fallbackHint);
+    const diagHasResendState = diag.includes("Resend erkannt") || diag.includes("Resend nicht erkannt");
+    if (resendState && !diagHasResendState && !base.includes(resendState)) parts.push(resendState);
     if (resendEnvState) parts.push(resendEnvState);
     return parts.join(" | ");
   }
@@ -12306,6 +12307,18 @@ async function runSmtpDiagnostics() {
     method: "POST",
     body: getCurrentSmtpSettingsFromForm()
   });
+}
+
+async function runResendDirectTest(recipient = "") {
+  const payload = recipient ? { recipient } : {};
+  try {
+    return await apiRequest(API_BASE + "/api/settings/resend-test", {
+      method: "POST",
+      body: payload
+    });
+  } catch (err) {
+    return err?.payload || { ok: false, error: err?.code || "resend_test_failed" };
+  }
 }
 
 async function sendOtpTestMail() {
@@ -12377,6 +12390,16 @@ async function sendSmtpTestMail() {
         } catch (diagErr) {
           const diagText = formatSmtpDiagnosticsPayload(diagErr?.payload);
           if (diagText) message += ` | ${diagText}`;
+        }
+      }
+      const isConnectFailure = String(err?.payload?.diagnostics?.stage || "") === "connect";
+      if (isConnectFailure) {
+        const resendCheck = await runResendDirectTest();
+        if (resendCheck?.ok) {
+          message += " | Resend Direkt-Test: OK";
+        } else if (resendCheck?.error) {
+          const resendSource = resendCheck?.resendKeySource ? ` (${resendCheck.resendKeySource})` : "";
+          message += ` | Resend Direkt-Test: ${resendCheck.error}${resendSource}`;
         }
       }
       result.textContent = `❌ Fehler: ${message}`;
