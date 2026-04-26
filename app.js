@@ -10356,6 +10356,18 @@ function renderAdminSettingsForm() {
   if (enforceTenantDomain) enforceTenantDomain.value = state.settings.enforceTenantDomain ? "1" : "0";
   if (supportPhone) supportPhone.value = getSupportPhoneForLockScreen();
   if (workerAppEnabled) workerAppEnabled.value = state.settings.workerAppEnabled === false ? "0" : "1";
+  // Resend-Felder (Key nicht vorausfüllen; leer lassen wenn gesetzt = kein Überschreiben)
+  const resendApiKeyEl = document.querySelector("#resendApiKey");
+  const resendFromEmailEl = document.querySelector("#resendFromEmail");
+  if (resendApiKeyEl) resendApiKeyEl.value = ""; // nie vorausfüllen (security)
+  if (resendFromEmailEl) resendFromEmailEl.value = state.settings.resendFromEmail || "";
+  // Hinweis anzeigen ob API-Key gespeichert ist
+  const resendKeyHint = document.querySelector("#resendKeyStoredHint");
+  if (resendKeyHint) {
+    const hasKey = !!(state.settings.resendApiKey);
+    resendKeyHint.textContent = hasKey ? "✓ API-Key gespeichert" : "Kein Key gespeichert";
+    resendKeyHint.style.color = hasKey ? "#16a34a" : "#9ca3af";
+  }
   if (elements.invoiceLogoData) {
     elements.invoiceLogoData.value = state.settings.invoiceLogoData || "";
   }
@@ -12179,6 +12191,8 @@ async function handleSettingsSubmit(event) {
       imapUseSsl: document.querySelector("#imapUseSsl")?.value !== "0",
       impressumText: (document.querySelector("#impressumText")?.value || ""),
       datenschutzText: (document.querySelector("#datenschutzText")?.value || ""),
+      resendApiKey: (document.querySelector("#resendApiKey")?.value || ""),
+      resendFromEmail: (document.querySelector("#resendFromEmail")?.value || "").trim(),
     };
     const smtpPasswordValue = document.querySelector("#smtpPassword")?.value || "";
     if (smtpPasswordValue.trim()) {
@@ -12224,7 +12238,9 @@ function getCurrentSmtpSettingsFromForm() {
     smtpUsername: document.querySelector("#smtpUsername")?.value.trim() || "",
     smtpSenderEmail: document.querySelector("#smtpSenderEmail")?.value.trim() || "",
     smtpSenderName: document.querySelector("#smtpSenderName")?.value.trim() || "",
-    smtpUseTls: document.querySelector("#smtpUseTls")?.value === "1"
+    smtpUseTls: document.querySelector("#smtpUseTls")?.value === "1",
+    resendApiKey: document.querySelector("#resendApiKey")?.value || "",
+    resendFromEmail: document.querySelector("#resendFromEmail")?.value.trim() || "",
   };
   const smtpPassword = document.querySelector("#smtpPassword")?.value || "";
   if (smtpPassword.trim()) {
@@ -12318,6 +12334,22 @@ async function runResendDirectTest(recipient = "") {
     });
   } catch (err) {
     return err?.payload || { ok: false, error: err?.code || "resend_test_failed" };
+  }
+}
+
+async function handleResendDirectTestClick() {
+  const resultEl = document.querySelector("#resendDirectTestResult");
+  if (resultEl) { resultEl.textContent = "…"; resultEl.style.color = "#6b7280"; }
+  const data = await runResendDirectTest("");
+  if (!resultEl) return;
+  if (data?.ok) {
+    resultEl.textContent = "✓ Resend: OK";
+    resultEl.style.color = "#16a34a";
+  } else {
+    const envLine = formatResendEnvState(data);
+    const errText = data?.error || "Fehler";
+    resultEl.textContent = `✗ ${errText}${envLine ? ` | ${envLine}` : ""}`;
+    resultEl.style.color = "#dc2626";
   }
 }
 

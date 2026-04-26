@@ -1654,6 +1654,10 @@ def init_db():
         cur.execute("ALTER TABLE settings ADD COLUMN impressum_text TEXT NOT NULL DEFAULT ''")
     if "datenschutz_text" not in settings_columns:
         cur.execute("ALTER TABLE settings ADD COLUMN datenschutz_text TEXT NOT NULL DEFAULT ''")
+    if "resend_api_key" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN resend_api_key TEXT NOT NULL DEFAULT ''")
+    if "resend_from_email" not in settings_columns:
+        cur.execute("ALTER TABLE settings ADD COLUMN resend_from_email TEXT NOT NULL DEFAULT ''")
 
     inbox_columns = [row[1] for row in cur.execute("PRAGMA table_info(email_inbox)").fetchall()]
     if "to_addr" not in inbox_columns:
@@ -2224,6 +2228,19 @@ def _normalize_env_value(raw):
 
 
 def _get_resend_api_key_and_source():
+    # Check DB settings first — allows admin to store the key via UI, bypassing env var issues.
+    try:
+        _db = sqlite3.connect(str(DB_PATH), timeout=5)
+        _db.row_factory = sqlite3.Row
+        _row = _db.execute("SELECT resend_api_key FROM settings WHERE id = 1").fetchone()
+        _db.close()
+        if _row:
+            _db_key = _normalize_env_value(_row["resend_api_key"] or "")
+            if _db_key:
+                return _db_key, "db_settings"
+    except Exception:
+        pass
+
     # Accept common variable names to reduce deployment misconfiguration issues.
     for key_name in (
         "RESEND_API_KEY",
@@ -2308,8 +2325,24 @@ def _send_via_resend(subject, sender_email, sender_name, recipient, text_body, h
         return False, "resend_not_configured (expected: RESEND_API_KEY | RESEND_KEY | RESEND_API_TOKEN)"
 
     endpoint = _normalize_env_value(os.getenv("RESEND_API_URL") or "https://api.resend.com/emails")
-    from_email = _normalize_env_value(os.getenv("RESEND_FROM_EMAIL") or sender_email or "")
-    from_name = _normalize_env_value(os.getenv("RESEND_FROM_NAME") or sender_name or "")
+    from_email = _normalize_env_value(os.getenv("RESEND_FROM_EMAIL") or "")
+    from_name = _normalize_env_value(os.getenv("RESEND_FROM_NAME") or "")
+    # Fall back to DB settings when env vars are absent (e.g. Railway blocks env propagation).
+    if not from_email or not from_name:
+        try:
+            _db2 = sqlite3.connect(str(DB_PATH), timeout=5)
+            _db2.row_factory = sqlite3.Row
+            _row2 = _db2.execute("SELECT resend_from_email FROM settings WHERE id = 1").fetchone()
+            _db2.close()
+            if _row2:
+                if not from_email:
+                    from_email = _normalize_env_value(_row2["resend_from_email"] or "")
+        except Exception:
+            pass
+    if not from_email:
+        from_email = sender_email or ""
+    if not from_name:
+        from_name = sender_name or ""
     if not from_email:
         return False, "resend_missing_from_email"
     from_header = f'"{from_name}" <{from_email}>' if from_name else from_email
@@ -4075,6 +4108,8 @@ def get_settings():
             "imapUseSsl": int(row["imap_use_ssl"]) == 1,
             "impressumText": row["impressum_text"] or "",
             "datenschutzText": row["datenschutz_text"] or "",
+            "resendApiKey": row["resend_api_key"] if "resend_api_key" in row.keys() else "",
+            "resendFromEmail": row["resend_from_email"] if "resend_from_email" in row.keys() else "",
         }
     )
 
@@ -4318,6 +4353,13 @@ def update_settings():
     impressum_text = str(payload.get("impressumText") or "")[:20000]
     datenschutz_text = str(payload.get("datenschutzText") or "")[:20000]
     db.execute("UPDATE settings SET impressum_text = ?, datenschutz_text = ? WHERE id = 1", (impressum_text, datenschutz_text))
+    # Resend-Konfiguration (API-Key direkt in DB speichern, umgeht Railway-Env-Probleme)
+    resend_api_key_payload = str(payload.get("resendApiKey") or "").strip()
+    resend_from_email_payload = str(payload.get("resendFromEmail") or "").strip()
+    db.execute(
+        "UPDATE settings SET resend_api_key = ?, resend_from_email = ? WHERE id = 1",
+        (resend_api_key_payload, resend_from_email_payload),
+    )
     # IMAP-Felder separat aktualisieren (immer optional)
     payload_imap_password = str(payload.get("imapPassword") or "")
     imap_fields = {

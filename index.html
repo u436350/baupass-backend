@@ -17,7 +17,7 @@
   <title data-ui-i18n="appTitle">BauPass Control</title>
     <script>
       (function enforceLatestBuild() {
-        const buildTag = "20260426a";
+        const buildTag = "20260427a";
         const storageKey = "baupass-control-build";
         try {
           const url = new URL(window.location.href);
@@ -1011,10 +1011,37 @@
                   <button type="button" id="otpTestBtn" class="btn btn-secondary" onclick="sendOtpTestMail()" style="margin-left:8px">OTP-Test senden</button>
                   <span id="otpTestResult" style="font-size:0.85rem"></span>
                 </div>
-                <small style="display:block;margin-top:8px;color:#6b7280;line-height:1.4;">
-                  Hinweis: Auf Railway kann SMTP blockiert sein. Dann nutzt BauPass automatisch den HTTPS-Fallback über Resend.
-                  Setze dafür in Railway die Variablen <strong>RESEND_API_KEY</strong> (optional: <strong>RESEND_FROM_EMAIL</strong>, <strong>RESEND_FROM_NAME</strong>).
-                </small>
+              </label>
+
+              <!-- ── Resend HTTPS-Fallback (Railway-Kompatibel) ── -->
+              <div class="form-section" style="margin-top:16px">
+                <div class="form-section-icon">📡</div>
+                <div class="form-section-label">
+                  <p class="eyebrow">E-Mail Fallback</p>
+                  <h4>Resend API (HTTPS-Fallback)</h4>
+                  <p style="font-size:0.82rem;color:#6b7280;margin-top:4px;line-height:1.5;">
+                    Wenn Railway SMTP blockiert, sendet BauPass automatisch über
+                    <a href="https://resend.com" target="_blank" rel="noopener">Resend</a>.
+                    Trage hier deinen Resend-API-Key ein – er wird in der Datenbank gespeichert und
+                    braucht <strong>keine</strong> Railway-Umgebungsvariable.
+                  </p>
+                </div>
+              </div>
+              <label>
+                <span>Resend API-Key</span>
+                <input id="resendApiKey" type="password" autocomplete="off" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="font-family:monospace" />
+                <small id="resendKeyStoredHint" style="display:block;margin-top:4px;font-size:0.8rem;color:#9ca3af">Kein Key gespeichert</small>
+              </label>
+              <label>
+                <span>Resend Absender-E-Mail</span>
+                <input id="resendFromEmail" type="email" placeholder="rechnung@deinefirma.de" />
+              </label>
+              <label class="full-width">
+                <span></span>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn btn-secondary" onclick="handleResendDirectTestClick()">Resend Direkt-Test</button>
+                  <span id="resendDirectTestResult" style="font-size:0.85rem"></span>
+                </div>
               </label>
 
               <!-- ── Dokument-Postfach (IMAP) ── -->
@@ -1402,7 +1429,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous"></script>
-  <script src="./app.js?v=20260426a"></script>
+  <script src="./app.js?v=20260427a"></script>
   <script src="./desktop/renderer.js?v=20260420a"></script>
 </body>
 </html>
